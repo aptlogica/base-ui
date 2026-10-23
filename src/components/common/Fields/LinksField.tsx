@@ -16,6 +16,7 @@ import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 import { linkItemIdentity, linkItemLabel, linkItems, resolveLinkRowId } from '../../../utils/linkValues';
+import { getLinkDisplayColumn, getRecordLabel, getRecordSearchText } from '../../../utils/recordLabel';
 
 interface LinksFieldProps {
     value?: any;
@@ -30,6 +31,7 @@ interface LinksFieldProps {
             };
             entity_role?: 'source' | 'target';
             is_self_link?: boolean;
+            display_column_id?: string;
         };
     };
     disabled?: boolean;
@@ -156,16 +158,19 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         return map;
     }, [records]);
 
+    // The column of the linked table this link shows for each record: the one chosen for the link,
+    // else the first text column of the linked table
+    const displayColumn = useMemo(() => {
+        const payload = tableData as { data?: { columns?: any[] } } | null | undefined;
+        return getLinkDisplayColumn(field?.meta, payload?.data?.columns);
+    }, [tableData, field?.meta]);
+
     const recordsSearchIndex = useMemo(() => {
-        const searchableFields = ['title', 'name', 'first_name', 'last_name', 'description'];
-        return records.map((record: RelatedRecord) => {
-            const searchText = searchableFields
-                .map(fieldName => record[fieldName]?.toString().toLowerCase() || '')
-                .filter(Boolean)
-                .join(' ');
-            return { record, searchText };
-        });
-    }, [records]);
+        return records.map((record: RelatedRecord) => ({
+            record,
+            searchText: getRecordSearchText(record, displayColumn),
+        }));
+    }, [records, displayColumn]);
 
     const selectedRecords = useMemo(() => {
         // Handle empty objects, null, undefined, or empty arrays
@@ -412,23 +417,11 @@ export const LinksField: React.FC<LinksFieldProps> = ({
     }, [disabled, persistImmediately, persistRelation, selectedRecords, onChange, toast, value, currentTableId, queryClient]);
 
     const getRecordDisplayText = (record: RelatedRecord) => {
-        // Try multiple fields in order of preference
-        const titleFields = ['title', 'name', 'first_name', 'last_name', 'description'];
-
-        for (const field of titleFields) {
-            const value = record[field];
-            if (value?.toString().trim()) {
-                return value.toString().trim();
-            }
-        }
-
-        // If it's a placeholder, show loading
+        // Records that are not loaded yet carry their own text
         if (record._isPlaceholder) {
             return record.title || 'Loading...';
         }
-
-        // Last resort
-        return `Record ${record.id}`;
+        return getRecordLabel(record, displayColumn);
     };
 
     // Keyboard navigation - use paginatedRecords since that's what's actually rendered
@@ -762,7 +755,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                             {/* Main title */}
                                                             <div className="flex items-center space-x-2">
                                                                 <h4 className="font-medium text-gray-900 truncate">
-                                                                    {record.title || `Record ${record.id}`}
+                                                                    {getRecordDisplayText(record)}
                                                                 </h4>
                                                             </div>
 

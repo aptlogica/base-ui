@@ -13,7 +13,10 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const refetchQueries = vi.fn();
 const loadNextPage = vi.fn();
-let mockRecords: Array<{ id: number; title: string }> = [
+let mockColumns: Array<Record<string, unknown>> = [
+  { id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 },
+];
+let mockRecords: Array<Record<string, unknown>> = [
   { id: 1, title: 'Record One' },
   { id: 2, title: 'Record Two' },
 ];
@@ -22,7 +25,7 @@ let mockHasMore = false;
 
 vi.mock('../../../../hooks/useApi', () => ({
   useTable: () => ({
-    data: { data: { records: mockRecords } },
+    data: { data: { records: mockRecords, columns: mockColumns } },
     isLoading: mockIsLoading,
   }),
   useInsertRelationData: () => ({ mutateAsync: mutateAsyncMock }),
@@ -72,6 +75,7 @@ describe('LinksField', () => {
     toastSuccess.mockReset();
     toastError.mockReset();
     loadNextPage.mockReset();
+    mockColumns = [{ id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 }];
     mockRecords = [
       { id: 1, title: 'Record One' },
       { id: 2, title: 'Record Two' },
@@ -565,5 +569,92 @@ describe('LinksField', () => {
       expect.objectContaining({ title: 'Record Two' }),
     ]);
     expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+  describe('display column', () => {
+    const people = [
+      { id: 1, title: 'Alpha', company: 'Acme Corp' },
+      { id: 2, title: 'Beta', company: 'Globex' },
+    ];
+    const columns = [
+      { id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 },
+      { id: 'c-company', column_name: 'company', uidt: 'text', order_index: 2 },
+    ];
+
+    it('shows the column chosen for the link, not Title', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[{ id: 1 }]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getAllByText('Acme Corp').length).toBeGreaterThan(0);
+      expect(screen.getByText('Globex')).toBeInTheDocument();
+      expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    });
+
+    it('falls back to the first text column when none is chosen', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getByText('Alpha')).toBeInTheDocument();
+      expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+    });
+
+    it('shows Record <id> when the display value is empty', async () => {
+      const user = userEvent.setup();
+      mockRecords = [{ id: 7, title: 'Alpha', company: '' }];
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getByText('Record 7')).toBeInTheDocument();
+    });
+
+    it('searches the chosen column', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+      await user.type(screen.getByRole('textbox'), 'globex');
+
+      await waitFor(() => expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument());
+      expect(screen.getByText('Globex')).toBeInTheDocument();
+    });
   });
 });

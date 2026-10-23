@@ -12,7 +12,7 @@ import { ImportColumnMapper } from './importer/ImportColumnMapper';
 import { ImportDataPreviewGrid } from './importer/ImportDataPreviewGrid';
 import { ImportCleanupOptions } from './importer/ImportCleanupOptions';
 import type { ImportCleanupOptionsState } from './importer/ImportCleanupOptions';
-import { buildImportPreview, buildInitialMappings } from './importer/importPreviewBuilder';
+import { avoidSystemColumnTitle, buildImportPreview, buildInitialMappings } from './importer/importPreviewBuilder';
 import { getImportFieldMeta, normalizeImportFieldType } from './importer/importFieldConfig';
 import { useImportData } from '../../hooks/useApi';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -145,8 +145,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [isBuildingPreview, setIsBuildingPreview] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [mappings, setMappings] = useState<Record<string, ImportColumnMapping>>({});
-  const [primaryKey, setPrimaryKey] = useState<string | null>(null);
-  const [primaryColumnError, setPrimaryColumnError] = useState<string | null>(null);
   const [cleanupOptions, setCleanupOptions] = useState<ImportCleanupOptionsState>({
     removeDuplicateRecords: false,
     trimExtraSpaces: false,
@@ -197,8 +195,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setMappings({});
       setUploadProgress(0);
       setIsSubmitting(false);
-      setPrimaryKey(null);
-      setPrimaryColumnError(null);
       isSubmittingRef.current = false;
       setCleanupOptions({
         removeDuplicateRecords: false,
@@ -222,7 +218,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         const fieldType = normalizeImportFieldType(mapping?.fieldType || 'text');
         return {
           column_name: column.label,
-          title: mapping?.sourceName || column.label,
+          title: avoidSystemColumnTitle(mapping?.sourceName || column.label),
           uidt: fieldType,
           meta: buildFieldMeta(fieldType, normalizeDefaultValue(fieldType, mapping?.defaultValue || '')),
         };
@@ -356,27 +352,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       return;
     }
 
-    if (primaryKey) {
-      const primaryPreviewColumn = preview?.columns.find((column) => column.label === primaryKey);
-      const primaryMapping = primaryPreviewColumn ? mappings[primaryPreviewColumn.key] : null;
-      const primaryDefaultValue = String(primaryMapping?.defaultValue || '').trim();
-
-      if (!primaryPreviewColumn || primaryMapping?.include === false) {
-        setPrimaryColumnError('Primary column must be included.');
-        setError('Primary column must be included before confirming import.');
-        return;
-      }
-
-      if (!primaryDefaultValue) {
-        setPrimaryColumnError('Primary column cannot be empty.');
-        setError('Primary column cannot be empty.');
-        return;
-      }
-    }
-
     try {
       const payload = buildImportPayload();
-      setPrimaryColumnError(null);
       if (isSubmittingRef.current || isSubmitting || importTableMutation.isPending) {
         return;
       }
@@ -395,7 +372,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         order_index,
         file: selectedFile,
         config: payload,
-        primary_column: primaryKey || '',
         onProgress: (progressEvent: ProgressEvent) => {
           if (progressEvent.total && progressEvent.total > 0) {
             const percent = Math.min(
@@ -435,10 +411,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       const nextState = { ...currentState, importSummary };
 
       if (targetRoute) {
-        navigate(targetRoute, { state: nextState });
+        void navigate(targetRoute, { state: nextState });
       } else {
         // Keep user on current route but still surface success summary.
-        navigate(location.pathname, { replace: true, state: nextState });
+        void navigate(location.pathname, { replace: true, state: nextState });
       }
     } catch (err: any) {
       const errorMessage = err?.message || 'Failed to generate import payload';
@@ -459,7 +435,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const handleBack = () => {
     setUiStep('select');
-    setPrimaryColumnError(null);
     setError(null);
   }
 
@@ -537,51 +512,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     <ImportColumnMapper
                       preview={preview}
                       mappings={mappings}
-                      primaryColumnError={primaryColumnError}
-                      primaryKey={primaryKey}
-                      onPrimaryKeyChange={(value) => {
-                        setPrimaryKey(value);
-                        setPrimaryColumnError(null);
-                        setError(null);
-
-                        // If the user picks an excluded column as primary, auto-include it.
-                        if (!value) return;
-                        const selected = preview.columns.find((column) => column.label === value);
-                        if (!selected) return;
-                        const wasExcluded = mappings[selected.key]?.include === false;
-                        if (wasExcluded) {
-                          setMappings((prev) => ({
-                            ...prev,
-                            [selected.key]: {
-                              sourceName: prev[selected.key]?.sourceName || selected.key,
-                              include: true,
-                              fieldType: prev[selected.key]?.fieldType || 'text',
-                              defaultValue: prev[selected.key]?.defaultValue || '',
-                            },
-                          }));
-                        }
-                      }}
                       onChange={(key, patch) => {
-                        const matchingColumn = preview.columns.find((column) => column.key === key);
-                        const shouldClearPrimaryError =
-                          matchingColumn?.label === primaryKey &&
-                          (
-                            patch.include !== undefined ||
-                            patch.defaultValue !== undefined
-                          );
-
-                        if (shouldClearPrimaryError) {
-                          setPrimaryColumnError(null);
-                          setError(null);
-                        }
-
-                        // If the primary column is excluded, clear primary selection to keep state consistent.
-                        if (matchingColumn?.label === primaryKey && patch.include === false) {
-                          setPrimaryKey(null);
-                          setPrimaryColumnError('Primary column cannot be excluded.');
-                          setError('Primary column cannot be excluded from import.');
-                        }
-
                         setMappings((prev) => ({
                           ...prev,
                           [key]: {
@@ -811,10 +742,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     setPreview(p);
                     const nextMappings: Record<string, ImportColumnMapping> = buildInitialMappings(p);
                     setMappings(nextMappings);
-                    // Set first column as primary key by default (use label for actual CSV column name)
-                    if (p.columns.length > 0) {
-                      setPrimaryKey(p.columns[0].label);
-                    }
                     setUiStep('review');
                   } catch (err: any) {
                     const msg = err?.message || 'Failed to read file preview';

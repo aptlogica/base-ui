@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordTitleColumn } from '../../../utils/recordLabel';
 import { formatTooltipValue } from '../../shared/tooltipValueUtils';
 import { toBulletLines } from '../../shared/tooltipLineUtils';
 
@@ -27,10 +28,9 @@ export type BuildGanttTooltipOptions = {
 
 const getColumnKey = (col: Column) => String(col?.column_name || col?.name || col?.key || col?.title || '');
 
-const isSystemOrReservedField = (key: string, col: Column) => {
-  const loweredKey = key.toLowerCase();
-  return loweredKey === 'title' || loweredKey === 'id' || !!col?.system;
-};
+// The task heading already shows the title column (the first text column), so it is not repeated as a field
+const isSystemOrReservedField = (key: string, col: Column, titleKey: string) =>
+  key.toLowerCase() === 'id' || !!col?.system || (titleKey !== '' && key === titleKey);
 
 const isExcludedField = (col: Column, options: BuildGanttTooltipOptions) =>
   options.fieldsToExclude?.includes(col?.uidt || '') ?? false;
@@ -99,6 +99,8 @@ export function buildGanttTooltipLines(args: {
   const visibleFields: Array<{ value: string; priority: number }> = [];
   
   if (task.rawData && typeof task.rawData === 'object') {
+    const titleColumn = getRecordTitleColumn((columns || []).map(col => ({ ...col, column_name: getColumnKey(col) })));
+    const titleKey = titleColumn?.column_name ?? '';
     (columns || []).forEach(col => {
       const key = getColumnKey(col);
       if (!key) return;
@@ -110,7 +112,7 @@ export function buildGanttTooltipLines(args: {
       if (isHiddenField(col, options)) return;
       
       // Skip title, id, and system fields
-      if (isSystemOrReservedField(key, col)) return;
+      if (isSystemOrReservedField(key, col, titleKey)) return;
       
       // Get value from rawData (use rawData[key] only – same mapping as filtering)
       const raw = task.rawData[key];

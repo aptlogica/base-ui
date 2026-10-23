@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordLabel, getRecordTitleColumn, isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useMemo, useCallback, useRef } from 'react';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { Plus, List, X } from 'lucide-react';
@@ -116,8 +117,8 @@ const getSelectColumns = (columns: BaseColumn[]) =>
 const getSearchableColumns = (columns: BaseColumn[]) =>
   columns.filter(col => {
     const isSystemField = col.isSystem || col.system;
-    const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-    return !isSystemField || isTitle;
+    // System fields are not searched, except the Title of a table created before Title became an ordinary column
+    return !isSystemField || isLegacyTitleColumn(col);
   });
 
 const getCardId = (card: Record<string, unknown>) =>
@@ -238,7 +239,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Get select columns for grouping
   const selectColumns = useMemo(() => getSelectColumns(columns), [columns]);
 
-  // Get searchable columns (exclude system fields except Title)
+  // Cards are named by the first text column of the table
+  const titleColumn = useMemo(() => getRecordTitleColumn(columns), [columns]);
+
+  // Get searchable columns (exclude system fields except the legacy Title)
   const searchableColumns = useMemo(() => getSearchableColumns(columns), [columns]);
 
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
@@ -460,19 +464,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     for (const record of searchFilteredRecords) {
       const value = record[groupCol.key];
       let stackName = 'Uncategorized'; // Default for null/undefined values
+      const stringValue = extractDisplayValue(value);
 
-      if (value !== null && value !== undefined && value !== '') {
-        const stringValue = extractDisplayValue(value);
-        // Only use the value if it exists in field options, otherwise use Uncategorized
-        if (stringValue && fieldOptionsSet.has(stringValue)) {
-          stackName = stringValue;
-        }
-        // If not found in options, stackName remains 'Uncategorized' (already set above)
+      // Only use the value if it exists in field options, otherwise use Uncategorized
+      if (value !== null && value !== undefined && value !== '' && stringValue && fieldOptionsSet.has(stringValue)) {
+        stackName = stringValue;
       }
 
-      if (!stackMap.has(stackName)) {
-        stackMap.set(stackName, []);
-      }
+      const stackCards = stackMap.get(stackName) ?? [];
+      stackMap.set(stackName, stackCards);
 
       // PERFORMANCE: Only normalize if record doesn't already have _meta
       const normalizedRecord = record._meta
@@ -486,10 +486,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             position: 0,
           },
           ...record,
-          title: record.title || ''
+          title: titleColumn ? getRecordLabel(record, titleColumn) : ''
         };
 
-      stackMap.get(stackName)!.push(normalizedRecord);
+      stackCards.push(normalizedRecord);
     }
 
     // Get custom stack order from view config (for drag & drop reordering)
@@ -533,7 +533,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         isCollapsed: false
       };
     });
-  }, [searchFilteredRecords, groupCol, view, fieldOptions, optionColorMap, extractDisplayValue]);
+  }, [searchFilteredRecords, groupCol, view, fieldOptions, optionColorMap, extractDisplayValue, titleColumn]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const stackNameInputRef = useRef<HTMLInputElement>(null);

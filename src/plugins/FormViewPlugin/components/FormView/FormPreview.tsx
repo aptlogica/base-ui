@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SortableFormField, DropPosition } from './SortableFormField';
 import { buildFieldRows, moveFieldOnDrop } from './fieldRows';
@@ -30,7 +31,7 @@ interface FormPreviewProps {
 
 // Extract field filtering logic
 const shouldIncludeField = (field: FormField): boolean => {
-  if (field.title?.toLowerCase().includes('title') || field.column_name === 'title') {
+  if (isLegacyTitleColumn(field)) {
     return !field.is_hidden;
   }
 

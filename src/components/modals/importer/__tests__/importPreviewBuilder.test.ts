@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Papa, { type ParseConfig, type ParseResult } from 'papaparse';
 import { FieldType } from '../../../../types/fieldTypes';
 import type { ImportPreview } from '../ImportTypes';
-import { buildImportPreview, buildInitialMappings } from '../importPreviewBuilder';
+import { avoidSystemColumnTitle, buildImportPreview, buildInitialMappings } from '../importPreviewBuilder';
 
 vi.mock('papaparse', () => ({
   default: {
@@ -317,5 +317,29 @@ describe('importPreviewBuilder', () => {
 
       expect(mappings).toEqual({});
     });
+  });
+});
+
+describe('avoidSystemColumnTitle', () => {
+  it('renames a title that a system column already has, whatever its case', () => {
+    expect(avoidSystemColumnTitle('id')).toBe('id (1)');
+    expect(avoidSystemColumnTitle('Id')).toBe('Id (1)');
+    expect(avoidSystemColumnTitle(' Created Time ')).toBe('Created Time (1)');
+    expect(avoidSystemColumnTitle('last modified by')).toBe('last modified by (1)');
+  });
+
+  it('leaves other titles alone', () => {
+    expect(avoidSystemColumnTitle('Title')).toBe('Title');
+    expect(avoidSystemColumnTitle('description')).toBe('description');
+    expect(avoidSystemColumnTitle('id (1)')).toBe('id (1)');
+  });
+
+  it('shows the new name in the initial mapping', () => {
+    const mappings = buildInitialMappings({
+      columns: [{ key: 'id', label: 'id' }, { key: 'description', label: 'description' }],
+      rows: [],
+    } as any);
+    expect(mappings.id.sourceName).toBe('id (1)');
+    expect(mappings.description.sourceName).toBe('description');
   });
 });

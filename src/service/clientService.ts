@@ -1029,7 +1029,6 @@ export async function importService(
     order_index: number;
     file: File;
     config: any;
-    primary_column: string;
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useMemo, Suspense, lazy } from 'react';
 import { FormPreview } from './FormPreview';
 import { RightPanel } from './RightPanel';
@@ -60,8 +61,8 @@ const shouldIncludeFieldInForm = (column: any): boolean => {
     return false;
   }
 
-  // Always allow Title field even if marked as system
-  if (column.column_name === 'title' || column.title === 'Title' || column.title?.toLowerCase().includes('title')) {
+  // Always allow the Title of a table created before Title became an ordinary column, even though it is a system field
+  if (isLegacyTitleColumn(column)) {
     return true;
   }
   

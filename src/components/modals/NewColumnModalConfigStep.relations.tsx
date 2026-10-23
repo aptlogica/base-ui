@@ -5,6 +5,15 @@
 import AdvancedDropdown from '../../components/common/dropdown/AdvancedDropdown';
 import { renderDescriptionToggle } from './NewColumnModalConfigStep';
 
+const getRelationButtonClass = (isEditing: boolean, isSelected: boolean) =>
+  `p-3 min-h-[150px] rounded-xl border-2 transition-all ${isEditing
+    ? 'opacity-50 cursor-not-allowed'
+    : 'hover:bg-gray-50'
+  } ${isSelected
+    ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
+    : 'text-[var(--color-text-primary)] border'
+  }`;
+
 export function renderRelationsConfigStep(props: any) {
   const {
     selectedType,
@@ -18,6 +27,10 @@ export function renderRelationsConfigStep(props: any) {
     setSelectedTable,
     inverseTitle,
     setInverseTitle,
+    displayColumnId,
+    setDisplayColumnId,
+    displayColumnOptions,
+    isLinkTargetLoading,
     isSelfLink,
     currentTableId,
     showDescription,
@@ -52,13 +65,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-gray-50'
-                  } ${relationType === 'one-to-one'
-                    ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                  }`}
+                className={getRelationButtonClass(isLinksFieldEditing, relationType === 'one-to-one')}
                 onClick={() => !isLinksFieldEditing && setRelationType('one-to-one')}
                 title="Each record in this table links to exactly one record in the target table, and vice versa"
               >
@@ -75,13 +82,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-gray-50'
-                  } ${relationType === 'has-many'
-                    ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                  }`}
+                className={getRelationButtonClass(isLinksFieldEditing, relationType === 'has-many')}
                 onClick={() => !isLinksFieldEditing && setRelationType('has-many')}
                 title="Each record in this table can link to multiple records in the target table"
               >
@@ -98,13 +99,7 @@ export function renderRelationsConfigStep(props: any) {
               <button
                 type="button"
                 disabled={isLinksFieldEditing}
-                className={`p-3 min-h-[150px] rounded-xl border-2 transition-all ${isLinksFieldEditing
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-gray-50'
-                  } ${relationType === 'many-to-many'
-                    ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-                    : 'text-[var(--color-text-primary)] border'
-                  }`}
+                className={getRelationButtonClass(isLinksFieldEditing, relationType === 'many-to-many')}
                 onClick={() => !isLinksFieldEditing && setRelationType('many-to-many')}
                 title="Records in both tables can link to multiple records in the other table"
               >
@@ -181,6 +176,29 @@ export function renderRelationsConfigStep(props: any) {
               />
               <div className="mt-1 text-xs text-gray-500">
                 The linked table gets a field that shows the records linked back to this table.
+              </div>
+            </div>
+          )}
+
+          {selectedTableId && (
+            <div className="mb-4">
+              <label htmlFor="displayColumn" className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+                Display column
+              </label>
+              <AdvancedDropdown
+                id="displayColumn"
+                options={displayColumnOptions ?? []}
+                value={displayColumnId}
+                onChange={(value) => setDisplayColumnId(typeof value === 'string' ? value : '')}
+                placeholder="Id"
+                disabled={isLinkTargetLoading}
+                searchable
+                clearable
+              />
+              <div className="mt-1 text-xs text-gray-500">
+                The column of {isSelfLink ? 'this table' : 'the linked table'} shown for each linked record. {isLinkTargetLoading
+                  ? 'Loading fields...'
+                  : 'Records with an empty value are shown as "Record <id>".'}
               </div>
             </div>
           )}

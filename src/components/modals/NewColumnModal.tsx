@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getDefaultDisplayColumn, isDisplayColumnCandidate, isLegacyTitleColumn, type LabelColumn } from '../../utils/recordLabel';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, Info, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -65,6 +66,18 @@ const getRawTables = (tablesData: any) => {
 
 const isSelfLinkTable = (selectedTableId: string, currentTableId?: string) =>
   !!currentTableId && selectedTableId === currentTableId;
+
+// Options for choosing which column labels the records of a table: plain fields, not links, lookups, attachments, JSON or system fields
+const toDisplayColumnOptions = (columns: LabelColumn[]) =>
+  (columns || [])
+    .filter(isDisplayColumnCandidate)
+    .map(column => ({ value: String(column.id), label: String(column.title || column.column_name || column.id) }));
+
+// The column a new link shows by default: the table's Id column, or '' when it has none
+const defaultDisplayColumnId = (columns: LabelColumn[]): string => {
+  const first = getDefaultDisplayColumn(columns);
+  return first ? String(first.id) : '';
+};
 
 const isFieldTypeLocked = (
   isFieldUsedInViews: boolean,
@@ -382,6 +395,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<any>(null);
   const [inverseTitle, setInverseTitle] = useState<string>('');
+  // Column of the linked table this link shows for each linked record ('' = the first text column).
+  // The field created on the other table is not asked for: it shows the Id column of this table.
+  const [displayColumnId, setDisplayColumnId] = useState<string>('');
   const isSelfLink = isSelfLinkTable(selectedTableId, currentTableId);
 
   // Add state for lookup field config
@@ -466,6 +482,23 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const { data: targetData, isLoading: isTargetTableLoading } = useTable(targetTableId) as { data?: { columns?: any[] }; isLoading: boolean };
   const targetTablePayload = useMemo(() => (targetData as any)?.data || targetData || null, [targetData]);
 
+  // Columns that can label the records of the linked table (and of this table, for the partner field)
+  const isLinkType = selectedType?.key === 'links';
+  const { data: linkTargetData, isLoading: isLinkTargetLoading } = useTable(isLinkType && selectedTableId && !isSelfLink ? selectedTableId : '') as { data?: any; isLoading: boolean };
+  const linkTargetColumns: LabelColumn[] = useMemo(() => {
+    if (isSelfLink) return (fields || []) as LabelColumn[];
+    const payload = linkTargetData?.data || linkTargetData;
+    return Array.isArray(payload?.columns) ? payload.columns : [];
+  }, [isSelfLink, fields, linkTargetData]);
+  const displayColumnOptions = useMemo(() => toDisplayColumnOptions(linkTargetColumns), [linkTargetColumns]);
+
+  // A new link starts with the Id column of the linked table; an existing link keeps what it has
+  const isEditingLink = Boolean(initialValues?.id);
+  useEffect(() => {
+    if (!isLinkType || isEditingLink || !selectedTableId) return;
+    setDisplayColumnId(current => (displayColumnOptions.some(o => o.value === current) ? current : defaultDisplayColumnId(linkTargetColumns)));
+  }, [isLinkType, isEditingLink, selectedTableId, displayColumnOptions, linkTargetColumns]);
+
   // Extract fields from target table
   useEffect(() => {
     if (!targetTableId || !targetData) {
@@ -475,12 +508,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     if (targetTablePayload?.columns && Array.isArray(targetTablePayload.columns)) {
       // Filter out links, rollup, and lookup fields
-      // Exclude system fields BUT keep 'title' as it's important for lookups
+      // Exclude system fields, but keep text fields and the Title of a table created before Title became an ordinary column
       const filteredFields = targetTablePayload.columns.filter((col: any) =>
         col.uidt !== 'links' &&
         col.uidt !== 'rollup' &&
         col.uidt !== 'lookup' &&
-        (!col.system || col.uidt === 'text' || col.column_name === 'title')
+        (!col.system || col.uidt === 'text' || isLegacyTitleColumn(col))
       );
       setTargetTableFields(filteredFields);
 
@@ -703,6 +736,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setRelationType(relation.type || 'one-to-one');
       const targetTableId = relation.with || '';
       setSelectedTableId(targetTableId);
+      setDisplayColumnId(String(config.display_column_id ?? config.meta?.display_column_id ?? ''));
     }
     setShowTextDefault(false);
     setShowDescription(false);
@@ -770,6 +804,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSelectedTableId('');
     setSelectedTable(null);
     setInverseTitle('');
+    setDisplayColumnId('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -1040,6 +1075,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       selectedTable,
       relationType,
       inverseTitle,
+      displayColumnId,
       currentTableId,
       selectedRelationId,
       selectedLookupColumnId,
@@ -1242,6 +1278,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSelectedTable,
     inverseTitle,
     setInverseTitle,
+    displayColumnId,
+    setDisplayColumnId,
+    displayColumnOptions,
+    isLinkTargetLoading,
     isSelfLink,
     currentTableId,
     selectedRelationId,
@@ -1300,24 +1340,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const modalAnchorClass = shouldUseBackdrop ? 'bg-modal-backdrop flex items-center justify-center' : `absolute top-full ${positionClass}`;
   const modalWidthClass = selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]';
 
-  return (
-    <div
-      ref={modalRef}
-      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
-        }`}
-    >
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
-        <div className="flex items-center mb-4">
-          <span className="text-lg font-semibold text-gray-900 flex-1">
-            {initialValues ? 'Edit Field' : 'New Field'}
-          </span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
-          {step === 1 && (
+  const renderTypeSelectionStep = () => step === 1 && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1366,9 +1389,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </div>
               )}
             </>
-          )}
-
-          {step === 2 && selectedType && (
+          );
+  const renderFieldConfigStep = () => step === 2 && selectedType && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1405,7 +1427,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               {/* Directly render the content without an extra div */}
               {renderConfigStep()}
             </>
-          )}
+          );
+  return (
+    <div
+      ref={modalRef}
+      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        }`}
+    >
+      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
+        <div className="flex items-center mb-4">
+          <span className="text-lg font-semibold text-gray-900 flex-1">
+            {initialValues ? 'Edit Field' : 'New Field'}
+          </span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
+          {renderTypeSelectionStep()}
+          {renderFieldConfigStep()}
         </div>
 
         {/* Buttons at the bottom */}

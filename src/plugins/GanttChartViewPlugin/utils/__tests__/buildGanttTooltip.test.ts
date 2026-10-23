@@ -185,21 +185,22 @@ describe('buildGanttTooltipLines', () => {
         notes: '<p>Hello&nbsp;<strong>World</strong> <span style="color:red">Text</span></p>',
       },
     };
-    const columns = [{ id: 'lt', column_name: 'notes', uidt: 'longText', type: 'longtext' }];
+    const columns = [{ id: 'head', column_name: 'heading', uidt: 'text' }, { id: 'lt', column_name: 'notes', uidt: 'longText', type: 'longtext' }];
 
     const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
     expect(lines[1]).toContain('Hello World Text');
     expect(lines[1]).not.toContain('<');
   });
 
-  it('skips system, id and title columns', () => {
+  it('skips system, id and the title (first text) column', () => {
     const task = {
       ...baseTask,
       rawData: { id: '1', title: 'ignored', custom: 'shown' },
     };
+    // the first text column is the task heading, so it is not repeated as a field
     const columns = [
-      { id: 'id-col', column_name: 'id', uidt: 'text' },
       { id: 'title-col', column_name: 'title', uidt: 'text' },
+      { id: 'id-col', column_name: 'id', uidt: 'text' },
       { id: 'sys-col', column_name: 'sys', uidt: 'text', system: true },
       { id: 'custom-col', column_name: 'custom', uidt: 'text' },
     ];
@@ -220,6 +221,7 @@ describe('buildGanttTooltipLines', () => {
       },
     };
     const columns = [
+      { id: 'head', column_name: 'heading', uidt: 'text' },
       { id: 't', column_name: 't', uidt: 'text' },
       { id: 'e', column_name: 'e', uidt: 'Email' },
       { id: 'p', column_name: 'p', uidt: 'Percent' },
@@ -385,7 +387,7 @@ describe('buildGanttTooltipLines - richer branch coverage', () => {
         note: 'x'.repeat(80),
       },
     };
-    const columns = [{ id: 'n', column_name: 'note', uidt: 'text' }];
+    const columns = [{ id: 'head', column_name: 'heading', uidt: 'text' }, { id: 'n', column_name: 'note', uidt: 'text' }];
 
     const lines = buildGanttTooltipLines({ task, columns, options: baseOptions });
     expect(lines.join(' ')).toContain('...');

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search as SearchIcon, ChevronUp, ChevronDown, Hash } from 'lucide-react';
 import { BaseColumn as ColumnConfig } from '../../../types/column.types';
@@ -171,9 +172,9 @@ export const Search: React.FC<SearchProps> = ({
         columnTitle.includes(normalizedSearchTerm) ||
         columnName.includes(normalizedSearchTerm);
 
-      // Exclude system fields except Title (case-insensitive comparison)
+      // Exclude system fields, except the Title of a table created before Title became an ordinary column
       const isSystemField = column.isSystem || column.system;
-      const isTitle = columnTitle === 'title' || columnName === 'title';
+      const isTitle = isLegacyTitleColumn(column);
 
       // Exclude fields in fieldsToExcludeInFilter
       const normalizedType = String(column.type || '').toLowerCase();

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { GroupPopover } from '../../../../components/shared/table/GroupPopover';
 import { SortPopover } from '../../../../components/shared/table/SortPopover';
@@ -247,7 +248,7 @@ export const Table: React.FC<TableProps> = ({
       .map((apiColumn: any): ColumnConfig => {
         const parsedMeta = parseApiColumnMeta(apiColumn.meta);
         const columnName = String(apiColumn.column_name ?? '').toLowerCase();
-        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && columnName !== 'title';
+        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && !isLegacyTitleColumn(apiColumn);
         return {
           id: apiColumn.id ? String(apiColumn.id) : undefined,
           key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
@@ -269,12 +270,11 @@ export const Table: React.FC<TableProps> = ({
       });
   }, [tableData?.columns]);
 
-  // Get searchable columns (exclude system fields except Title)
+  // Get searchable columns (exclude system fields except the Title of an older table)
   const searchableColumns = useMemo(() => {
     return columns.filter(col => {
       const isSystemField = col.isSystem || col.system;
-      const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-      return !isSystemField || isTitle;
+      return !isSystemField || isLegacyTitleColumn(col);
     });
   }, [columns]);
 
