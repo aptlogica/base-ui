@@ -289,27 +289,10 @@ describe('CreateRecordModal', () => {
       expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
     });
 
-    it('duplicates from the record menu: saves and keeps the form open with the same values', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-      const onSuccess = vi.fn();
-      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} onSuccess={onSuccess} />);
+    it('does not show a record menu on the create form', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" />);
 
-      await user.click(screen.getByRole('button', { name: 'Record menu' }));
-      expect(screen.getByRole('button', { name: /duplicate record/i })).toBeDisabled();
-
-      await user.type(screen.getByTestId('field-input-field-1'), 'Hello');
-      await user.click(screen.getByRole('button', { name: 'Record menu' }));
-      await user.click(screen.getByRole('button', { name: /duplicate record/i }));
-
-      await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
-        model_id: 'table-123',
-        values: { 'field-1': 'Hello' },
-      }));
-      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ recordId: '123' }));
-      expect(onClose).not.toHaveBeenCalled();
-      expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
-      expect(screen.queryByRole('button', { name: /duplicate record/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Record menu' })).not.toBeInTheDocument();
     });
   });
 
