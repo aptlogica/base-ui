@@ -1,10 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PhoneNumber } from '../PhoneNumber';
 
-vi.mock('../../../utils/helpers', () => ({
-  useClickHandler: (single: () => void) => single,
+const { clickMode, mockToastError } = vi.hoisted(() => ({
+  clickMode: { current: 'single' as 'single' | 'double' },
+  mockToastError: vi.fn(),
+}));
+
+vi.mock('../../../../utils/helpers', () => ({
+  useClickHandler: (single: () => void, double: () => void) => () =>
+    clickMode.current === 'double' ? double() : single(),
+}));
+
+vi.mock('../../Toast', () => ({
+  useOptionalToast: () => ({ error: mockToastError }),
 }));
 
 describe('PhoneNumber Component', () => {
@@ -201,6 +211,58 @@ describe('PhoneNumber Component', () => {
       expect(screen.getByRole('textbox')).toBeInTheDocument();
 
       rerender(<PhoneNumber placeholder={placeholder} value="123" readOnly onChange={mockOnChange} />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Invalid existing value', () => {
+    it('shows an error toast when editing a stored value that is not a valid phone number', () => {
+      renderPhone({ value: 'abc', config: { formatDisplay: false } });
+      fireEvent.mouseDown(screen.getByText('abc'));
+
+      expect(mockToastError).toHaveBeenCalledWith('Invalid phone number', expect.objectContaining({ title: 'Error' }));
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('does not show the toast for a valid or empty value', () => {
+      renderPhone({ value: '1234567890' });
+      fireEvent.mouseDown(screen.getByText('(123) 456-7890'));
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it('does not show the toast when phone validation is off', () => {
+      renderPhone({ value: 'abc', config: { phoneValid: false, formatDisplay: false } });
+      fireEvent.mouseDown(screen.getByText('abc'));
+
+      expect(mockToastError).not.toHaveBeenCalled();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+  });
+
+  describe('Double click editing', () => {
+    beforeEach(() => {
+      clickMode.current = 'double';
+    });
+
+    afterEach(() => {
+      clickMode.current = 'single';
+    });
+
+    it('enters edit mode on double click when allowEdit is false', () => {
+      renderPhone({ value: '123', allowEdit: false });
+      fireEvent.mouseDown(screen.getByText('123'));
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('does not enter edit mode on double click when allowEdit is true', () => {
+      renderPhone({ value: '123' });
+      fireEvent.mouseDown(screen.getByText('123'));
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('does not enter edit mode on double click when readOnly', () => {
+      renderPhone({ value: '123', allowEdit: false, readOnly: true });
+      fireEvent.mouseDown(screen.getByText('123'));
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     });
   });
