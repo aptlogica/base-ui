@@ -289,27 +289,115 @@ describe('CreateRecordModal', () => {
       expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
     });
 
-    it('duplicates from the record menu: saves and keeps the form open with the same values', async () => {
-      const user = userEvent.setup();
+    it('does not show a record menu on the create form', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" />);
+
+      expect(screen.queryByRole('button', { name: 'Record menu' })).not.toBeInTheDocument();
+    });
+
+    it('does not count an empty text input as a change, but enables save once text is typed', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" submitLabel="Save Record" />);
+      const input = screen.getByTestId('field-input-field-2');
+      const save = screen.getByRole('button', { name: 'Save Record' });
+
+      fireEvent.input(input, { target: { value: '' } });
+      expect(save).toBeDisabled();
+
+      fireEvent.input(input, { target: { value: 'a' } });
+      expect(save).toBeEnabled();
+    });
+
+    it('counts input from a non-text control as a change', () => {
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" submitLabel="Save Record" />);
+
+      fireEvent.input(screen.getByTestId('field-renderer-field-3'));
+
+      expect(screen.getByRole('button', { name: 'Save Record' })).toBeEnabled();
+    });
+
+    it('closes on a backdrop click but not on a click inside the modal', () => {
+      const onClose = vi.fn();
+      const { container } = renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} />);
+      const backdrop = container.querySelector('.bg-modal-backdrop') as HTMLElement;
+
+      fireEvent.click(container.querySelector('.bg-modal') as HTMLElement);
+      fireEvent.keyDown(backdrop, { key: 'Escape' });
+      expect(onClose).not.toHaveBeenCalled();
+
+      fireEvent.click(backdrop);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('saves from the header button and leaves out auto-generated uuid fields', async () => {
       const onClose = vi.fn();
       const onSuccess = vi.fn();
-      renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" onClose={onClose} onSuccess={onSuccess} />);
+      const fields = [
+        ...mockFields,
+        { id: 'field-uuid', name: 'ref', title: 'Ref', uidt: 'uuid', meta: { idGeneration: { mode: 'auto', version: 'v4' } } },
+      ];
+      renderWithQueryClient(
+        <CreateRecordModal
+          {...defaultProps}
+          fields={fields as any}
+          layout="record"
+          submitLabel="Save Record"
+          onClose={onClose}
+          onSuccess={onSuccess}
+          initialValues={{ 'field-uuid': '11111111-1111-4111-8111-111111111111' }}
+        />
+      );
 
-      await user.click(screen.getByRole('button', { name: 'Record menu' }));
-      expect(screen.getByRole('button', { name: /duplicate record/i })).toBeDisabled();
-
-      await user.type(screen.getByTestId('field-input-field-1'), 'Hello');
-      await user.click(screen.getByRole('button', { name: 'Record menu' }));
-      await user.click(screen.getByRole('button', { name: /duplicate record/i }));
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Record' }));
 
       await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
         model_id: 'table-123',
         values: { 'field-1': 'Hello' },
       }));
       await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ recordId: '123' }));
-      expect(onClose).not.toHaveBeenCalled();
-      expect(screen.getByTestId('field-input-field-1')).toHaveValue('Hello');
-      expect(screen.queryByRole('button', { name: /duplicate record/i })).not.toBeInTheDocument();
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('shows hidden fields and the required field error in the record layout', async () => {
+      const fields = [
+        { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },
+        { id: 'field-req', name: 'code', title: 'Code', uidt: 'SingleLineText', required: true },
+        { id: 'field-hidden', name: 'secret', title: 'Secret', uidt: 'SingleLineText', hidden: true },
+      ];
+      renderWithQueryClient(<CreateRecordModal {...defaultProps} fields={fields as any} layout="record" submitLabel="Save Record" />);
+
+      expect(screen.queryByTestId('field-renderer-field-hidden')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /show 1 hidden field/i }));
+      expect(screen.getByTestId('field-renderer-field-hidden')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Record' }));
+
+      expect(await screen.findByText('Required field(s) must not be left empty.')).toBeInTheDocument();
+      expect(upsertRowMutateAsyncMock).not.toHaveBeenCalled();
+    });
+
+    it('closes without prompting and hides save when the user cannot create records', () => {
+      vi.mocked(useBaseAccess).mockImplementation(() => ({
+        canCreateRecord: () => false,
+        isBaseReadOnly: () => true,
+      } as any));
+      const onClose = vi.fn();
+      try {
+        renderWithQueryClient(<CreateRecordModal {...defaultProps} layout="record" submitLabel="Save Record" onClose={onClose} />);
+
+        expect(screen.queryByRole('button', { name: 'Save Record' })).not.toBeInTheDocument();
+        fireEvent.input(screen.getByTestId('field-renderer-field-3'));
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      } finally {
+        vi.mocked(useBaseAccess).mockImplementation(() => ({
+          canCreateRecord: () => true,
+          isBaseReadOnly: () => false,
+        } as any));
+      }
     });
   });
 

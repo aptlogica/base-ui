@@ -189,10 +189,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     await handleDeleteRecordFromModal(recordId, deleteEvent, tableData, onRefresh);
   }, [handleDeleteRecordFromModal, deleteEvent, tableData, onRefresh]);
 
-  const onDuplicateCard = useCallback(() => {
-    // Duplicate functionality - can be implemented later
-  }, []);
-
   const getEditInitialValues = useCallback((): Record<string, any> => {
     if (!modalState.edit.selectedEvent) return {};
 
@@ -400,7 +396,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           submitLabel="Update record"
           onSuccess={() => handleEditSuccess(onRefresh)}
           onDelete={onDeleteHandler}
-          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
           onPrevious={showPreviousEvent}
           onNext={showNextEvent}

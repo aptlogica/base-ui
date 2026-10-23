@@ -23,6 +23,8 @@ import { isAutoUuidColumn, uuidCellProblem } from '../../../../utils/uuid';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
 import CreateRecordModal from '../../../../components/modals/CreateRecordModal';
 import { NewRowSplitButton } from './components/NewRowSplitButton';
+import { isSystemField, isAttachmentField, isLinksField } from '../../../../components/modals/RecordModalParts';
+import { isFormulaField, processFieldValue } from '../../../../utils/fieldUtils';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
 import { apiErrorMessage } from '../../../../utils/apiErrors';
@@ -1102,6 +1104,30 @@ export const Table: React.FC<TableProps> = ({
     setFormRecordId(null);
   }, []);
 
+  // Duplicate record: add a copy of the record straight into the table, no form
+  const handleDuplicateRecord = useCallback(async (sourceRecordId: string | null) => {
+    if (!sourceRecordId) return;
+    const columns = tableData?.columns || [];
+    const source = buildInitialValuesForEdit({ recordId: sourceRecordId, columns, rawRecords: tableData?.records || [] });
+    const values: Record<string, any> = {};
+    columns.forEach((col: any) => {
+      if (isSystemField(col) || isAttachmentField(col) || isLinksField(col) || isFormulaField(col) || isAutoUuidColumn(col)) return;
+      const value = source[col.id];
+      if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return;
+      values[col.id] = processFieldValue(col, value);
+    });
+    closeEditRecordModal();
+    closeRecordForm();
+    try {
+      await upsertRowMutation.mutateAsync({ model_id: String(tableId), values });
+      toast.success('Record duplicated successfully', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to duplicate record', err);
+      toast.error(apiErrorMessage(err, 'Failed to duplicate record'), { title: 'Error', duration: 5000 });
+    }
+  }, [tableData, tableId, upsertRowMutation, closeEditRecordModal, closeRecordForm, toast, onRefresh]);
+
   const showPreviousFormRecord = useCallback(() => {
     if (formRecordIds.length === 0) return;
     // From the blank form (or a record no longer in the grid) go to the last record
@@ -1746,6 +1772,7 @@ export const Table: React.FC<TableProps> = ({
             closeEditRecordModal();
           }
         }}
+        onDuplicate={() => handleDuplicateRecord(selectedRecordId)}
         title="Edit record"
         submitLabel="Update record"
         onPrevious={showPreviousEditRecord}
@@ -1787,6 +1814,7 @@ export const Table: React.FC<TableProps> = ({
             closeRecordForm();
           }
         }}
+        onDuplicate={() => handleDuplicateRecord(formRecordId)}
         title="Edit record"
         submitLabel="Update record"
         onPrevious={showPreviousFormRecord}

@@ -212,6 +212,9 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   );
 };
 
+/** Like useToast, but returns null instead of throwing when no ToastProvider is mounted. */
+export const useOptionalToast = () => useContext(ToastContext);
+
 export const useToast = () => {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within a ToastProvider');
