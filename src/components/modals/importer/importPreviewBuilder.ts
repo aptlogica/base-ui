@@ -157,13 +157,13 @@ export const buildImportPreview = async (file: File): Promise<ImportPreview> => 
 
 // Titles of the system columns every table has. An imported column can't share one of them, so it is renamed
 // here, the same way the server does: "id" becomes "id (1)".
-const SYSTEM_COLUMN_TITLES = ['id', 'created time', 'last modified time', 'created by', 'last modified by'];
+const SYSTEM_COLUMN_TITLES = new Set(['id', 'created time', 'last modified time', 'created by', 'last modified by']);
 
 export const avoidSystemColumnTitle = (title: string): string => {
   const trimmed = title.trim();
-  if (!SYSTEM_COLUMN_TITLES.includes(trimmed.toLowerCase())) return title;
+  if (!SYSTEM_COLUMN_TITLES.has(trimmed.toLowerCase())) return title;
   let index = 1;
-  while (SYSTEM_COLUMN_TITLES.includes(`${trimmed} (${index})`.toLowerCase())) index += 1;
+  while (SYSTEM_COLUMN_TITLES.has(`${trimmed} (${index})`.toLowerCase())) index += 1;
   return `${trimmed} (${index})`;
 };
 

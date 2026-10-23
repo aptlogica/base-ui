@@ -1340,24 +1340,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const modalAnchorClass = shouldUseBackdrop ? 'bg-modal-backdrop flex items-center justify-center' : `absolute top-full ${positionClass}`;
   const modalWidthClass = selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]';
 
-  return (
-    <div
-      ref={modalRef}
-      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
-        }`}
-    >
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
-        <div className="flex items-center mb-4">
-          <span className="text-lg font-semibold text-gray-900 flex-1">
-            {initialValues ? 'Edit Field' : 'New Field'}
-          </span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
-          {step === 1 && (
+  const renderTypeSelectionStep = () => step === 1 && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1406,9 +1389,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </div>
               )}
             </>
-          )}
-
-          {step === 2 && selectedType && (
+          );
+  const renderFieldConfigStep = () => step === 2 && selectedType && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1445,7 +1427,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               {/* Directly render the content without an extra div */}
               {renderConfigStep()}
             </>
-          )}
+          );
+  return (
+    <div
+      ref={modalRef}
+      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        }`}
+    >
+      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
+        <div className="flex items-center mb-4">
+          <span className="text-lg font-semibold text-gray-900 flex-1">
+            {initialValues ? 'Edit Field' : 'New Field'}
+          </span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
+          {renderTypeSelectionStep()}
+          {renderFieldConfigStep()}
         </div>
 
         {/* Buttons at the bottom */}

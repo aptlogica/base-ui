@@ -446,7 +446,7 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
   if (params.selectedTypeKey === 'links' && params.initialValues) {
     // The relation of an existing link can't change; only its display column can
     finalMeta = {
-      ...(params.initialValues.meta || params.initialValues.config || {}),
+      ...(params.initialValues.meta || params.initialValues.config),
       display_column_id: params.meta?.display_column_id ?? '',
     };
   }

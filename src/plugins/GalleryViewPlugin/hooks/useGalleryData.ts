@@ -72,7 +72,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
 
     // Find current view
     const currentView = viewId ? views.find((v: any) => String(v?.id) === String(viewId)) : null;
-    const viewMeta = currentView?.meta || {};
+    const viewMeta = currentView?.meta ?? {};
 
     // Process columns with GridView compatibility
     const uiColumns: BaseColumn[] = columns.map((col: any, index: number) => ({
@@ -97,7 +97,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     );
 
     // Get selected attachment field from view config
-    const selectedAttachmentFieldId = viewMeta?.attachment_field_id;
+    const selectedAttachmentFieldId = viewMeta.attachment_field_id;
     const attachmentField = selectedAttachmentFieldId 
       ? attachmentFields.find(f => f.id === selectedAttachmentFieldId)
       : attachmentFields[0]; // Default to first attachment field
@@ -118,7 +118,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       
       if (attachmentField) {
         const attachmentData = rowData?.[attachmentField.key || ''] || record?.[attachmentField.key || ''];
-        if (attachmentData && Array.isArray(attachmentData) && attachmentData.length > 0) {
+        if (attachmentData?.length && Array.isArray(attachmentData)) {
           // Filter out empty objects, null values, and objects without valid URLs
           allImages = attachmentData.filter(att => 
             att && 
@@ -133,7 +133,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       // Build metadata from all fields (include Title, attachment fields, JSON fields if visible, exclude system fields)
       const metadata: Record<string, any> = {};
       uiColumns.forEach(col => {
-        const isTitleField = titleField !== undefined && col.key === titleField.key;
+        const isTitleField = col.key === titleField?.key;
         const isJsonField = col.type === 'json' || col.uidt === 'json';
         const isLinksField = col.type === 'links' || col.uidt === 'links';
         const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';

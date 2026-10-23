@@ -464,19 +464,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     for (const record of searchFilteredRecords) {
       const value = record[groupCol.key];
       let stackName = 'Uncategorized'; // Default for null/undefined values
+      const stringValue = extractDisplayValue(value);
 
-      if (value !== null && value !== undefined && value !== '') {
-        const stringValue = extractDisplayValue(value);
-        // Only use the value if it exists in field options, otherwise use Uncategorized
-        if (stringValue && fieldOptionsSet.has(stringValue)) {
-          stackName = stringValue;
-        }
-        // If not found in options, stackName remains 'Uncategorized' (already set above)
+      // Only use the value if it exists in field options, otherwise use Uncategorized
+      if (value !== null && value !== undefined && value !== '' && stringValue && fieldOptionsSet.has(stringValue)) {
+        stackName = stringValue;
       }
 
-      if (!stackMap.has(stackName)) {
-        stackMap.set(stackName, []);
-      }
+      const stackCards = stackMap.get(stackName) ?? [];
+      stackMap.set(stackName, stackCards);
 
       // PERFORMANCE: Only normalize if record doesn't already have _meta
       const normalizedRecord = record._meta
@@ -493,7 +489,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           title: titleColumn ? getRecordLabel(record, titleColumn) : ''
         };
 
-      stackMap.get(stackName)!.push(normalizedRecord);
+      stackCards.push(normalizedRecord);
     }
 
     // Get custom stack order from view config (for drag & drop reordering)
