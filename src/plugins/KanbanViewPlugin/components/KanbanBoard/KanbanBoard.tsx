@@ -306,7 +306,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Extract actions with proper defaults
   const {
     deleteCard: onDeleteCard = async () => { },
-    duplicateCard: onDuplicateCard = async () => '',
     updateFieldOptions: onUpdateFieldOptions = async () => { },
     changeGroupByColumn: onChangeGroupByColumn = async () => { },
     updateViewConfig: onUpdateView = async () => { }
@@ -1134,7 +1133,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           submitLabel="Update record"
           onSuccess={handleEditSuccess}
           onDelete={isReadOnly ? undefined : handleDeleteRecordFromModal}
-          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
           onPrevious={showPreviousCard}
           onNext={showNextCard}

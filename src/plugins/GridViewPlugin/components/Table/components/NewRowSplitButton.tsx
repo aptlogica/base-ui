@@ -85,7 +85,7 @@ export const NewRowSplitButton: React.FC<NewRowSplitButtonProps> = ({ onAddGridR
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
-          <ChevronUp className="w-4 h-4" />
+          <ChevronUp className={`w-4 h-4 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 

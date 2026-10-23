@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, CirclePlus, MoreVertical, Copy } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, CirclePlus } from 'lucide-react';
 import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldRenderer';
 import { useUpsertRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
@@ -20,8 +20,6 @@ import {
     FieldRow,
     HiddenFieldsToggle,
     KeyAwareField,
-    RecordMenuButton,
-    RecordMenuPanel,
     RecordTitle,
     getAttachmentProps,
     getLinksProps,
@@ -30,7 +28,6 @@ import {
     isLinksField,
     isSystemField,
     normalizeLinksFieldValue,
-    useCloseOnOutsideClick,
 } from './RecordModalParts';
 
 type CreateRecordModalProps = {
@@ -72,12 +69,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     const [rowData, setRowData] = useState<Record<string, any>>({});
     const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
     const [initialRowData, setInitialRowData] = useState<Record<string, any>>({});
-    const [menuOpen, setMenuOpen] = useState(false);
     const [hasTyped, setHasTyped] = useState(false);
     const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    useCloseOnOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
     // Get base_id from table (could be table.base_id or table.model.base_id)
     const baseId = table?.base_id || table?.model?.base_id;
@@ -132,12 +125,18 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         setFormError(null);
         setSubmitting(false);
         setCreatedRecordId(null); // Reset created record ID
-        setMenuOpen(false);
         setHasTyped(false);
         setShowUnsavedPrompt(false);
     }, [isOpen, fields, JSON.stringify(initialValues)]);
 
-    const handleFieldChange = (field: any, value: unknown) => {
+    // Emptying a text input again means the typed text is gone, so it no longer counts as a change
+    const handleInput = (e: React.FormEvent<HTMLElement>) => {
+        const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+        const isTextEntry = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+        setHasTyped(isTextEntry ? target.value !== '' : true);
+    };
+
+    const handleFieldChange =(field: any, value: unknown) => {
         setRowData(prev => ({ ...prev, [field.id]: value }));
     };
 
@@ -317,8 +316,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         }
     };
 
-    // keepOpen (Duplicate record) saves the record and leaves the form filled in, ready to save a copy
-    const handleSave = async ({ keepOpen = false }: { keepOpen?: boolean } = {}) => {
+    const handleSave = async () => {
         // Check permission before saving
         if (!canCreateRecord()) {
             setFormError('You do not have permission to create records.');
@@ -354,10 +352,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             setSubmitting(false);
             toast.success('Record created successfully');
             onSuccess?.({ recordId });
-            if (keepOpen) {
-                setCreatedRecordId(null);
-                return;
-            }
             onClose();
         } catch (err) {
             console.error('Failed to create record', err);
@@ -449,28 +443,6 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                                     {submitLabel}
                                 </button>
                             )}
-                            {canCreateRecord() && (
-                                <div className="relative" ref={menuRef}>
-                                    <RecordMenuButton onToggle={() => setMenuOpen(v => !v)} icon={<MoreVertical className="w-5 h-5 text-gray-500" />} />
-                                    {menuOpen && (
-                                        <RecordMenuPanel>
-                                            <button
-                                                type="button"
-                                                disabled={isSaveDisabled}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setMenuOpen(false);
-                                                    void handleSave({ keepOpen: true });
-                                                }}
-                                            >
-                                                <Copy className="w-4 h-4" /> Duplicate record
-                                            </button>
-                                        </RecordMenuPanel>
-                                    )}
-                                </div>
-                            )}
                             <button
                                 type="button"
                                 className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
@@ -482,7 +454,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     </div>
 
                     {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
                         <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
                             <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
 
@@ -527,7 +499,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                 </div>
 
                 {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
+                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
                     <div className="p-6">
                         {/* Visible fields */}
                         <div className="space-y-4">
