@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordTitleColumn } from '../../../utils/recordLabel';
 import { isTruthyValue } from '../../shared/tooltipTextUtils';
 import { formatTooltipValue } from '../../shared/tooltipValueUtils';
 import { toBulletLines } from '../../shared/tooltipLineUtils';
@@ -33,8 +34,9 @@ const isHiddenField = (col: Column, options: BuildEventTooltipOptions) => {
   return !!fc?.isHidden;
 };
 
-const isSystemOrTitleField = (key: string, col: Column) =>
-  key.toLowerCase() === 'title' || !!col?.system;
+// The event heading already shows the title column (the first text column), so it is not repeated as a field
+const isSystemOrTitleField = (col: Column, titleKey: string) =>
+  !!col?.system || (titleKey !== '' && getColumnKey(col) === titleKey);
 
 const isCategoryLikeField = (key: string) => {
   const lower = key.toLowerCase();
@@ -108,12 +110,14 @@ const getVisibleFields = (args: {
 }) => {
   const { columns, event, options } = args;
   const visibleFields: Array<{ col: Column; value: string; priority: number }> = [];
+  const titleColumn = getRecordTitleColumn((columns || []).map(col => ({ ...col, column_name: getColumnKey(col) })));
+  const titleKey = titleColumn?.column_name ?? '';
 
   (columns || []).forEach(col => {
     const key = getColumnKey(col);
     if (!key) return;
     if (isHiddenField(col, options)) return;
-    if (isSystemOrTitleField(key, col)) return;
+    if (isSystemOrTitleField(col, titleKey)) return;
     if (isCategoryLikeField(key)) return;
 
     const raw = event?.data?.[key] ?? event?.[key];

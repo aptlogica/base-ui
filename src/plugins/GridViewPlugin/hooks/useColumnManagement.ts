@@ -31,6 +31,8 @@ interface PendingEditColumnChanges {
   description?: string;
   uidt?: string;
   meta?: any;
+  // UUID field turned to auto-generated: fill the records that have no value yet
+  backfill?: boolean;
 }
 
 export function useColumnManagement({
@@ -239,6 +241,9 @@ export function useColumnManagement({
       changes.meta = newCol.meta || {};
     } else if (JSON.stringify(editColumn.meta ?? {}) !== JSON.stringify(newCol.meta ?? {})) {
       changes.meta = newCol.meta;
+    }
+    if (changes.meta && typeof newCol.backfill === 'boolean') {
+      changes.backfill = newCol.backfill;
     }
 
     return { changes, uidtChanged };

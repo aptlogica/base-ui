@@ -31,7 +31,8 @@ import {
   LinksField,
   Formula,
   Lookup,
-  NumberField
+  NumberField,
+  UUIDField
 } from '../../../components/common/Fields';
 import { normalizeFieldType } from '../../../utils/fieldType';
 import { utcISOToZoned } from '../../../utils/dateUtils';
@@ -454,6 +455,19 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       />
     );
 
+    // Auto UUID fields stay read-only whatever allowEdit says; UUIDField reads the mode from the config
+    const renderUuid = () => (
+      <UUIDField
+        value={value ?? null}
+        onChange={isSystemField ? () => { } : onChange}
+        disabled={isSystemField}
+        config={parsedConfig}
+        allowEdit={true}
+        readOnly={!allowEdit}
+        isBorder={isBorder}
+      />
+    );
+
     const renderDefault = () => (
       <SingleLineText {...commonProps} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
     );
@@ -487,6 +501,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       attachment: renderAttachment,
       lookup: renderLookup,
       formula: renderFormula,
+      uuid: renderUuid,
     };
 
     return (renderers[fieldType] || renderDefault)();

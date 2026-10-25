@@ -40,7 +40,6 @@ export function renderBasicConfigStep(props: any) {
 
   switch (selectedType?.key) {
     case 'text':
-    case 'uuid':
       return (
         <>
           <div className="mb-3 space-y-2 " >

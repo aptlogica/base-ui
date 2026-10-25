@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useState } from 'react';
 import { GripVertical, Trash, ChevronDown, ChevronUp, SquarePen } from 'lucide-react';
 import FieldRenderer from '../shared/FieldRenderer';
@@ -209,9 +210,11 @@ const getFieldRendererProps = (
   }
 
   if (baseProps.type === 'longText') {
-    // Form View edits long text in place (rich text editor or plain textarea, per the field config)
+    // Form View edits long text in place (rich text editor or plain textarea, per the field config).
+    // Rich text is on by default here unless the field explicitly disables it.
     return {
       ...baseProps,
+      config: { ...baseProps.config, richText: baseProps.config.richText ?? true },
       inline: true
     };
   }
@@ -337,7 +340,7 @@ const FieldContent: React.FC<{
   isSubmitting?: boolean;
 }> = ({ field, appearance = {}, fieldRendererProps, onChange, isReadOnly, isSubmitting = false }) => {
   const labelPosition = appearance?.labelPosition === 'left' ? 'flex-row items-center' : 'flex-col';
-  const isSystemField = field.isSystem && field.column_name !== 'title' && field.title?.toLowerCase() !== 'title';
+  const isSystemField = field.isSystem && !isLegacyTitleColumn(field);
   
   return (
     <>

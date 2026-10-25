@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import type { Column } from '../../../types/api.types';
 
 // Field types that can't be part of a key, by lower-cased uidt
@@ -20,13 +21,13 @@ const BLOCKED_TYPES: Record<string, string> = {
 };
 
 // Why a column can't be part of a key, or null when it can.
-// Title is a system column but allowed: links and lookups show it. Computed fields are
+// The Title of a table created before Title became an ordinary column is a system column but allowed. Computed fields are
 // recognised by type, not by the virtual flag, which the server also sets on columns made with a table.
 export const columnBlockReason = (column: Column): string | null => {
   if (column.column_name === 'id') return 'Already unique';
   const blocked = BLOCKED_TYPES[(column.uidt || '').toLowerCase()];
   if (blocked) return `${blocked} can't be part of a key`;
-  if (column.system && column.column_name !== 'title') return "System fields can't be part of a key";
+  if (column.system && !isLegacyTitleColumn(column)) return "System fields can't be part of a key";
   return null;
 };
 

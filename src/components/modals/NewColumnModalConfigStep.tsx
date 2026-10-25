@@ -21,6 +21,7 @@ import { renderBasicConfigStep } from './NewColumnModalConfigStep.basic';
 import { renderDateTimeConfigStep } from './NewColumnModalConfigStep.dateTime';
 import { renderContactConfigStep } from './NewColumnModalConfigStep.contact';
 import { renderRelationsConfigStep } from './NewColumnModalConfigStep.relations';
+import { renderUuidConfigStep } from './NewColumnModalConfigStep.uuid';
 
 export { renderDescriptionToggle };
 
@@ -1181,7 +1182,11 @@ export function renderNewColumnConfigStep(props: any) {
     isLinksFieldEditing,
   } = props;
   // Self-link props for the links field config.
-  const { inverseTitle, setInverseTitle, isSelfLink, currentTableId } = props;
+  const {
+    inverseTitle, setInverseTitle, isSelfLink, currentTableId,
+    displayColumnId, setDisplayColumnId, displayColumnOptions,
+    isLinkTargetLoading,
+  } = props;
   const handleJsonChange = (value: any) => {
     const stringify = JSON.stringify(value, null, 2);
     setDefaultValue(stringify);
@@ -1222,6 +1227,9 @@ export function renderNewColumnConfigStep(props: any) {
 
   // Config step for each type
   function renderConfigStep() {
+    // UUID field settings read their own state (mode, version, backfill) from the props
+    const uuidConfig = renderUuidConfigStep(props);
+    if (uuidConfig) return uuidConfig;
     const basicConfig = renderBasicConfigStep({
       selectedType,
       defaultValue,
@@ -1304,6 +1312,10 @@ export function renderNewColumnConfigStep(props: any) {
       setSelectedTable,
       inverseTitle,
       setInverseTitle,
+      displayColumnId,
+      setDisplayColumnId,
+      displayColumnOptions,
+      isLinkTargetLoading,
       isSelfLink,
       currentTableId,
       showDescription,

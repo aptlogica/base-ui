@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
 import { parseFieldConfig } from '../../../utils/pluginUtils';
@@ -96,8 +97,8 @@ export function useTableViewConfig({
         .map((c, idx) => ({
           id: c.id,
           position: idx,
-          // Hide system fields by default, except Title field
-          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title' ? true : !!(c.hidden || c.isHidden)
+          // Hide system fields by default, except the Title of an older table
+          isHidden: c.isSystem && !isLegacyTitleColumn(c) ? true : !!(c.hidden || c.isHidden)
         }));
 
     setLocalFieldConfig(prev => (JSON.stringify(prev) === JSON.stringify(currentFieldConfig) ? prev : currentFieldConfig));
@@ -273,8 +274,8 @@ export function useTableViewConfig({
         ...missingColumns.map((c, idx) => ({
           id: c.id,
           position: maxPosition + 1 + idx,
-          // Hide system fields by default, except Title field
-          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title'
+          // Hide system fields by default, except the Title of an older table
+          isHidden: c.isSystem && !isLegacyTitleColumn(c)
         }))
       ];
 
@@ -296,7 +297,7 @@ export function useTableViewConfig({
   }, [baseMeta, effectiveViewId, columns, updateViewMutation]);
 
   // Toggle field visibility in this view and persist to view meta
-  const handleFieldToggle = useCallback(async (fieldId: string) => {
+  const handleFieldToggle = useCallback((fieldId: string) => {
     // Use functional update to avoid dependency on localFieldConfig
     setLocalFieldConfig(prevConfig => {
       const updatedFieldConfig = prevConfig.map((fc: any) => {
@@ -307,7 +308,7 @@ export function useTableViewConfig({
       });
 
       // Debounced API call - will only execute after 500ms of no more toggles
-      debouncedUpdateFieldConfig(updatedFieldConfig);
+      void debouncedUpdateFieldConfig(updatedFieldConfig);
 
       return updatedFieldConfig;
     });

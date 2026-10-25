@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 export type FieldRendererType =
-  | 'number' | 'boolean' | 'multiSelect' | 'select' | 'longText' | 'attachment' | 'text' | 'decimal' | 'year' | 'time' | 'datetime' | 'currency' | 'percent' | 'duration' | 'date' | 'email' | 'phoneNumber' | 'url' | 'rating' | 'user' | 'button' | 'json' | 'links' | 'createdTime' | 'lastModifiedTime' | 'createdBy' | 'lastModifiedBy' | 'formula' | 'lookup';
+  | 'number' | 'boolean' | 'multiSelect' | 'select' | 'longText' | 'attachment' | 'text' | 'decimal' | 'year' | 'time' | 'datetime' | 'currency' | 'percent' | 'duration' | 'date' | 'email' | 'phoneNumber' | 'url' | 'rating' | 'user' | 'button' | 'json' | 'links' | 'createdTime' | 'lastModifiedTime' | 'createdBy' | 'lastModifiedBy' | 'formula' | 'lookup' | 'uuid';
 
 const fieldTypeMap: Record<string, FieldRendererType> = {
   text: 'text',
@@ -34,7 +34,7 @@ const fieldTypeMap: Record<string, FieldRendererType> = {
   lastmodifiedtime: 'lastModifiedTime',
   createdby: 'createdBy',
   lastmodifiedby: 'lastModifiedBy',
-  uuid: 'text',
+  uuid: 'uuid',
   links: 'links',
   lookup: 'lookup',
   formula: 'formula',

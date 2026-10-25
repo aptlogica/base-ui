@@ -88,6 +88,20 @@ describe('NewColumnModal.logic', () => {
     expect(result.error).toBe('Target table is required for relation fields');
   });
 
+  it('sends the chosen display column, or an empty id to use the first text column', () => {
+    const target = { ...linksParams, selectedTableId: 't2', selectedTable: { id: 't2' }, currentTableId: 't1' };
+
+    const chosen = buildFieldMeta({ ...target, displayColumnId: 'col-b' });
+    expect(chosen.meta.display_column_id).toBe('col-b');
+    // the field in the linked table is not configured here: the server gives it the first text column
+    expect(chosen.meta.relation).toEqual({ with: 't2', type: 'one-to-one' });
+
+    expect(buildFieldMeta({ ...target }).meta.display_column_id).toBe('');
+
+    const selfLink = buildFieldMeta({ ...target, selectedTableId: 't1', selectedTable: { id: 't1' }, displayColumnId: 'col-a' });
+    expect(selfLink.meta.display_column_id).toBe('col-a');
+  });
+
   it('sets a trimmed inverse title only when linking to another table', () => {
     const target = { ...linksParams, selectedTableId: 't2', selectedTable: { id: 't2' }, currentTableId: 't1' };
 
@@ -176,7 +190,39 @@ describe('NewColumnModal.logic', () => {
     });
 
     expect(payload.name).toBe('Links 1');
-    expect(payload.meta).toEqual({ relation: { with: 'abc', type: 'one-to-one' } });
+    // the relation of an existing link can't change, and no display column was chosen
+    expect(payload.meta).toEqual({ relation: { with: 'abc', type: 'one-to-one' }, display_column_id: '' });
+  });
+
+  it('lets an existing link change its display column and nothing else in meta', () => {
+    const payload = buildColumnPayload({
+      fieldName: 'Orders',
+      selectedTypeKey: 'links',
+      description: '',
+      fields: [],
+      initialValues: { meta: { relation: { with: 'abc', type: 'one-to-one' }, relation_id: 'r1', entity_role: 'source', display_column_id: 'old' } },
+      meta: { relation: { with: 'xyz', type: 'has-many' }, display_column_id: 'new' },
+    });
+
+    expect(payload.meta).toEqual({
+      relation: { with: 'abc', type: 'one-to-one' },
+      relation_id: 'r1',
+      entity_role: 'source',
+      display_column_id: 'new',
+    });
+  });
+
+  it('clears the display column of an existing link when none is chosen', () => {
+    const payload = buildColumnPayload({
+      fieldName: 'Orders',
+      selectedTypeKey: 'links',
+      description: '',
+      fields: [],
+      initialValues: { meta: { relation: { with: 'abc', type: 'one-to-one' }, display_column_id: 'old' } },
+      meta: { relation: { with: 'abc', type: 'one-to-one' }, display_column_id: '' },
+    });
+
+    expect(payload.meta.display_column_id).toBe('');
   });
 
   it('formats title case and increments names with existing numbered suffixes', () => {
