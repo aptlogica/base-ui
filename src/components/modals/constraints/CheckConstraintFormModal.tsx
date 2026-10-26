@@ -11,7 +11,7 @@ import { useToast } from '../../common/Toast';
 import type { CheckExample, FieldKind, ValueSpec } from './checkCategories';
 import type { TableConstraint } from '../../../service/clientService';
 import type { Column } from '../../../types/api.types';
-import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, examplesFor, fieldKind, savedCategoryKey } from './checkCategories';
+import { CHECK_CATEGORIES, CUSTOM_CATEGORY, categoryByKey, examplesFor, fieldKind, savedCategoryKey, suitsCategory } from './checkCategories';
 import {
   buildCondition, checkConstraintName, displayName, checkableColumns, insertColumn, matchExample, parseCheckStatement, previewSql, toColumnNames, toTitles, valueSql,
 } from './checkSql';
@@ -120,9 +120,14 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
 
   const selected = categoryByKey(category);
   const isCustom = selected.key === CUSTOM_CATEGORY;
-  // Fields that suit the category first
-  const suits = (column: Column) => Number(selected.suits.includes(fieldKind(column.uidt)));
-  const fieldOptions = [...usable].sort((a, b) => suits(b) - suits(a));
+  // Only fields the category has conditions for; an already chosen field stays so it can be changed
+  const optionsFor = (index: number) => usable.filter(c => {
+    if (fieldIds.includes(c.id)) return true;
+    if (!suitsCategory(selected, c.uidt)) return false;
+    // Comparing needs the same kind on both sides
+    const first = usable.find(f => f.id === fieldIds[0]);
+    return !(selected.fields === 2 && index === 1 && first && fieldKind(first.uidt) !== fieldKind(c.uidt));
+  });
   const columnName = (id: string) => usable.find(c => c.id === id)?.column_name;
   const firstFieldKind = fieldKind(usable.find(c => c.id === fieldIds[0])?.uidt);
 
@@ -271,7 +276,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
       <p className={labelClass}>{label}</p>
       <AdvancedDropdown
         id={`check-field-${index}`}
-        options={fieldOptions.map(c => ({ label: c.title, value: c.id, icon: getFieldTypeIconComponent(c.uidt) }))}
+        options={optionsFor(index).map(c => ({ label: c.title, value: c.id, icon: getFieldTypeIconComponent(c.uidt) }))}
         value={fieldIds[index] || undefined}
         onChange={value => chooseField(index, String(value))}
         placeholder="Select a field"
