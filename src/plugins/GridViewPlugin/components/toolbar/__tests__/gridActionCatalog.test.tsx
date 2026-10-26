@@ -80,12 +80,12 @@ describe('gridActionCatalog', () => {
     expect(String(el.props.className)).toContain('foo');
   });
 
-  it('GRID_ACTION_GROUPS groups contain correct actions and hide fuzzy_deduplication', () => {
+  it('GRID_ACTION_GROUPS groups contain correct actions including fuzzy_deduplication', () => {
     const cleanIds = GRID_ACTION_GROUPS.clean.map(a => a.id);
     expect(cleanIds).toContain('remove_duplicates');
     expect(cleanIds).toContain('remove_extra_spaces');
     expect(cleanIds).toContain('remove_special_characters');
-    expect(cleanIds).not.toContain('fuzzy_deduplication');
+    expect(cleanIds).toContain('fuzzy_deduplication');
 
     const transformIds = GRID_ACTION_GROUPS.transform.map(a => a.id);
     expect(transformIds).toContain('split_column');
