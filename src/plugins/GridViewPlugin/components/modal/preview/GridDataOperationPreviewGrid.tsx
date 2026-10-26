@@ -164,10 +164,11 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
     return groupedDuplicates.slice(start, start + GROUPS_PAGE_SIZE);
   }, [groupedDuplicates, page]);
 
-  const startRow = preview.previewRows.length === 0 ? 0 : page * (isFuzzy ? GROUPS_PAGE_SIZE : PAGE_SIZE) + 1;
+  const pageSize = isFuzzy ? GROUPS_PAGE_SIZE : PAGE_SIZE;
+  const startRow = preview.previewRows.length === 0 ? 0 : page * pageSize + 1;
   const endRow = Math.min(
     preview.previewRows.length,
-    (page + 1) * (isFuzzy ? GROUPS_PAGE_SIZE : PAGE_SIZE)
+    (page + 1) * pageSize
   );
   const canGoPrevious = page > 0;
   const canGoNext = page < totalPages - 1;
@@ -339,7 +340,8 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
               </div>
             );
           })
-        ) : previewRows ? (
+        ) : null}
+        {!(isFuzzy && displayedGroups) && previewRows ? (
           <table className="min-w-full table-fixed text-sm">
             <thead className="sticky top-0 z-10 bg-background">
               <tr>

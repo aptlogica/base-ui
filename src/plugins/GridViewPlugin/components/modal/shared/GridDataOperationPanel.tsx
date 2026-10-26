@@ -36,14 +36,13 @@ import { SplitColumnPanel } from '../panels/SplitColumnPanel';
 import { MergeColumnPanel } from '../panels/MergeColumnPanel';
 import { ExtractSubstringPanel } from '../panels/ExtractSubstring';
 import { FuzzyDuplicationPanel } from '../panels/FuzzyDuplicationPanel';
-import { filterGridDataOperationColumns, getGridColumnIdentity } from './gridColumnIdentity';
+import { filterGridDataOperationColumnsForAction, getGridColumnIdentity } from './gridColumnIdentity';
 
 interface GridDataOperationPanelProps {
   action: GridActionDefinition;
   columns: GridColumn[];
   state: GridDataOperationState;
   onStateChange: (patch: Partial<GridDataOperationState>) => void;
-  preview?: any;
 }
 
 export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
@@ -55,8 +54,8 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
 }) => {
   const { scope, selectedColumnIds, caseFormat, spaceMode, matchingCase, charRemovalMode, customChar } = state;
   const columnOptions = useMemo(
-    () => filterGridDataOperationColumns(columns),
-    [columns]
+    () => filterGridDataOperationColumnsForAction(columns, action.id),
+    [action.id, columns]
   );
 
   const suggestMergeColumnTitle = (columnIds: string[]) => {
@@ -359,7 +358,7 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
       case 'fuzzy_deduplication':
         return (
           <FuzzyDuplicationPanel
-            columns={columns}
+            columns={columnOptions}
             selectedColumnIds={selectedColumnIds}
             onToggleColumn={toggleColumn}
             onToggleAllColumns={toggleAllColumns}
@@ -369,8 +368,6 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
             onDuplicateKeepRuleChange={(val) => onStateChange({ duplicateKeepRule: val })}
             duplicateAction={state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row'}
             onDuplicateActionChange={(val) => onStateChange({ duplicateAction: val })}
-            duplicatesCount={preview ? preview.changedRowIds.length : 0}
-            rowsAffected={preview ? preview.affectedRows : 0}
             deduplicationMode={state.deduplicationMode}
             onDeduplicationModeChange={(val) => onStateChange({ deduplicationMode: val })}
           />

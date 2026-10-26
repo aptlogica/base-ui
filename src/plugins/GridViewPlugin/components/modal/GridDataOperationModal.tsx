@@ -13,21 +13,21 @@ import { GridDataOperationPanel } from './shared/GridDataOperationPanel';
 import { GridDataOperationPreviewGrid } from './preview/GridDataOperationPreviewGrid';
 import { getGridDataOperationAdapter } from './shared/gridDataOperationRegistry';
 import type { GridDataOperationApplyPlan, GridDataOperationPreviewResult, GridDataOperationState, GridExtractMethod, GridExtractType, GridScanProgress } from './shared/gridDataOperation.types';
-import { filterGridDataOperationColumns, getGridColumnIdentity } from './shared/gridColumnIdentity';
+import { filterGridDataOperationColumnsForAction, getGridColumnIdentity } from './shared/gridColumnIdentity';
 import { useToast } from '../../../../components/common/Toast';
 import { bulkUpdateFieldService } from '../../../../service/clientService';
 import { useCaseNormalize, useFindReplace, useMergeColumns, useRemoveDuplicates, useTrimWhitespace, useRemoveSpecialCharacters, useExtractSubstring, useRemoveFormatting, useSplitColumn, useFuzzyDeduplication } from '../../../../hooks/useApi';
 
 const DEFAULT_SELECTED_COUNT = 1;
 
-const buildInitialSelectedColumns = (columns: GridColumn[]) =>
-  filterGridDataOperationColumns(columns)
+const buildInitialSelectedColumns = (columns: GridColumn[], actionId?: GridActionId) =>
+  filterGridDataOperationColumnsForAction(columns, actionId)
     .slice(0, DEFAULT_SELECTED_COUNT)
     .map((column) => getGridColumnIdentity(column));
 
-const buildInitialState = (columns: GridColumn[], _actionId?: GridActionId): GridDataOperationState => ({
+const buildInitialState = (columns: GridColumn[], actionId?: GridActionId): GridDataOperationState => ({
   scope: 'all',
-  selectedColumnIds: buildInitialSelectedColumns(columns),
+  selectedColumnIds: buildInitialSelectedColumns(columns, actionId),
   caseFormat: 'title_case',
   spaceMode: 'both',
   formatting: 'currency',
@@ -720,6 +720,13 @@ interface GridDataOperationModalProps {
   onClose: () => void;
 }
 
+const getDefaultRowAction = (rowState: string | undefined) => {
+  if (rowState === 'removed') return 'delete';
+  if (rowState === 'changed') return 'clear';
+  return 'keep';
+};
+
+
 export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
   isOpen,
   action,
@@ -989,6 +996,9 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
     }
   };
 
+  const showPreviewLoading = isPreviewLoading && action?.id !== 'fuzzy_deduplication';
+  const hasPreviewContent = Boolean(preview || (action?.id === 'fuzzy_deduplication' && scanProgress));
+
   return createPortal(
     <div className="fixed inset-0 z-[10040] flex items-center justify-center p-4">
       <button
@@ -1022,12 +1032,13 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
 
         <div className="grid flex-1 min-h-0 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1.8fr)_440px]">
           <div className="min-h-0 overflow-hidden border-r bg-muted/20 p-6">
-            {isPreviewLoading && action?.id !== 'fuzzy_deduplication' ? (
+            {showPreviewLoading ? (
               <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/70 bg-background/60 px-6 text-center text-sm text-secondary">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                 Calculating preview...
               </div>
-            ) : preview || (action?.id === 'fuzzy_deduplication' && scanProgress) ? (
+            ) : null}
+            {!showPreviewLoading && hasPreviewContent ? (
               <GridDataOperationPreviewGrid
                 columns={previewColumns}
                 preview={
@@ -1047,14 +1058,14 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
                 scanProgress={scanProgress}
                 onRowAction={action?.id === 'fuzzy_deduplication' ? (rowId, rowAction) => {
                   setState((prev) => {
-                    const newOverrides = { ...(prev.rowActions ?? {}) };
+                    const newOverrides = { ...prev.rowActions };
                     if (rowAction === 'delete' || rowAction === 'clear') {
                       const targetRow = preview?.previewRows?.find((r) => String(r.id) === String(rowId));
-                      if (targetRow && targetRow.groupId) {
+                      if (targetRow?.groupId) {
                         const groupRows = preview?.previewRows?.filter((r) => r.groupId === targetRow.groupId) ?? [];
                         const otherRows = groupRows.filter((r) => String(r.id) !== String(rowId));
                         const allOtherActioned = otherRows.every((r) => {
-                          const act = newOverrides[r.id] || (r.rowState === 'removed' ? 'delete' : r.rowState === 'changed' ? 'clear' : 'keep');
+                          const act = newOverrides[r.id] || getDefaultRowAction(r.rowState);
                           return act === 'delete' || act === 'clear';
                         });
                         if (allOtherActioned && otherRows.length > 0) {
@@ -1070,11 +1081,12 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
                   });
                 } : undefined}
               />
-            ) : (
+            ) : null}
+            {!showPreviewLoading && !hasPreviewContent ? (
               <div className="flex h-full items-center justify-center rounded-2xl border-2 border-dashed border-border/70 bg-background/60 px-6 text-center text-sm text-secondary">
                 Preview will appear here once the data is ready.
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="flex min-h-0 flex-col overflow-hidden bg-gray-50 dark:bg-background">
@@ -1083,7 +1095,6 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
               columns={columns}
               state={state}
               onStateChange={handleStateChange}
-              preview={preview}
             />
 
             <div className="border-t bg-card px-5 py-4">
@@ -1099,7 +1110,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
                   type="button"
                   onClick={handleApply}
                   disabled={isApplying || !applyPlan || Boolean(mergeValidationError)}
-                  className="flex-1 rounded-xl btn-primary px-4 py-2.5 text-sm font-medium"
+                  className="flex-1 rounded-xl btn-primary px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isApplying ? 'Applying...' : 'Apply'}
                 </button>

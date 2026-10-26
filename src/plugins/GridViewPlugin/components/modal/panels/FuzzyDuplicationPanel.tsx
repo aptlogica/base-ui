@@ -1,57 +1,32 @@
+
 // Copyright (c) 2026 Aptlogica Technologies Private Limited
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
-import { Info } from 'lucide-react';
 import type { GridColumn } from '../../../types/grid.types';
 import type { GridDuplicateKeepRule } from '../shared/gridDataOperation.types';
 import { ColumnSelectionSection } from '../shared/ColumnSelectionSection';
 import { Dropdown } from '../../shared';
-import AdvancedDropdown from '../../../../../components/common/dropdown/AdvancedDropdown';
 
-type MatchingMethod = 'similar' | 'phonetic' | 'ignore';
-
+type FuzzySensitivity = 'low' | 'medium' | 'high';
 
 interface FuzzyDuplicationPanelProps {
     columns: GridColumn[];
     selectedColumnIds: string[];
     onToggleColumn: (columnId: string) => void;
     onToggleAllColumns: () => void;
-    fuzzySensitivity: 'low' | 'medium' | 'high';
-    onFuzzySensitivityChange: (value: 'low' | 'medium' | 'high') => void;
+    fuzzySensitivity: FuzzySensitivity;
+    onFuzzySensitivityChange: (value: FuzzySensitivity) => void;
     duplicateKeepRule: GridDuplicateKeepRule;
     onDuplicateKeepRuleChange: (value: GridDuplicateKeepRule) => void;
     duplicateAction: 'remove_row' | 'remove_duplicates';
     onDuplicateActionChange: (value: 'remove_row' | 'remove_duplicates') => void;
-    duplicatesCount: number;
-    rowsAffected: number;
     deduplicationMode?: 'automatic' | 'manual';
     onDeduplicationModeChange?: (value: 'automatic' | 'manual') => void;
 }
-const MATCHING_METHOD_OPTIONS: Array<{
-    value: MatchingMethod;
-    label: string;
-    description: string;
-}> = [
-        {
-            value: 'similar',
-            label: 'Similar text',
-            description: 'Match similar spellings',
-        },
-        {
-            value: 'phonetic',
-            label: 'Phonetic match',
-            description: 'Match similar sounding values',
-        },
-        {
-            value: 'ignore',
-            label: 'Ignore formatting',
-            description: 'Ignore spaces and formatting',
-        },
-    ];
 const MATCH_SENSITIVITY_OPTIONS: Array<{
-    value: 'low' | 'medium' | 'high';
+    value: FuzzySensitivity;
     label: string;
     description: string;
 }> = [
@@ -90,7 +65,7 @@ const DUPLICATE_ACTION_OPTIONS: Array<{
     ];
 
 const KEEP_RULE_OPTIONS: Array<{
-    value: 'keep_first' | 'keep_last' | 'keep_latest_updated' | 'keep_highest' | 'keep_lowest';
+    value: 'keep_first' | 'keep_last' | 'keep_latest_updated';
     label: string;
     description: string;
 }> = [
@@ -108,16 +83,6 @@ const KEEP_RULE_OPTIONS: Array<{
             value: 'keep_latest_updated',
             label: 'Keep last updated record',
             description: 'Keep the record with the most recent updated time.'
-        },
-        {
-            value: 'keep_highest',
-            label: 'Keep highest value',
-            description: 'Keep the record with the highest value.'
-        },
-        {
-            value: 'keep_lowest',
-            label: 'Keep lowest value',
-            description: 'Keep the record with the lowest value.'
         }
     ];
 
@@ -132,8 +97,6 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
     onDuplicateKeepRuleChange,
     duplicateAction,
     onDuplicateActionChange,
-    duplicatesCount,
-    rowsAffected,
     deduplicationMode = 'automatic',
     onDeduplicationModeChange,
 }) => {
@@ -187,14 +150,13 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                     <div>
                         <h3 className="text-sm font-semibold text-primary">Matching Method</h3>
                         <p className="text-sm text-secondary">
-                            Choose the method used to find similar values.
+                            The method used to find similar values.
                         </p>
                     </div>
-                    <AdvancedDropdown
-                        options={MATCHING_METHOD_OPTIONS}
-                        value={MATCHING_METHOD_OPTIONS[0].value}
-                        onChange={(value) => console.log('Selected matching method:', value)}
-                    />
+                    <div className="rounded-xl border bg-card px-3 py-3">
+                        <span className="block text-sm font-medium text-foreground">Similar text</span>
+                        <span className="block text-sm text-secondary">Match similar spellings</span>
+                    </div>
                 </div>
                 <div className="space-y-2">
                     <div>

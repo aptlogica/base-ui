@@ -17,7 +17,7 @@ import type {
   GridTrimWhitespaceMode,
 } from './gridDataOperation.types';
 import type { GridActionId } from '../../toolbar/gridActionCatalog';
-import { getGridColumnIdentity, getGridColumnValueKey } from './gridColumnIdentity';
+import { getGridColumnIdentity, getGridColumnValueKey, isFuzzyDeduplicationSupportedColumn } from './gridColumnIdentity';
 
 const matchesSelectedColumn = (
   column: { id?: string; key?: string; column_name?: string; title?: string },
@@ -187,6 +187,7 @@ const buildFuzzyDeduplicationPlan = (
   preview: GridDataOperationPreviewResult,
 ): GridDataOperationApplyPlan | null => {
   const selectedColumns = context.columns
+    .filter(isFuzzyDeduplicationSupportedColumn)
     .filter((column) => context.state.selectedColumnIds.includes(getGridColumnIdentity(column)))
     .map((column) => getGridColumnIdentity(column))
     .filter(Boolean);
@@ -195,11 +196,12 @@ const buildFuzzyDeduplicationPlan = (
 
   const duplicateAction = context.state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row';
 
-  const keepRule = context.state.duplicateKeepRule === 'keep_last'
-    ? 'keep_last'
-    : context.state.duplicateKeepRule === 'keep_latest_updated'
-      ? 'keep_latest_updated'
-      : 'keep_first';
+  let keepRule: 'keep_first' | 'keep_last' | 'keep_latest_updated' = 'keep_first';
+  if (context.state.duplicateKeepRule === 'keep_last') {
+    keepRule = 'keep_last';
+  } else if (context.state.duplicateKeepRule === 'keep_latest_updated') {
+    keepRule = 'keep_latest_updated';
+  }
 
   const threshold = context.state.fuzzySensitivity || 'medium';
 
