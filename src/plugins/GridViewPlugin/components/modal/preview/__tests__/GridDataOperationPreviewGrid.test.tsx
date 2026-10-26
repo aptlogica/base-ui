@@ -191,3 +191,101 @@ describe('GridDataOperationPreviewGrid', () => {
     expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
   });
 });
+
+describe('GridDataOperationPreviewGrid fuzzy deduplication view', () => {
+  const columns = [makeColumn({ id: 'name', key: 'name', title: 'Name' })];
+  const groupRows = (g: string, n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...makePreviewRow({
+        id: `${g}-${i}`,
+        rowState: i === 0 ? 'kept' : 'removed',
+        values: { name: `${g}-${i}` },
+        original: { name: `${g}-${i}` },
+      }),
+      groupId: g,
+    }));
+  const makePreview = (overrides: Partial<any> = {}) =>
+    ({
+      actionId: 'fuzzy_deduplication',
+      totalRows: 10,
+      affectedRows: 3,
+      affectedCells: 3,
+      affectedColumns: 1,
+      duplicateAction: 'remove_row',
+      previewRows: [...groupRows('g1', 2), ...groupRows('g2', 2)],
+      ...overrides,
+    }) as any;
+
+  it('renders similarity groups with summary', () => {
+    render(<GridDataOperationPreviewGrid columns={columns} preview={makePreview()} />);
+    expect(screen.getByText('Similarity Group 1')).toBeInTheDocument();
+    expect(screen.getByText('Similarity Group 2')).toBeInTheDocument();
+    expect(screen.getByText(/2 similarity groups/)).toBeInTheDocument();
+    expect(screen.getAllByText('Kept').length).toBe(2);
+  });
+
+  it('fires row actions from the checkbox and buttons', async () => {
+    const onRowAction = vi.fn();
+    render(<GridDataOperationPreviewGrid columns={columns} preview={makePreview()} onRowAction={onRowAction} />);
+    const boxes = screen.getAllByRole('checkbox');
+
+    await userEvent.click(boxes[0]); // unchecked kept row -> delete
+    expect(onRowAction).toHaveBeenLastCalledWith('g1-0', 'delete');
+    await userEvent.click(boxes[1]); // checked removed row -> keep
+    expect(onRowAction).toHaveBeenLastCalledWith('g1-1', 'keep');
+
+    await userEvent.click(screen.getAllByText('Clear Cells')[0]);
+    expect(onRowAction).toHaveBeenLastCalledWith('g1-1', 'clear');
+    await userEvent.click(screen.getAllByText('Delete')[0]);
+    expect(onRowAction).toHaveBeenLastCalledWith('g1-1', 'delete');
+  });
+
+  it('uses clear when duplicateAction is remove_duplicates', async () => {
+    const onRowAction = vi.fn();
+    render(
+      <GridDataOperationPreviewGrid
+        columns={columns}
+        preview={makePreview({ duplicateAction: 'remove_duplicates' })}
+        onRowAction={onRowAction}
+      />,
+    );
+    await userEvent.click(screen.getAllByRole('checkbox')[0]);
+    expect(onRowAction).toHaveBeenCalledWith('g1-0', 'clear');
+  });
+
+  it('works without an onRowAction handler', async () => {
+    render(<GridDataOperationPreviewGrid columns={columns} preview={makePreview()} />);
+    await userEvent.click(screen.getAllByRole('checkbox')[0]);
+    await userEvent.click(screen.getAllByText('Delete')[0]);
+  });
+
+  it('shows scan progress and completion states', () => {
+    const { rerender } = render(
+      <GridDataOperationPreviewGrid
+        columns={columns}
+        preview={makePreview()}
+        scanProgress={{ scannedRows: 5, totalRows: 10, duplicatesDetected: 2 }}
+      />,
+    );
+    expect(screen.getByText(/Scanning rows/)).toBeInTheDocument();
+
+    rerender(
+      <GridDataOperationPreviewGrid
+        columns={columns}
+        preview={makePreview()}
+        scanProgress={{ scannedRows: 10, totalRows: 10, duplicatesDetected: 2 }}
+      />,
+    );
+    expect(screen.getByText(/Scanning complete/)).toBeInTheDocument();
+  });
+
+  it('paginates groups', async () => {
+    const rows = Array.from({ length: 7 }, (_, i) => groupRows(`g${i}`, 2)).flat();
+    render(<GridDataOperationPreviewGrid columns={columns} preview={makePreview({ previewRows: rows })} />);
+    expect(screen.queryByText('Similarity Group 6')).toBeNull();
+    const buttons = screen.getAllByRole('button');
+    const next = buttons.find((b) => b.querySelector('svg.lucide-chevron-right'));
+    await userEvent.click(next!);
+    expect(screen.getByText('Similarity Group 6')).toBeInTheDocument();
+  });
+});

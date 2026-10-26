@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { GridColumn } from '../../../../types/grid.types';
 import type {
@@ -9,6 +9,7 @@ import type {
 import {
   applyGridDataOperationToRecords,
   buildGridDataOperationPreview,
+  buildGridDataOperationPreviewAsync,
   mergeColumnValues,
   normalizeCaseValue,
   normalizeCustomFormattingPattern,
@@ -1384,3 +1385,57 @@ describe('fuzzy_deduplication preview', () => {
 
 
 
+
+describe('buildGridDataOperationPreviewAsync', () => {
+  const fuzzyContext = (records: Array<Record<string, unknown>>, overrides: Partial<GridDataOperationContext> = {}) =>
+    createContext({
+      actionId: 'fuzzy_deduplication',
+      tableData: createTableData(records),
+      state: createState({ selectedColumnIds: ['name'], fuzzySensitivity: 'medium' }),
+      ...overrides,
+    });
+
+  it('falls back to the sync preview for non-fuzzy actions or no selected columns', async () => {
+    const nonFuzzy = await buildGridDataOperationPreviewAsync(createContext());
+    expect(nonFuzzy.actionId).toBe('case_normalization');
+
+    const noSelection = await buildGridDataOperationPreviewAsync(
+      fuzzyContext([{ id: '1', name: 'a' }], { state: createState({ selectedColumnIds: [] }) }),
+    );
+    expect(noSelection.actionId).toBe('fuzzy_deduplication');
+  });
+
+  it('falls back when selected columns do not match any column', async () => {
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext([{ id: '1', name: 'a' }], { state: createState({ selectedColumnIds: ['missing'] }) }),
+    );
+    expect(result.actionId).toBe('fuzzy_deduplication');
+  });
+
+  it.each(['low', 'medium', 'high'] as const)('scans, reports progress and finds duplicates (%s)', async (sensitivity) => {
+    const onProgress = vi.fn();
+    const records = Array.from({ length: 20 }, (_, i) => ({ id: `r${i}`, name: i < 2 ? 'Jonathan Smith' : `Unique value ${'x'.repeat(i)}` }));
+    records.push({ id: 'e1', name: '' }, { id: 'e2', name: '' });
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext(records, {
+        onProgress,
+        state: createState({ selectedColumnIds: ['name'], fuzzySensitivity: sensitivity, duplicateKeepRule: 'keep_last' }),
+      } as Partial<GridDataOperationContext>),
+    );
+
+    expect(result.changedRowIds).toContain('r0');
+    expect(onProgress).toHaveBeenCalled();
+    expect(onProgress.mock.calls.at(-1)![0]).toMatchObject({ scannedRows: 22, totalRows: 22 });
+  });
+
+  it('serves repeated calls from the cache', async () => {
+    const records = [{ id: 'c1', name: 'cache me' }, { id: 'c2', name: 'cache me' }];
+    await buildGridDataOperationPreviewAsync(fuzzyContext(records));
+    const onProgress = vi.fn();
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext(records, { onProgress } as Partial<GridDataOperationContext>),
+    );
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(result.changedRowIds).toEqual(['c2']);
+  });
+});
