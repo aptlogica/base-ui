@@ -15,6 +15,8 @@ interface VirtualizedTableBodyProps {
   selectedRows: Set<string>;
   onRowSelect: (rowId: string, selected: boolean) => void;
   onCellChange: (rowId: string, columnKey: string, value: any) => void;
+  // Cells to show in red with the reason: rowId -> columnKey -> message
+  invalidCells?: Record<string, Record<string, string>>;
   onContextMenu: (e: React.MouseEvent, rowId: string) => void;
   activeCell: { rowId: string; colKey: string } | null;
   setActiveCell: React.Dispatch<React.SetStateAction<{ rowId: string; colKey: string } | null>>;
@@ -32,6 +34,10 @@ interface VirtualizedTableBodyProps {
   canSelectRows?: boolean;
   pinnedColumnIds?: string[];
   pinnedColumnOffsets?: Record<string, number>;
+  // Bumped per cell ("<rowId>-<columnKey>") when its save fails, to show the saved value again
+  cellResets?: Record<string, number>;
+  // Cells ("<rowId>-<columnKey>") whose last save failed; boxed in red
+  saveErrorCells?: Set<string>;
 }
 
 const ROW_HEIGHT = 40; // Row height in pixels
@@ -125,6 +131,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   selectedRows,
   onRowSelect,
   onCellChange,
+  invalidCells,
   onContextMenu,
   activeCell,
   setActiveCell,
@@ -142,6 +149,8 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   allColumns,
   pinnedColumnIds = [],
   pinnedColumnOffsets = {},
+  cellResets,
+  saveErrorCells,
 }) => {
   // Calculate total table width (selector + columns + add column button)
   const totalWidth = 48 + columnWidths.reduce((sum, w) => sum + w, 0);
@@ -422,6 +431,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         onSelect={onRowSelect}
         canSelectRows={canSelectRows}
         onCellChange={onCellChange}
+        invalidCells={invalidCells?.[rowId]}
         onContextMenu={e => onContextMenu(e, rowId)}
         activeCell={activeCell}
         setActiveCell={setActiveCell}
@@ -430,9 +440,11 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         canEdit={canEdit}
         pinnedColumnIds={pinnedColumnIds}
         pinnedColumnOffsets={pinnedColumnOffsets}
+        cellResets={cellResets}
+        saveErrorCells={saveErrorCells}
       />
     );
-  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets]);
+  }, [columns, columnWidths, selectedRows, onRowSelect, onCellChange, invalidCells, onContextMenu, activeCell, setActiveCell, tableId, allColumns, canEdit, pinnedColumnIds, pinnedColumnOffsets, cellResets, saveErrorCells]);
 
   const virtualItems = virtualizer.getVirtualItems();
 

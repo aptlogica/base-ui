@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordLabel, getRecordTitleColumn, isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useMemo, useCallback, useRef } from 'react';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { Plus, List, X } from 'lucide-react';
@@ -116,8 +117,8 @@ const getSelectColumns = (columns: BaseColumn[]) =>
 const getSearchableColumns = (columns: BaseColumn[]) =>
   columns.filter(col => {
     const isSystemField = col.isSystem || col.system;
-    const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-    return !isSystemField || isTitle;
+    // System fields are not searched, except the Title of a table created before Title became an ordinary column
+    return !isSystemField || isLegacyTitleColumn(col);
   });
 
 const getCardId = (card: Record<string, unknown>) =>
@@ -238,7 +239,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Get select columns for grouping
   const selectColumns = useMemo(() => getSelectColumns(columns), [columns]);
 
-  // Get searchable columns (exclude system fields except Title)
+  // Cards are named by the first text column of the table
+  const titleColumn = useMemo(() => getRecordTitleColumn(columns), [columns]);
+
+  // Get searchable columns (exclude system fields except the legacy Title)
   const searchableColumns = useMemo(() => getSearchableColumns(columns), [columns]);
 
   // Convert BaseColumn[] to ColumnConfig[] for FieldsPopover
@@ -302,7 +306,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Extract actions with proper defaults
   const {
     deleteCard: onDeleteCard = async () => { },
-    duplicateCard: onDuplicateCard = async () => '',
     updateFieldOptions: onUpdateFieldOptions = async () => { },
     changeGroupByColumn: onChangeGroupByColumn = async () => { },
     updateViewConfig: onUpdateView = async () => { }
@@ -460,19 +463,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     for (const record of searchFilteredRecords) {
       const value = record[groupCol.key];
       let stackName = 'Uncategorized'; // Default for null/undefined values
+      const stringValue = extractDisplayValue(value);
 
-      if (value !== null && value !== undefined && value !== '') {
-        const stringValue = extractDisplayValue(value);
-        // Only use the value if it exists in field options, otherwise use Uncategorized
-        if (stringValue && fieldOptionsSet.has(stringValue)) {
-          stackName = stringValue;
-        }
-        // If not found in options, stackName remains 'Uncategorized' (already set above)
+      // Only use the value if it exists in field options, otherwise use Uncategorized
+      if (value !== null && value !== undefined && value !== '' && stringValue && fieldOptionsSet.has(stringValue)) {
+        stackName = stringValue;
       }
 
-      if (!stackMap.has(stackName)) {
-        stackMap.set(stackName, []);
-      }
+      const stackCards = stackMap.get(stackName) ?? [];
+      stackMap.set(stackName, stackCards);
 
       // PERFORMANCE: Only normalize if record doesn't already have _meta
       const normalizedRecord = record._meta
@@ -486,10 +485,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             position: 0,
           },
           ...record,
-          title: record.title || ''
+          title: titleColumn ? getRecordLabel(record, titleColumn) : ''
         };
 
-      stackMap.get(stackName)!.push(normalizedRecord);
+      stackCards.push(normalizedRecord);
     }
 
     // Get custom stack order from view config (for drag & drop reordering)
@@ -533,7 +532,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         isCollapsed: false
       };
     });
-  }, [searchFilteredRecords, groupCol, view, fieldOptions, optionColorMap, extractDisplayValue]);
+  }, [searchFilteredRecords, groupCol, view, fieldOptions, optionColorMap, extractDisplayValue, titleColumn]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const stackNameInputRef = useRef<HTMLInputElement>(null);
@@ -696,6 +695,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Kanban doesn't have normalizedColumns; keys are typically in col.column_name
     });
   };
+
+  // "Edit record" navigation: Previous / Next step through the cards stack by stack, in board order
+  const navCardIds = useMemo(
+    () => (filteredStacks || []).flatMap((s) => Array.isArray(s.cards) ? s.cards : []).map((c: Record<string, unknown>) => {
+      const cardMeta = c._meta;
+      return cardMeta && typeof cardMeta === 'object' && 'id' in cardMeta ? String(cardMeta.id) : String(c.id);
+    }),
+    [filteredStacks]
+  );
+  const editRecordIndex = modalState.edit.recordId ? navCardIds.indexOf(String(modalState.edit.recordId)) : -1;
+
+  const showPreviousCard = useCallback(() => {
+    if (editRecordIndex > 0) handleOpenEditRecord(navCardIds[editRecordIndex - 1]);
+  }, [navCardIds, editRecordIndex, handleOpenEditRecord]);
+
+  const showNextCard = useCallback(() => {
+    if (editRecordIndex !== -1 && editRecordIndex < navCardIds.length - 1) handleOpenEditRecord(navCardIds[editRecordIndex + 1]);
+  }, [navCardIds, editRecordIndex, handleOpenEditRecord]);
 
 
   const handleDeleteRecordFromModal = useCallback(async (cardId: string) => {
@@ -1100,7 +1117,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           table={{ id: tableId, title: tableName } as any}
           fields={columns as any}
           title="New record"
-          submitLabel="Save record"
+          submitLabel="Save Record"
           initialValues={getCreateInitialValues()}
           onSuccess={handleCreateSuccess}
         />
@@ -1116,8 +1133,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           submitLabel="Update record"
           onSuccess={handleEditSuccess}
           onDelete={isReadOnly ? undefined : handleDeleteRecordFromModal}
-          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
+          onPrevious={showPreviousCard}
+          onNext={showNextCard}
+          hasPrevious={editRecordIndex > 0}
+          hasNext={editRecordIndex !== -1 && editRecordIndex < navCardIds.length - 1}
         />
       )}
       {modalState.delete.isOpen && modalState.delete.recordId && (

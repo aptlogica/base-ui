@@ -82,8 +82,25 @@ import {
   getOrganizationService,
   updateOrganizationService,
   mergeColumnsService,
-  splitColumnService
+  splitColumnService,
+  getAutomationsService,
+  createAutomationService,
+  updateAutomationService,
+  runAutomationService,
+  validateAutomationService,
+  deleteAutomationService,
+  getPrimaryKeyService,
+  updatePrimaryKeyService,
+  getFieldEmptyCountService,
+  upsertRowService,
+  getTableConstraintsService,
+  checkTableConstraintService,
+  createTableConstraintService,
+  updateTableConstraintService,
+  deleteTableConstraintService,
+  type TableConstraintType,
 } from '../service/clientService';
+import type { UpdateTableConstraint } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
 // Query Keys
@@ -191,16 +208,29 @@ export const useAddRow = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after adding a row, regardless of cache age
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
+// Creates a record with its values (no row_id) or updates one (row_id); see upsertRowService
+export const useUpsertRow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: upsertRowService,
+    onSuccess: (_, { model_id }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id), refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
     },
   });
 };
@@ -261,13 +291,13 @@ export const useBulkAddBaseMembers = () => {
     },
     onSuccess: (_, variables) => {
       // Invalidate base members query to refresh the list
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['base', variables.baseId, 'members']
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['bases']
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['workspaces']
       });
     },
@@ -286,15 +316,15 @@ export const useRemoveUserFromBase = () => {
     },
     onSuccess: (_, variables) => {
       // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['userRolesAndAccess', variables.user_id],
         exact: false
       });
       // Invalidate base members query to refresh the list
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['base', variables.baseId, 'members']
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['bases']
       });
     },
@@ -466,7 +496,7 @@ export const useCreateWorkspace = () => {
         });
       }
       // Invalidate and immediately refetch workspaces list for instant UI update
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.workspaces,
         refetchType: 'active' // Force immediate refetch for active queries
       });
@@ -474,11 +504,11 @@ export const useCreateWorkspace = () => {
       // If the new workspace has an ID, invalidate its bases query
       const newWorkspaceId = data?.data?.id || data?.id;
       if (newWorkspaceId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.bases(newWorkspaceId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bases(newWorkspaceId) });
       }
 
       // Also invalidate all workspace-related queries to ensure bases are refreshed
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
   });
 };
@@ -490,8 +520,8 @@ export const useUpdateWorkspace = () => {
     mutationFn: ({ workspaceId, updates }: { workspaceId: string; updates: any }) =>
       updateWorkspaceService(workspaceId, updates),
     onSuccess: (_, { workspaceId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspaceId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspaceId) });
     },
   });
 };
@@ -505,7 +535,7 @@ export const useDeleteWorkspace = () => {
       return await deleteWorkspaceService(workspaceId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -518,14 +548,14 @@ export const useCreateBase = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ title, description, workspace_id, image }: { title: string; description: string; workspace_id: string; image?: File | Blob | null }) => {
-      // Directly pass the SDK CreateBase interface
-      return createBaseService({ title, description, workspace_id, image: image || undefined });
+    mutationFn: ({ title, description, workspace_id, image, meta }: { title: string; description: string; workspace_id: string; image?: File | Blob | null; meta?: object }) => {
+      // SDK CreateBase interface, plus optional base-level `meta`
+      return createBaseService({ title, description, workspace_id, image: image || undefined, ...(meta && { meta }) });
     },
     onSuccess: (_, { workspace_id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspace_id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspace_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspace_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspace_id) });
     },
   });
 };
@@ -537,7 +567,7 @@ export const useDeleteBase = () => {
     mutationFn: (baseId: string) => deleteBaseService(baseId),
     onSuccess: () => {
       // Invalidate all workspace-related queries since base structure changed
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -550,27 +580,27 @@ export const useUpdateBase = () => {
       updateBaseService(baseId, updates),
     onSuccess: (_, { baseId }) => {
       // Invalidate base by ID query (used by BaseSettingsTab)
-      queryClient.invalidateQueries({ queryKey: ['bases', baseId] });
+      void queryClient.invalidateQueries({ queryKey: ['bases', baseId] });
 
       // Invalidate all workspaces queries to refresh base lists
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
 
       // Invalidate all bases queries (this will refresh bases in workspace lists)
-      queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.allBases });
 
       // Get the base data to invalidate workspace-specific bases if available
       const baseData = queryClient.getQueryData(['bases', baseId]);
       if (baseData && typeof baseData === 'object' && 'data' in baseData) {
         const workspaceId = (baseData as { data?: { workspace_id?: string } }).data?.workspace_id;
         if (workspaceId) {
-          queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspaceId) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.bases(workspaceId) });
         } else {
           // Fallback: invalidate all workspace bases queries
-          queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+          void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
         }
       } else {
         // Fallback: invalidate all workspace bases queries
-        queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+        void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       }
     },
   });
@@ -588,8 +618,8 @@ export const useCreateTable = () => {
       return createTableService({ base_id, workspace_id, title, description, order_index });
     },
     onSuccess: (_, { base_id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -601,8 +631,8 @@ export const useUpdateTable = () => {
     mutationFn: ({ tableId, params }: { tableId: string; params: any }) =>
       updateTableService(tableId, params),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -614,9 +644,9 @@ export const useDeleteTable = () => {
     mutationFn: ({ tableId, baseId: _baseId }: { tableId: string; baseId: string }) => deleteTableService(tableId),
     onSuccess: (_, { baseId }) => {
       // Invalidate the specific base's tables query
-      queryClient.invalidateQueries({ queryKey: queryKeys.tables(baseId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables(baseId) });
       // Also invalidate workspaces to update any workspace-level data
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -631,7 +661,6 @@ export const useImportData = () => {
       order_index,
       file,
       config,
-      primary_column,
       onProgress,
     }: {
       base_id?: string; // Optional: required from sidebar, optional from home page
@@ -641,7 +670,6 @@ export const useImportData = () => {
       order_index: number;
       file: File;
       config: any; // ImportPayload with mapped field types and settings
-      primary_column?: string;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
       return importService(
@@ -651,7 +679,6 @@ export const useImportData = () => {
           order_index,
           file,
           config,
-          primary_column: primary_column || '',
         },
         onProgress
       );
@@ -660,10 +687,10 @@ export const useImportData = () => {
     onSuccess: (_, { base_id }) => {
       // Invalidate the specific base's tables query if base_id is provided
       if (base_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
       }
       // Also invalidate workspaces to update any workspace-level data
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -690,9 +717,9 @@ export const useCreateField = () => {
     },
     onSuccess: (_, { tableId, config }) => {
       // Invalidate source table
-      queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(tableId)] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(tableId)] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
 
       // If this is a link field, also invalidate the target table's cache
       // Performance note: invalidateQueries with refetchType: 'active' only refetches
@@ -701,11 +728,11 @@ export const useCreateField = () => {
       // Only when navigating to the target table will it refetch (which is when we want fresh data)
       if (config?.meta?.relation?.with) {
         const targetTableId = config.meta.relation.with;
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['tables', String(targetTableId)],
           refetchType: 'active' // Only refetch if query is currently active (table is open)
         });
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: queryKeys.fields(targetTableId),
           refetchType: 'active'
         });
@@ -722,11 +749,11 @@ export const useUpdateField = () => {
     mutationFn: ({ fieldId, updatedValue }: { fieldId: string; updatedValue: any }) =>
       updateFieldService(fieldId, updatedValue),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['fields'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: ['fields'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Lookup pills fetch source column config by fieldId. Ensure metadata changes
       // (e.g. currency config, datetime timezone/format) refresh immediately.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['lookupSourceColumn', String(variables.fieldId)],
         refetchType: 'active'
       });
@@ -736,7 +763,7 @@ export const useUpdateField = () => {
 
       if (isTypeChange) {
         // Type change: invalidate and refetch (data structure changed)
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey;
             return Array.isArray(key) && key[0] === 'tables';
@@ -746,7 +773,7 @@ export const useUpdateField = () => {
       } else {
         // Metadata change: Force refetch with refetchType: 'active' to bypass staleTime
         // This ensures the query refetches immediately even if within staleTime window
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           predicate: (query) => {
             const key = query.queryKey;
             // Match ['tables', tableId] pattern - specific table queries only
@@ -766,16 +793,16 @@ export const useResetField = () => {
     mutationFn: ({ column_id, model_id }: { column_id: string; model_id: string }) =>
       resetFieldService({ column_id, model_id }),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['fields'] });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({ queryKey: ['fields'] });
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(vars.model_id),
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -788,8 +815,8 @@ export const useDeleteColumn = () => {
       deleteFieldService(fieldId),
     onSuccess: (_, vars) => {
       const tableId = vars?.tableId;
-      if (tableId) queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      if (tableId) void queryClient.invalidateQueries({ queryKey: queryKeys.fields(tableId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -808,15 +835,15 @@ export const useBulkUpdateColumn = () => {
       updates: Array<{ id: any; value: any }>;
     }) => bulkUpdateFieldService({ model_id, column_id, updates }),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(vars.model_id),
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -830,15 +857,15 @@ export const useTrimWhitespace = () => {
       trim_mode: 'trim_both' | 'trim_leading' | 'trim_trailing' | 'collapse_spaces';
     }) => trimWhitespaceService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -852,15 +879,15 @@ export const useCaseNormalize = () => {
       case_format: 'lowercase' | 'uppercase' | 'title_case' | 'sentence_case';
     }) => caseNormalizeService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -879,15 +906,15 @@ export const useExtractSubstring = () => {
       add_at_end: boolean;
     }) => extractSubstringService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -903,15 +930,15 @@ export const useFindReplace = () => {
       match_type: 'match_case' | 'ignore_case' | 'match_entire_value';
     }) => findReplaceService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -930,15 +957,15 @@ export const useMergeColumns = () => {
       add_at_end: boolean;
     }) => mergeColumnsService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -953,15 +980,15 @@ export const useRemoveSpecialCharacters = () => {
       custom?: string[];
     }) => removeSpecialCharactersService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -976,15 +1003,15 @@ export const useRemoveFormatting = () => {
       custom_pattern?: string[];
     }) => removeFormattingService(params),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1033,15 +1060,15 @@ export const useSplitColumn = () => {
       });
     },
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     }
   });
 };
@@ -1060,16 +1087,16 @@ export const useCreateView = () => {
     },
     onSuccess: (_, { model_id, base_id }) => {
       // Invalidate views query for this table
-      queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.views(model_id) });
       // Invalidate the table query itself (used by TableViewRouteWrapper) to refresh views array
-      queryClient.invalidateQueries({ queryKey: ['tables', model_id] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: ['tables', model_id] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Invalidate baseTables query to refresh views in sidebar
       if (base_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables(base_id) });
       }
       // Also invalidate all base tables queries as fallback
-      queryClient.invalidateQueries({ queryKey: ['bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['bases'] });
     },
   });
 };
@@ -1175,12 +1202,12 @@ export const useUpdateViewAppearance = () => {
     },
     onSuccess: (_, { viewId }) => {
       // Invalidate both the view query and table queries to ensure consistency
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['view', String(viewId)],
         refetchType: 'none' // Don't refetch, we already updated optimistically
       });
       // Also invalidate table queries so they refetch with fresh data when needed
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'none' // Don't refetch immediately, but mark as stale
       });
@@ -1250,14 +1277,14 @@ export const useUpdateViewMeta = () => {
       }
 
       // Invalidate the specific view query so components using view data will see updates
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['view', String(viewId)]
       });
 
       // Also invalidate the table query to ensure views array is refreshed
       // This ensures KanbanBoard and other view-based components get the updated view metadata
       if (tableId) {
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['tables', String(tableId)]
         });
       }
@@ -1277,21 +1304,21 @@ export const useUpdateView = () => {
       updateViewService(viewId, view),
     onSuccess: (_, { viewId, view }) => {
       // Invalidate both listing and the specific view cache
-      queryClient.invalidateQueries({ queryKey: ['views'] });
-      queryClient.invalidateQueries({ queryKey: ['view', String(viewId)] });
+      void queryClient.invalidateQueries({ queryKey: ['views'] });
+      void queryClient.invalidateQueries({ queryKey: ['view', String(viewId)] });
       // Invalidate views for the specific table (model_id)
       if (view?.model_id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.views(view.model_id) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.views(view.model_id) });
         // Also invalidate the table query itself (used by TableViewRouteWrapper) to refresh views array
-        queryClient.invalidateQueries({ queryKey: ['tables', view.model_id] });
+        void queryClient.invalidateQueries({ queryKey: ['tables', view.model_id] });
         // Refetch the specific table immediately to get fresh views data (no performance impact - only one table)
-        queryClient.refetchQueries({ queryKey: ['tables', view.model_id] });
+        void queryClient.refetchQueries({ queryKey: ['tables', view.model_id] });
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Also invalidate all table queries to refresh view data (including baseTables which contains views)
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables'] });
       // Invalidate baseTables queries - pattern: ['bases', baseId, 'tables']
-      queryClient.invalidateQueries({ queryKey: ['bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['bases'] });
     },
   });
 };
@@ -1303,12 +1330,12 @@ export const useDeleteView = () => {
     mutationFn: (viewId: string) => deleteViewService(viewId),
     onSuccess: () => {
       // Invalidate all view-related queries
-      queryClient.invalidateQueries({ queryKey: ['views'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: ['views'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Also invalidate all table queries to refresh views array (since we don't have model_id here)
       // This ensures TableViewRouteWrapper and sidebar both get updated
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: ['bases'] });
+      void queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: ['bases'] });
     },
   });
 };
@@ -1324,21 +1351,21 @@ export const useInsertRowData = () => {
     onSuccess: (_, vars) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after cell edits, regardless of cache age
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(vars.model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
       // Ensure lookup columns in other tables refresh when source table values change.
       // This marks all table queries stale and refetches whichever table queries are active.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1349,21 +1376,21 @@ export const useUpdateRowData = () => {
     mutationFn: ({ model_id, row_id, values }: { model_id: string; row_id: number; values: Record<string, any> }) =>
       updateRowDataService({ model_id, row_id, values }),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(vars.model_id),
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(vars.model_id)],
         refetchType: 'active'
       });
       // Ensure lookup columns in other tables refresh when source table values change.
       // This marks all table queries stale and refetches whichever table queries are active.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1377,15 +1404,15 @@ export const useDeleteRecord = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after record deletion, regardless of cache age
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1399,15 +1426,15 @@ export const useBulkDeleteRecords = () => {
     onSuccess: (_, { model_id }) => {
       // CRITICAL: Use refetchType: 'active' to bypass staleTime and update immediately
       // This ensures UI updates instantly after bulk deletion, regardless of cache age
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch - bypasses staleTime
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1428,15 +1455,15 @@ export const useRemoveDuplicates = () => {
     }) =>
       removeDuplicatesService({ model_id, columns, duplicate, keep_rule }),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1492,11 +1519,11 @@ export const useInsertRelationData = () => {
       insertRelationDataService({ model_id, column_id, source_row_id, target_row_id, action }),
     onSuccess: (_, { model_id, target_table_id }) => {
       // Invalidate source table
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active' // Force immediate refetch for active queries
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active' // Force immediate refetch for active queries
       });
@@ -1504,18 +1531,19 @@ export const useInsertRelationData = () => {
       // Invalidate target table if provided
       // Performance: refetchType: 'active' only refetches if target table is currently open
       // If target table isn't open, this has zero performance impact - no API call happens
-      if (target_table_id) {
-        queryClient.invalidateQueries({
+      // On a self-link the target is the same table, which was already refreshed above.
+      if (target_table_id && String(target_table_id) !== String(model_id)) {
+        void queryClient.invalidateQueries({
           queryKey: queryKeys.records(target_table_id),
           refetchType: 'active' // Only refetch if query is currently active (table is open)
         });
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['tables', String(target_table_id)],
           refetchType: 'active' // Only refetch if query is currently active (table is open)
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1535,14 +1563,14 @@ export const useAddAttachment = () => {
       addAttachmentService({ model_id, column_id, row_id, files, onProgress }),
     onSuccess: (_, { model_id }) => {
       // Invalidate table records to refresh attachment data
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
       // Attachment values can be shown through lookup fields in other active tables.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1560,14 +1588,14 @@ export const useRemoveAttachments = () => {
       removeAttachmentsService({ model_id, column_id, row_id, attachments }),
     onSuccess: (_, { model_id }) => {
       // Invalidate table records to refresh attachment data
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
-      queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(model_id) });
+      void queryClient.invalidateQueries({ queryKey: ['tables', String(model_id)] });
       // Attachment values can be shown through lookup fields in other active tables.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables'],
         refetchType: 'active'
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1597,8 +1625,8 @@ export const useUpdateAttachment = () => {
         content: { title }
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: ['tables'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };
@@ -1640,7 +1668,7 @@ export const useUpdateUserProfile = (userId: string) => {
     },
     onSuccess: (_, variables) => {
       // Invalidate React Query cache - this triggers automatic refetch in all components
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      void queryClient.invalidateQueries({ queryKey: ['userProfile'] });
 
       // Update sessionStorage for next page load only (not for immediate UI)
       if (variables.display_name) {
@@ -1687,7 +1715,7 @@ export const useRemoveAvatar = (userId: string) => {
     },
     onSuccess: () => {
       // Invalidate user profile queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      void queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
   });
 };
@@ -1701,7 +1729,7 @@ export const useGetRecordsByPagination = (modelId: string) => {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(modelId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records(modelId) });
     },
   });
 };
@@ -1773,7 +1801,7 @@ export const useAddUser = () => {
     },
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Add tenant user failed:', error);
@@ -1805,8 +1833,8 @@ export const useEditUser = () => {
     },
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
     onError: (error: any) => {
       console.error('❌ Edit user failed:', error);
@@ -1824,7 +1852,7 @@ export const useRemoveTenantUser = () => {
     },
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Remove tenant user failed:', error);
@@ -1842,7 +1870,7 @@ export const useActivateTenantUser = () => {
     },
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Activate tenant user failed:', error);
@@ -1863,7 +1891,7 @@ export const useDeactivateTenantUser = () => {
     },
     onSuccess: () => {
       // Invalidate tenant users query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Deactivate tenant user failed:', error);
@@ -1896,23 +1924,23 @@ export const useBulkAddMembers = () => {
     onSuccess: (_, variables) => {
       // Invalidate user access details for all assigned users
       variables.members.forEach(member => {
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['userAccessDetails', member.user_id],
           exact: false
         });
         // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['userRolesAndAccess', member.user_id],
           exact: false
         });
       });
 
       // Invalidate workspaces query to refresh workspace members
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Invalidate workspace members query
-      queryClient.invalidateQueries({ queryKey: ['workspaceMembers', variables.workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaceMembers', variables.workspaceId] });
       // Invalidate tenant users query in case it affects user data
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Bulk add members failed:', error);
@@ -1936,22 +1964,22 @@ export const useRemoveUserFromWorkspace = () => {
     onSuccess: (_, variables) => {
       // Invalidate user access details for the removed user
       // This ensures "View Access Details" modal refetches updated data
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['userAccessDetails', variables.user_id],
         exact: false // Match all queries starting with ['userAccessDetails', userId]
       });
       // Invalidate userRolesAndAccess queries to refresh role display in MembersTable
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['userRolesAndAccess', variables.user_id],
         exact: false
       });
 
       // Invalidate workspace members query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['workspace', variables.workspaceId, 'members'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspace', variables.workspaceId, 'members'] });
       // Invalidate workspaces query
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
       // Invalidate tenant users query
-      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
     onError: (error: any) => {
       console.error('❌ Remove user from workspace failed:', error);
@@ -1991,10 +2019,150 @@ export const useUpdateOrganization = (organizationId: string) => {
     },
     onSuccess: () => {
       // Invalidate organization query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['organization'] });
+      void queryClient.invalidateQueries({ queryKey: ['organization'] });
     },
     onError: (error: any) => {
       console.error('❌ Update organization failed:', error);
     }
+  });
+};
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export const useAutomations = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'automations'],
+    queryFn: () => getAutomationsService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+  });
+};
+
+export const useCreateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createAutomationService,
+    onSuccess: (_, params) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'automations'] });
+    },
+  });
+};
+
+export const useUpdateAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: { id: string; tableId: string; title: string; context: string; event?: string }) => updateAutomationService(params),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+export const useRunAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => runAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+// Nothing is changed, so no queries are invalidated
+export const useValidateAutomation = () =>
+  useMutation({ mutationFn: validateAutomationService });
+
+export const useDeleteAutomation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteAutomationService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'automations'] });
+    },
+  });
+};
+
+// Table constraints: unique keys (later primary key and check)
+export const useTableConstraints = (tableId: string, type: TableConstraintType) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'constraints', type],
+    queryFn: () => getTableConstraintsService(tableId, type),
+    enabled: !!tableId,
+    select: (res) => res?.data ?? [],
+    retry: false,
+  });
+};
+
+// Nothing is changed, so no queries are invalidated
+export const useCheckTableConstraint = () =>
+  useMutation({ mutationFn: checkTableConstraintService });
+
+export const useCreateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createTableConstraintService,
+    onSuccess: (_, params) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', params.model_id, 'constraints'] });
+    },
+  });
+};
+
+export const useUpdateTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tableId: _tableId, ...params }: UpdateTableConstraint & { id: string; tableId: string }) => updateTableConstraintService(params),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
+  });
+};
+
+export const useDeleteTableConstraint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string; tableId: string }) => deleteTableConstraintService(id),
+    onSuccess: (_, { tableId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
+    },
+  });
+};
+
+export const usePrimaryKey = (tableId: string) => {
+  return useQuery({
+    queryKey: ['tables', tableId, 'primary-key'],
+    queryFn: () => getPrimaryKeyService(tableId),
+    enabled: !!tableId,
+    select: (res) => res?.data,
+  });
+};
+
+// Empty / filled record counts of one field (used before turning a UUID field to auto-generated)
+export const useFieldEmptyCount = (fieldId: string, enabled = true) => {
+  return useQuery({
+    queryKey: ['fields', fieldId, 'empty-count'],
+    queryFn: () => getFieldEmptyCountService(fieldId),
+    enabled: !!fieldId && enabled,
+    select: (res) => res?.data,
+    staleTime: 0,
+  });
+};
+
+export const useUpdatePrimaryKey = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updatePrimaryKeyService,
+    onSuccess: (res, { tableId }) => {
+      queryClient.setQueryData(['tables', tableId, 'primary-key'], res);
+    },
   });
 };

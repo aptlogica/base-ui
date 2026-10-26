@@ -33,6 +33,7 @@ import Sidebar from './components/layout/sidebar/Sidebar';
 import { Loader } from './components/ui/Loader';
 import AdministratorPage from './pages/AdministratorPage';
 import NotFoundPage from './pages/NotFoundPage';
+import TableSettingsPage from './pages/TableSettingsPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 import { NavigationResolver } from './components/NavigationResolver';
@@ -367,6 +368,11 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      {/* Table settings: a full page of its own, outside the Layout (no sidebar or table view) */}
+      <Route
+        path="/workspace/:workspaceId/base/:baseId/table/:tableId/settings/:section?"
+        element={<PrivateRoute><TableSettingsPage /></PrivateRoute>}
+      />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/workspace" replace />} />
         <Route path="/workspace" element={<ExtensionPoint id="page:homepage" />} /> {/* Handles /workspace when no workspaceId - NavigationResolver will redirect to first workspace */}

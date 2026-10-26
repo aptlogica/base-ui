@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordLabel, getRecordTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
 import type { TableData } from '../../../types/api.types';
@@ -199,6 +200,9 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
       ) || availableDateFields[0];
     }
 
+    // Events are named by the first text column of the table
+    const eventTitleColumn = getRecordTitleColumn(uiColumns);
+
     // Process events
     const processedEvents: CalendarEvent[] = currentDateField ? records.reduce((acc: CalendarEvent[], record: any, idx: number) => {
       const rowData = record?.data || record;
@@ -234,7 +238,7 @@ export function useCalendarData({ tableId, viewId }: UseCalendarDataOptions): Us
 
       acc.push({
         id: record?.id ?? idx,
-        title: rowData?.title || rowData?.Title || rowData?.name || `Record ${record?.id || idx}`,
+        title: getRecordLabel({ ...rowData, id: record?.id ?? idx }, eventTitleColumn),
         date: eventDate,
         dateTime: eventDateTime,
         data: rowData,

@@ -19,6 +19,7 @@ const TEST_ID = {
   MENU_ITEM_DELETE_TABLE: 'menu-item-delete-table',
   MENU_ITEM_PIN_TABLE: 'menu-item-pin-table',
   MENU_ITEM_UNPIN_TABLE: 'menu-item-unpin-table',
+  MENU_ITEM_SETTINGS: 'menu-item-settings',
 } as const;
 
 const mockMutateAsync = vi.fn();
@@ -107,6 +108,17 @@ vi.mock('../../modals/DeleteConfirmModal', () => ({
         </button>
       </div>
     ) : null,
+}));
+
+const navigateMock = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
+  useParams: () => ({ workspaceId: 'ws-1' }),
+}));
+
+vi.mock('../../../stores/navigationStore', () => ({
+  useNavigationStore: (selector: (state: { selectedWorkspaceId: string | null }) => unknown) =>
+    selector({ selectedWorkspaceId: null }),
 }));
 
 describe('TableOptionsMenu', () => {
@@ -395,6 +407,46 @@ describe('TableOptionsMenu', () => {
 
       alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('Settings', () => {
+    it('renders Settings between Edit table and Delete table', () => {
+      render(<TableOptionsMenu {...defaultProps} />);
+      const labels = screen.getAllByRole('button').map((b) => b.textContent);
+      expect(labels).toEqual(['Edit table', 'Settings', 'Delete table']);
+    });
+
+    it('opens the settings page for the table', async () => {
+      const user = userEvent.setup();
+      render(<TableOptionsMenu {...defaultProps} />);
+
+      await user.click(screen.getByTestId(TEST_ID.MENU_ITEM_SETTINGS));
+      expect(navigateMock).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/workspace\/ws-1\/base\/.+\/table\/table-1\/settings\/primaryKey$/),
+      );
+    });
+
+    it('does not render Settings when the user cannot update the table', () => {
+      useBaseAccessMock.mockReturnValue({
+        canDeleteTable: vi.fn().mockReturnValue(true),
+        isBaseReadOnly: vi.fn().mockReturnValue(false),
+        canUpdateTable: vi.fn().mockReturnValue(false),
+      } as ReturnType<typeof useBaseAccessMock>);
+
+      render(<TableOptionsMenu {...defaultProps} />);
+      expect(screen.queryByTestId(TEST_ID.MENU_ITEM_SETTINGS)).not.toBeInTheDocument();
+    });
+
+    it('does not render Settings when the base is read-only', () => {
+      useBaseAccessMock.mockReturnValue({
+        canDeleteTable: vi.fn().mockReturnValue(true),
+        isBaseReadOnly: vi.fn().mockReturnValue(true),
+        canUpdateTable: vi.fn().mockReturnValue(true),
+      } as ReturnType<typeof useBaseAccessMock>);
+
+      render(<TableOptionsMenu {...defaultProps} />);
+      expect(screen.queryByTestId(TEST_ID.MENU_ITEM_SETTINGS)).not.toBeInTheDocument();
     });
   });
 

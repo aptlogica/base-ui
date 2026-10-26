@@ -2,8 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-// @ts-ignore - SDK module does not have type declarations
 import { SereniBaseClient } from 'serenibase-sdk';
+import type {
+  CheckTableConstraint,
+  ConstraintCheckResult,
+  CreateAutomation,
+  CreateTableConstraint,
+  StandardResponse,
+  TableConstraint,
+  TableConstraintType,
+  UpdateTableConstraint,
+  UpsertRow,
+  UpsertRowResult,
+  ValidateAutomation,
+} from 'serenibase-sdk';
 import { WorkspaceBaseInput } from "../types/interfaces/workspace.interface.js";
 import { decodeJwt } from 'jose';
 import { LoginParams, VerifyOtpParams, ResendOtpParams } from '../types/interfaces/auth.js';
@@ -246,19 +258,19 @@ const refreshAccessToken = async (): Promise<string> => {
     // Validate refresh token and user ID
     if (!refreshToken) {
       console.error('No refresh token found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (!userId) {
       console.error('No user_id found in storage');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
     if (isRefreshExpired) {
       console.error('Refresh token is expired');
-      await forceLogout();
+      forceLogout();
       return '';
     }
 
@@ -304,7 +316,7 @@ const refreshAccessToken = async (): Promise<string> => {
 
     // Only force logout on authentication errors (401, 403)
     if (error?.response?.status === 401 || error?.response?.status === 403) {
-      await forceLogout();
+      forceLogout();
     }
 
     return '';
@@ -325,7 +337,7 @@ export const updateClientToken = (token: string) => {
  * Dispatches 'auth_token_expired' event for components to handle
  * Uses custom event for navigation to avoid full page refresh
  */
-export const forceLogout = async (): Promise<void> => {
+export const forceLogout = (): void => {
   clearTokens();
   updateClientToken('');
 
@@ -393,15 +405,13 @@ export const client = new SereniBaseClient({
  * The SDK's HttpClient emits 'response-error' events BEFORE formatting errors,
  * allowing us to catch 401 errors and refresh tokens automatically
  */
-if ((client as any).http) {
-  const httpClient = (client as any).http;
-
+{
   // Track if we're already refreshing to prevent multiple refresh calls
   let isRefreshingToken = false;
   let failedQueue: Array<{ resolve: (value: any) => void; reject: (error: any) => void }> = [];
 
   // Listen to SDK's response-error event (fires BEFORE error formatting)
-  httpClient.on('response-error', async (error: any) => {
+  client.on('response-error', async (error: any) => {
     // Check if it's a 401 token expiry error
     const is401 = error.response?.status === 401;
     const isTokenExpired = is401 && (
@@ -447,8 +457,6 @@ if ((client as any).http) {
       }
     }
   });
-} else {
-  console.error('Failed to access SDK HttpClient for token refresh setup');
 }
 
 /**
@@ -687,6 +695,7 @@ export async function removeUserFromWorkspaceService(workspaceId: string, params
 }
 
 // BaseService wrappers with auth/tenant headers
+// meta (base-level format defaults) is sent by the SDK as a JSON string form field
 export async function createBaseService(params: any) {
   return await makeAuthenticatedCall(() => client.baseService.create(params));
 }
@@ -813,6 +822,15 @@ export async function updateFieldService(id: string, params: any) {
 
 export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
+}
+
+// How many records have this field empty / filled; GET /column/:id/empty-count.
+// The SDK has no method for this endpoint yet, so it goes through the column service's HTTP client.
+export async function getFieldEmptyCountService(id: string) {
+  const http = (client.columnService as unknown as {
+    http: { get: <T>(url: string) => Promise<{ data?: T }> };
+  }).http;
+  return await makeAuthenticatedCall(() => http.get<{ empty: number; filled: number }>(`/column/${id}/empty-count`));
 }
 
 export async function resetFieldService(params: any) {
@@ -961,6 +979,12 @@ export async function addRow(params: {
   return await makeAuthenticatedCall(() => client.tableService.createRow(params));
 }
 
+// POST /row/data/insert as an upsert: without row_id it creates a record with values (column ID -> value;
+// every primary key field is required), with row_id it updates that record. All values are saved together.
+export async function upsertRowService(params: UpsertRow): Promise<StandardResponse<UpsertRowResult>> {
+  return await makeAuthenticatedCall(() => client.rowService.upsert(params));
+}
+
 export async function deleteRowService(params: { model_id: string; row_id: number }) {
   return await makeAuthenticatedCall(() => client.tableService.deleteRow(params));
 }
@@ -1017,7 +1041,6 @@ export async function importService(
     order_index: number;
     file: File;
     config: any;
-    primary_column: string;
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
@@ -1137,3 +1160,78 @@ export async function updateOrganizationService(orgId: string, updateData: { nam
 }
 
 
+
+// =========================
+// Automations (triggers & webhooks)
+// =========================
+
+export type { Automation, AutomationValidationResult } from 'serenibase-sdk';
+
+export async function getAutomationsService(tableId: string) {
+  return await makeAuthenticatedCall(() => client.automationService.list(tableId));
+}
+
+export async function createAutomationService(params: CreateAutomation) {
+  return await makeAuthenticatedCall(() => client.automationService.create(params));
+}
+
+export async function updateAutomationService({ id, ...params }: { id: string; title: string; context: string; event?: string }) {
+  return await makeAuthenticatedCall(() => client.automationService.update(id, params));
+}
+
+// Applies the saved query in Postgres
+export async function runAutomationService(id: string) {
+  return await makeAuthenticatedCall(() => client.automationService.run(id));
+}
+
+// Runs the query as typed (saved or not) in a rolled-back transaction; nothing is changed.
+// id is set when editing, so the query is checked as a replacement of what that entry installed.
+export async function validateAutomationService(params: ValidateAutomation) {
+  return await makeAuthenticatedCall(() => client.automationService.validate(params));
+}
+
+export async function deleteAutomationService(id: string) {
+  return await makeAuthenticatedCall(() => client.automationService.delete(id));
+}
+
+// =========================
+// Primary key
+// =========================
+
+// PrimaryKeyViolation is returned in error.details (PKY_1004) when existing records don't satisfy a new key
+export type { PrimaryKey, PrimaryKeyColumn, PrimaryKeyViolation } from 'serenibase-sdk';
+
+export async function getPrimaryKeyService(tableId: string) {
+  return await makeAuthenticatedCall(() => client.tableService.getPrimaryKey(tableId));
+}
+
+export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId: string; columnIds: string[] }) {
+  return await makeAuthenticatedCall(() => client.tableService.updatePrimaryKey(tableId, columnIds));
+}
+
+// =========================
+// Table constraints (unique keys and check constraints)
+// =========================
+
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult, ConstraintColumn } from 'serenibase-sdk';
+
+export async function getTableConstraintsService(tableId: string, type: TableConstraintType) {
+  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type)) as StandardResponse<TableConstraint[]>;
+}
+
+// Checks existing records against the columns, or the check condition, without changing anything
+export async function checkTableConstraintService(params: CheckTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.check(params)) as StandardResponse<ConstraintCheckResult>;
+}
+
+export async function createTableConstraintService(params: CreateTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.create(params)) as StandardResponse<TableConstraint>;
+}
+
+export async function updateTableConstraintService({ id, ...params }: UpdateTableConstraint & { id: string }) {
+  return await makeAuthenticatedCall(() => client.constraintService.update(id, params)) as StandardResponse<TableConstraint>;
+}
+
+export async function deleteTableConstraintService(id: string) {
+  return await makeAuthenticatedCall(() => client.constraintService.delete(id));
+}

@@ -1,5 +1,5 @@
 # ---------- Build stage ----------
-FROM node:20-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 
 # Accept API base URL at build time and expose to Vite
 ARG VITE_API_BASE_URL

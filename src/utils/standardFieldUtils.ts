@@ -62,48 +62,20 @@ export const isFieldHidden = (field: any): boolean => {
 };
 
 /**
- * Get field default value from config
+ * Get the empty/initial value for a field based on its type.
+ * Column defaults (meta.defaultValue) are applied by the database, not the frontend.
  */
 export const getFieldDefaultValue = (field: any): any => {
-  const config = getFieldConfig(field);
-  const fieldType = getStandardFieldType(field);
-  
-  if (config.defaultValue !== undefined && config.defaultValue !== null) {
-    return config.defaultValue;
-  }
-  
-  // Type-specific defaults
-  switch (fieldType) {
+  switch (getStandardFieldType(field)) {
     case 'boolean':
     case 'checkbox':
-      return config.checkboxDefault ?? false;
+      return false;
     case 'rating':
-      return config.ratingDefault ?? 0;
-    case 'number':
-    case 'decimal':
-    case 'currency':
-    case 'percent':
-      return config.defaultValue ?? '';
-    case 'select':
-      return config.singleDefault ?? '';
+      return 0;
     case 'multiSelect':
-      return config.multiDefault ?? [];
-    case 'datetime':
-      return config.dateTimeDefault ?? '';
-    case 'date':
-      return config.dateDefault ?? '';
-    case 'time':
-      return config.timeDefault ?? '';
-    case 'year':
-      return config.yearDefault ?? '';
-    case 'email':
-      return config.emailDefault ?? '';
-    case 'url':
-      return config.urlDefault ?? '';
-    case 'duration':
-      return config.durationDefault ?? '';
+      return [];
     default:
-      return config.defaultValue ?? '';
+      return '';
   }
 };
 

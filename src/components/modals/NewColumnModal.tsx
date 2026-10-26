@@ -2,18 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getDefaultDisplayColumn, isDisplayColumnCandidate, isLegacyTitleColumn, type LabelColumn } from '../../utils/recordLabel';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, Info, Loader2 } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { FIELD_TYPES } from '../../types/fieldTypes';
 import { timeZoneOptions } from '../../types/constants';
 import { FieldTypeDropdown } from '../common/dropdown/fieldDropdown/FieldTypeDropdown';
-import { useBaseTables, useTable, useAllViews, useResetField } from '../../hooks/useApi';
+import { useBaseTables, useBaseById, useTable, useAllViews, useResetField, useTableConstraints, usePrimaryKey, useFieldEmptyCount } from '../../hooks/useApi';
+import { DEFAULT_ID_GENERATION, IdGeneration } from '../../types/uuid.types';
+import { idGenerationFromMeta } from '../../utils/uuid';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
-import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName } from './NewColumnModal.logic';
+import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName, getBaseFormatDefaults } from './NewColumnModal.logic';
+import { UNIQUE_DEFAULT_CONFLICT_MESSAGE, hasDefaultValue, keyHasDefaultConflict } from './constraints/constraintUtils';
 import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
@@ -32,6 +36,8 @@ interface NewColumnModalProps {
   useBackdrop?: boolean;
   excludeRefs?: React.RefObject<HTMLElement | null>[];
   currentTableId?: string; // Add current table ID to exclude from target selection
+  // Initial state of the "Enable rich text" option for long text fields (Form View enables it by default)
+  defaultRichText?: boolean;
 }
 
 const getBrowserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -58,6 +64,21 @@ const getRawTables = (tablesData: any) => {
   return [];
 };
 
+const isSelfLinkTable = (selectedTableId: string, currentTableId?: string) =>
+  !!currentTableId && selectedTableId === currentTableId;
+
+// Options for choosing which column labels the records of a table: plain fields, not links, lookups, attachments, JSON or system fields
+const toDisplayColumnOptions = (columns: LabelColumn[]) =>
+  (columns || [])
+    .filter(isDisplayColumnCandidate)
+    .map(column => ({ value: String(column.id), label: String(column.title || column.column_name || column.id) }));
+
+// The column a new link shows by default: the table's Id column, or '' when it has none
+const defaultDisplayColumnId = (columns: LabelColumn[]): string => {
+  const first = getDefaultDisplayColumn(columns);
+  return first ? String(first.id) : '';
+};
+
 const isFieldTypeLocked = (
   isFieldUsedInViews: boolean,
   isLinksFieldEditing: boolean,
@@ -65,7 +86,26 @@ const isFieldTypeLocked = (
   selectedRelationId: string
 ) => isFieldUsedInViews || isLinksFieldEditing || (selectedTypeKey === 'lookup' && !!selectedRelationId);
 
-export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId }: Readonly<NewColumnModalProps>) {
+// UUID field config: Auto-generated (v7 by default) or Manual. Editing an existing field starts
+// from its saved settings; a field saved before these settings existed is manual.
+const useUuidFieldConfig = (initialValues: any, currentTableId: string | undefined, selectedType: FieldType | null, isOpen: boolean) => {
+  const [idGeneration, setIdGeneration] = useState<IdGeneration>(DEFAULT_ID_GENERATION);
+  const [uuidBackfill, setUuidBackfill] = useState(true);
+  const initialIdGeneration = useMemo<IdGeneration | null>(() => {
+    const isUuid = initialValues && (initialValues.type === 'uuid' || initialValues.uidt === 'uuid');
+    return isUuid ? idGenerationFromMeta(initialValues.meta || initialValues.config) : null;
+  }, [initialValues]);
+  const { data: primaryKey } = usePrimaryKey(currentTableId || '');
+  const isPrimaryKeyField = !!initialValues?.id &&
+    (primaryKey?.column_ids ?? []).map(String).includes(String(initialValues.id));
+  // Turning a saved manual UUID field to auto-generated: show how many records would be filled
+  const isTurningUuidToAuto = selectedType?.key === 'uuid' && initialIdGeneration?.mode === 'manual' && idGeneration.mode === 'auto';
+  const { data: uuidCounts } = useFieldEmptyCount(String(initialValues?.id || ''), isOpen && isTurningUuidToAuto);
+  return { idGeneration, setIdGeneration, uuidBackfill, setUuidBackfill, isPrimaryKeyField, isTurningUuidToAuto, uuidCounts };
+};
+
+export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields = [], isAddNewColumn = false, isAddNewField = false, useBackdrop, excludeRefs = [], currentTableId, defaultRichText = false }: Readonly<NewColumnModalProps>) {
+
   const [step, setStep] = useState<number | null>(initialValues ? 2 : 1);
   const [fieldName, setFieldName] = useState(initialValues?.title || '');
   const [search, setSearch] = useState('');
@@ -77,9 +117,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Get current base ID and tables for relations
   const { selectedBaseId } = useNavigationStore();
   const { data: tablesData } = useBaseTables(selectedBaseId || '') as { data?: any };
+  const { data: baseData } = useBaseById(selectedBaseId || '') as { data?: { data?: { meta?: unknown } } };
+  const baseMeta = baseData?.data?.meta;
   
   // Hook for resetting field data (used when formula is cleared)
   const resetField = useResetField();
+  const { data: uniqueKeys = [] } = useTableConstraints(currentTableId || '', 'unique');
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
@@ -124,7 +167,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     return fieldUsage.isUsedInViews;
   }, [initialValues?.id, currentTableViews, currentTableId]);
 
-  // Extract tables array from response and filter out current table
+  // Extract tables array from response. The current table stays in the list (first) so a table can link to itself.
   const tables = useMemo(() => {
     if (!tablesData) return [];
 
@@ -134,16 +177,18 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     const rawTables = getRawTables(tablesData);
 
     // Extract model objects when present, otherwise use table item directly.
-    return rawTables
+    const allTables = rawTables
       .map((item: any) => item?.model || item)
-      .filter((table: any) => !!table?.id)
-      .filter((table: any) => table.id !== currentTableId); // Exclude current table from target selection
+      .filter((table: any) => !!table?.id);
+    const current = allTables.filter((table: any) => table.id === currentTableId);
+    const others = allTables.filter((table: any) => table.id !== currentTableId);
+    return [...current, ...others];
   }, [tablesData, currentTableId]);
 
   // Config state for each type
   const [defaultValue, setDefaultValue] = useState('');
   const [description, setDescription] = useState('');
-  const [richText, setRichText] = useState(false);
+  const [richText, setRichText] = useState(defaultRichText);
   const [showThousands, setShowThousands] = useState(false);
   const [precision, setPrecision] = useState<string | number>('1.0');
 
@@ -237,6 +282,16 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
   // Add state for json field config
   const [showJsonDefault, setShowJsonDefault] = useState(false);
+
+  const {
+    idGeneration,
+    setIdGeneration,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
+    isTurningUuidToAuto,
+    uuidCounts,
+  } = useUuidFieldConfig(initialValues, currentTableId, selectedType, isOpen);
 
   const applyNumberConfig = (config: any) => {
     setShowThousands(config.showThousands || false);
@@ -339,6 +394,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const [relationType, setRelationType] = useState<'one-to-one' | 'has-many' | 'many-to-many'>('one-to-one');
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [inverseTitle, setInverseTitle] = useState<string>('');
+  // Column of the linked table this link shows for each linked record ('' = the first text column).
+  // The field created on the other table is not asked for: it shows the Id column of this table.
+  const [displayColumnId, setDisplayColumnId] = useState<string>('');
+  const isSelfLink = isSelfLinkTable(selectedTableId, currentTableId);
 
   // Add state for lookup field config
   const [selectedRelationId, setSelectedRelationId] = useState<string>('');
@@ -422,6 +482,23 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const { data: targetData, isLoading: isTargetTableLoading } = useTable(targetTableId) as { data?: { columns?: any[] }; isLoading: boolean };
   const targetTablePayload = useMemo(() => (targetData as any)?.data || targetData || null, [targetData]);
 
+  // Columns that can label the records of the linked table (and of this table, for the partner field)
+  const isLinkType = selectedType?.key === 'links';
+  const { data: linkTargetData, isLoading: isLinkTargetLoading } = useTable(isLinkType && selectedTableId && !isSelfLink ? selectedTableId : '') as { data?: any; isLoading: boolean };
+  const linkTargetColumns: LabelColumn[] = useMemo(() => {
+    if (isSelfLink) return (fields || []) as LabelColumn[];
+    const payload = linkTargetData?.data || linkTargetData;
+    return Array.isArray(payload?.columns) ? payload.columns : [];
+  }, [isSelfLink, fields, linkTargetData]);
+  const displayColumnOptions = useMemo(() => toDisplayColumnOptions(linkTargetColumns), [linkTargetColumns]);
+
+  // A new link starts with the Id column of the linked table; an existing link keeps what it has
+  const isEditingLink = Boolean(initialValues?.id);
+  useEffect(() => {
+    if (!isLinkType || isEditingLink || !selectedTableId) return;
+    setDisplayColumnId(current => (displayColumnOptions.some(o => o.value === current) ? current : defaultDisplayColumnId(linkTargetColumns)));
+  }, [isLinkType, isEditingLink, selectedTableId, displayColumnOptions, linkTargetColumns]);
+
   // Extract fields from target table
   useEffect(() => {
     if (!targetTableId || !targetData) {
@@ -431,12 +508,12 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     if (targetTablePayload?.columns && Array.isArray(targetTablePayload.columns)) {
       // Filter out links, rollup, and lookup fields
-      // Exclude system fields BUT keep 'title' as it's important for lookups
+      // Exclude system fields, but keep text fields and the Title of a table created before Title became an ordinary column
       const filteredFields = targetTablePayload.columns.filter((col: any) =>
         col.uidt !== 'links' &&
         col.uidt !== 'rollup' &&
         col.uidt !== 'lookup' &&
-        (!col.system || col.uidt === 'text' || col.column_name === 'title')
+        (!col.system || col.uidt === 'text' || isLegacyTitleColumn(col))
       );
       setTargetTableFields(filteredFields);
 
@@ -577,7 +654,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // initialValues.defaultValue doesn't exist at top level - it's nested in meta/config
     setDefaultValue(config.defaultValue || '');
     setDescription(values.description || '');
-    setRichText(!!config.richText);
+    setRichText(config.richText ?? defaultRichText);
     setShowThousands(!!config.showThousands);
     setPrecision(config.precision || '1.0');
     // Boolean/checkbox fields: check both saved format (icon/color/defaultValue) and state format (checkboxIcon/checkboxColor/checkboxDefault)
@@ -659,20 +736,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       setRelationType(relation.type || 'one-to-one');
       const targetTableId = relation.with || '';
       setSelectedTableId(targetTableId);
+      setDisplayColumnId(String(config.display_column_id ?? config.meta?.display_column_id ?? ''));
     }
     setShowTextDefault(false);
     setShowDescription(false);
     setSearch('');
+    setIdGeneration(fieldType === 'uuid' ? idGenerationFromMeta(config) : DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
   };
 
-  const initializeCreateState = () => {
-    setStep(1);
-    setFieldName('');
-    setSearch('');
-    setSelectedType(null);
+  // Puts every type-specific config input back to its default
+  const resetTypeConfig = () => {
     setDefaultValue('');
     setDescription('');
-    setRichText(false);
+    setRichText(defaultRichText);
     setShowThousands(false);
     setPrecision('1.0');
     setCheckboxIcon('check');
@@ -726,6 +803,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setRelationType('one-to-one');
     setSelectedTableId('');
     setSelectedTable(null);
+    setInverseTitle('');
+    setDisplayColumnId('');
     // Reset lookup field config state
     setSelectedRelationId('');
     setSelectedLookupColumnId('');
@@ -737,80 +816,34 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setOpenButtonInNewTab(true);
     // Reset json field config state
     // Reset createdBy/lastModifiedBy field config state
+    // Reset uuid field config state
+    setIdGeneration(DEFAULT_ID_GENERATION);
+    setUuidBackfill(true);
+  };
+
+  // Puts every field-config input back to its default
+  const resetConfigState = () => {
+    setFieldName('');
+    setSearch('');
+    setSelectedType(null);
+    resetTypeConfig();
   };
 
   const resetStateOnClose = () => {
     // Reset all state when modal closes
     setStep(null);
-    setFieldName('');
-    setSearch('');
-    setSelectedType(null);
-    setDefaultValue('');
-    setDescription('');
-    setRichText(false);
-    setShowThousands(false);
-    setPrecision('1.0');
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    setSelectOptions([]);
-    setColor('');
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    setYearDefault(null);
-    setDateDefault('');
-    setShowDateDefault(false);
-    setTimeDefault('');
-    setShowTimeDefault(false);
-    setPhoneValid(false);
-    setPhoneDefault('');
-    setShowPhoneDefault(false);
-    setEmailValid(false);
-    setEmailDefault('');
-    setShowEmailDefault(false);
-    setUrlValid(false);
-    setUrlDefault('');
-    setShowUrlDefault(false);
-    setDisplayAsProgress(false);
-    setShowPercentDefault(false);
-    setPercentDefault(null);
-    setDurationFormat('h:mm');
-    setDurationDefault(0);
-    setCurrencyType('USD');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    setShowTextDefault(false);
-    setShowDescription(false);
-    setAllowMultipleUsers(false);
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setHasUserModifiedLookupColumn(false);
-    setTargetTableFields([]);
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
+    resetConfigState();
     setNameError(null);
     setFormulaError(null);
     setShowYearDefault(false);
     setShowPercentDefault(false);
     setShowJsonDefault(false);
     setIsSaving(false);
+  };
+
+  const initializeCreateState = () => {
+    setStep(1);
+    resetConfigState();
   };
 
   //select, multi-select input state - track which option is being edited
@@ -868,15 +901,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   }, [fieldName, fields, step, initialValues]);
 
   // Auto-focus field name input when modal opens and step is 1 or 2
+  const isEditMode = !!initialValues;
   useEffect(() => {
     if (isOpen && (step === 1 || step === 2) && fieldNameInputRef.current) {
       // Small delay to ensure the modal is fully rendered
       const timer = setTimeout(() => {
         fieldNameInputRef.current?.focus();
+        // In edit mode, select the existing name so it can be replaced by typing
+        if (isEditMode) {
+          fieldNameInputRef.current?.select();
+        }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, step]);
+  }, [isOpen, step, isEditMode]);
 
   // Filter out hidden field types (button, formula, uuid) from user selection
   const filteredTypes: FieldType[] = FIELD_TYPES
@@ -917,59 +955,20 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
 
     setSelectedType(type);
     setStep(2);
-    // Reset config state
-    setDefaultValue('');
-    setDescription('');
-    setRichText(false);
-    setShowThousands(false);
-    setPrecision('1.0');
-    // Reset checkbox config state
-    setCheckboxIcon('check');
-    setCheckboxColor('green');
-    setCheckboxDefault(false);
-    // Reset select/multiselect config state
-    setSelectOptions([]);
-    setNewOption('');
-    setMultiDefault([]);
-    setSingleDefault('');
-    // Reset rating config state
-    setRatingIcon('star');
-    setRatingColor('yellow');
-    setRatingMax(5);
-    setRatingDefault(0);
-    setDateFormat('YYYY-MM-DD');
-    setTimeFormat('hh:mm');
-    setHourFormat('24');
-    setDisplayTimeZone(false);
-    setSameTimezone(false);
-    setTimeZone('');
-    setDateTimeDefault('');
-    setShowDateTimeDefault(false);
-    // Reset currency config state
-    setCurrencyType('USD');
-    setCurrencyDefault(null);
-    setShowCurrencyDefault(false);
-    // Reset text config state
-    setShowTextDefault(false);
-    setShowDescription(false);
-    // Reset user field config state
-    setAllowMultipleUsers(false);
-    // Reset links field config state
-    setRelationType('one-to-one');
-    setSelectedTableId('');
-    setSelectedTable(null);
-    // Reset lookup field config state
-    setSelectedRelationId('');
-    setSelectedLookupColumnId('');
-    setTargetTableFields([]);
-    // Reset button field config state
-    setButtonStyle('primary');
-    setButtonAction('url');
-    setOpenButtonInNewTab(true);
+    resetTypeConfig();
+    // Start from the formats chosen when the base was created (user can still change them)
+    const baseDefaults = getBaseFormatDefaults(baseMeta, type.key);
+    setDateFormat(baseDefaults.dateFormat ?? 'YYYY-MM-DD');
+    setTimeFormat(baseDefaults.timeFormat ?? 'hh:mm');
+    setHourFormat(baseDefaults.hourFormat ?? '24');
+    setDisplayTimeZone(baseDefaults.displayTimeZone ?? false);
+    setSameTimezone(baseDefaults.sameTimezone ?? false);
+    setTimeZone(baseDefaults.timeZone ?? '');
+    setCurrencyType(baseDefaults.currencyType ?? 'USD');
+    setCurrencyLocale(baseDefaults.currencyLocale ?? 'en-US');
     // Reset formula field config state
     setFormulaText('');
     setFormulaError(null);
-    // Reset json field config state
   };
 
 /* eslint-disable sonarjs/cognitive-complexity */
@@ -1075,6 +1074,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       selectedTableId,
       selectedTable,
       relationType,
+      inverseTitle,
+      displayColumnId,
+      currentTableId,
       selectedRelationId,
       selectedLookupColumnId,
       linkFields,
@@ -1083,12 +1085,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       openButtonInNewTab,
       formulaText,
       formulaFormatting,
-      getBrowserTimeZone
+      getBrowserTimeZone,
+      idGeneration
     });
 
     if (error) {
       toast.error(error);
       return;
+    }
+
+    // A default on a column of a unique key that has a default on every column repeats in each new record
+    if (initialValues?.id && hasDefaultValue(meta)) {
+      const columnsWithNewMeta = (fields || []).map((f: any) => (f.id === initialValues.id ? { ...f, meta } : f));
+      const conflict = uniqueKeys.some(
+        key => key.columns.some(c => c.id === initialValues.id) &&
+          keyHasDefaultConflict(key.columns.map(c => c.id), columnsWithNewMeta)
+      );
+      if (conflict) {
+        toast.error(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+        return;
+      }
     }
 
     const colConfig = buildColumnPayload({
@@ -1097,7 +1113,9 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       description,
       fields,
       initialValues,
-      meta
+      meta,
+      // A primary key field always gets its empty records filled
+      backfill: isTurningUuidToAuto ? (uuidBackfill || isPrimaryKeyField) : undefined
     });
 
     setIsSaving(true);
@@ -1258,6 +1276,14 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setSelectedTableId,
     selectedTable,
     setSelectedTable,
+    inverseTitle,
+    setInverseTitle,
+    displayColumnId,
+    setDisplayColumnId,
+    displayColumnOptions,
+    isLinkTargetLoading,
+    isSelfLink,
+    currentTableId,
     selectedRelationId,
     setSelectedRelationId,
     selectedLookupColumnId,
@@ -1300,6 +1326,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setFormulaError,
     isValidPercentInput,
     isLinksFieldEditing,
+    idGeneration,
+    setIdGeneration,
+    isTurningUuidToAuto,
+    uuidCounts,
+    uuidBackfill,
+    setUuidBackfill,
+    isPrimaryKeyField,
   });
   const isCompactAnchor = !isAddNewColumn || fields.length === 0 || fields.length <= 1;
   const positionClass = isCompactAnchor ? "left-0" : "right-0 translate-x-0";
@@ -1307,24 +1340,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   const modalAnchorClass = shouldUseBackdrop ? 'bg-modal-backdrop flex items-center justify-center' : `absolute top-full ${positionClass}`;
   const modalWidthClass = selectedType?.key === 'formula' ? 'w-[500px]' : 'w-[416px]';
 
-  return (
-    <div
-      ref={modalRef}
-      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
-        }`}
-    >
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
-        <div className="flex items-center mb-4">
-          <span className="text-lg font-semibold text-gray-900 flex-1">
-            {initialValues ? 'Edit Field' : 'New Field'}
-          </span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
-          {step === 1 && (
+  const renderTypeSelectionStep = () => step === 1 && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1373,9 +1389,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                 </div>
               )}
             </>
-          )}
-
-          {step === 2 && selectedType && (
+          );
+  const renderFieldConfigStep = () => step === 2 && selectedType && (
             <>
               <input
                 ref={fieldNameInputRef}
@@ -1412,7 +1427,26 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               {/* Directly render the content without an extra div */}
               {renderConfigStep()}
             </>
-          )}
+          );
+  return (
+    <div
+      ref={modalRef}
+      className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        }`}
+    >
+      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
+        <div className="flex items-center mb-4">
+          <span className="text-lg font-semibold text-gray-900 flex-1">
+            {initialValues ? 'Edit Field' : 'New Field'}
+          </span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
+          {renderTypeSelectionStep()}
+          {renderFieldConfigStep()}
         </div>
 
         {/* Buttons at the bottom */}

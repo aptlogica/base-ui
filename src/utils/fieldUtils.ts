@@ -17,54 +17,11 @@ export interface BaseField {
 }
 
 /**
- * Get default value for a field based on its type and meta
+ * Get the empty/initial value for a field based on its type.
+ * Column defaults (meta.defaultValue) are applied by the database, not the frontend.
  */
 export const getFieldDefaultValue = (field: BaseField): any => {
-  if (!field?.meta) return getTypeDefaultValue(field?.type || 'text');
-
-  // C!field?.metafirst
-  if (field.meta.defaultValue !== undefined && field.meta.defaultValue !== null) {
-    return field.meta.defaultValue;
-  }
-
-  // Type-specific default values from meta
-  switch (field.type) {
-    case 'checkbox':
-    case 'boolean':
-      return field.meta.checkboxDefault ?? false;
-    case 'rating':
-      return field.meta.ratingDefault ?? 0;
-    case 'number':
-    case 'decimal':
-    case 'currency':
-    case 'percent':
-      return field.meta.defaultValue ?? '';
-    case 'select':
-      return field.meta.singleDefault ?? '';
-    case 'multiSelect':
-      return field.meta.multiDefault ?? [];
-    case 'links':
-      return field.meta.linksDefault ?? [];
-    case 'datetime':
-      return field.meta.dateTimeDefault ?? '';
-    case 'date':
-      return field.meta.dateDefault ?? '';
-    case 'time':
-      return field.meta.timeDefault ?? '';
-    case 'year':
-      return field.meta.yearDefault ?? '';
-    case 'phone':
-    case 'phoneNumber':
-      return field.meta.phoneDefault ?? '';
-    case 'email':
-      return field.meta.emailDefault ?? '';
-    case 'url':
-      return field.meta.urlDefault ?? '';
-    case 'duration':
-      return field.meta.durationDefault ?? '';
-    default:
-      return field.meta.defaultValue ?? getTypeDefaultValue(field.type);
-  }
+  return getTypeDefaultValue(field?.type || 'text');
 };
 
 /**

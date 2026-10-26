@@ -3,8 +3,10 @@ import {
   buildColumnPayload,
   buildFieldMeta,
   getUniqueColumnNameByUidt,
+  getBaseFormatDefaults,
   isDuplicateFieldName,
   toTitleCase,
+  type BuildFieldMetaParams,
 } from '../NewColumnModal.logic';
 
 describe('NewColumnModal.logic', () => {
@@ -23,65 +25,94 @@ describe('NewColumnModal.logic', () => {
     expect(getUniqueColumnNameByUidt('text', fields)).toBe('Text 1');
   });
 
+  const linksParams: BuildFieldMetaParams = {
+    selectedTypeKey: 'links',
+    defaultValue: '',
+    richText: false,
+    showThousands: false,
+    precision: '1.0',
+    checkboxIcon: 'check',
+    checkboxColor: 'green',
+    checkboxDefault: false,
+    selectOptions: [],
+    singleDefault: '',
+    multiDefault: [],
+    ratingIcon: 'star',
+    ratingColor: 'yellow',
+    ratingMax: 5,
+    ratingDefault: 0,
+    description: '',
+    dateFormat: 'YYYY-MM-DD',
+    timeFormat: 'hh:mm',
+    hourFormat: '24',
+    displayTimeZone: false,
+    sameTimezone: false,
+    timeZone: '',
+    timeZoneOptions: [],
+    dateTimeDefault: '',
+    currencyType: 'USD',
+    currencyLocale: 'en-US',
+    displayAsProgress: false,
+    progressColor: 'blue',
+    percentDefault: null,
+    durationFormat: 'h:mm',
+    durationDefault: 0,
+    yearDefault: null,
+    dateDefault: '',
+    timeDefault: '',
+    phoneValid: false,
+    phoneDefault: '',
+    emailValid: false,
+    emailDefault: '',
+    urlValid: false,
+    urlDefault: '',
+    allowMultipleUsers: false,
+    selectedUsers: null,
+    selectedTableId: '',
+    selectedTable: null,
+    relationType: 'one-to-one',
+    selectedRelationId: '',
+    selectedLookupColumnId: '',
+    linkFields: [],
+    buttonStyle: 'primary',
+    buttonAction: 'url',
+    openButtonInNewTab: true,
+    formulaText: '',
+    formulaFormatting: { type: 'text', precision: 2, currency: 'USD', dateFormat: 'YYYY-MM-DD' },
+    getBrowserTimeZone: () => 'UTC',
+  };
+
   it('returns validation error when links field has no target', () => {
-    const result = buildFieldMeta({
-      selectedTypeKey: 'links',
-      defaultValue: '',
-      richText: false,
-      showThousands: false,
-      precision: '1.0',
-      checkboxIcon: 'check',
-      checkboxColor: 'green',
-      checkboxDefault: false,
-      selectOptions: [],
-      singleDefault: '',
-      multiDefault: [],
-      ratingIcon: 'star',
-      ratingColor: 'yellow',
-      ratingMax: 5,
-      ratingDefault: 0,
-      description: '',
-      dateFormat: 'YYYY-MM-DD',
-      timeFormat: 'hh:mm',
-      hourFormat: '24',
-      displayTimeZone: false,
-      sameTimezone: false,
-      timeZone: '',
-      timeZoneOptions: [],
-      dateTimeDefault: '',
-      currencyType: 'USD',
-      currencyLocale: 'en-US',
-      displayAsProgress: false,
-      progressColor: 'blue',
-      percentDefault: null,
-      durationFormat: 'h:mm',
-      durationDefault: 0,
-      yearDefault: null,
-      dateDefault: '',
-      timeDefault: '',
-      phoneValid: false,
-      phoneDefault: '',
-      emailValid: false,
-      emailDefault: '',
-      urlValid: false,
-      urlDefault: '',
-      allowMultipleUsers: false,
-      selectedUsers: null,
-      selectedTableId: '',
-      selectedTable: null,
-      relationType: 'one-to-one',
-      selectedRelationId: '',
-      selectedLookupColumnId: '',
-      linkFields: [],
-      buttonStyle: 'primary',
-      buttonAction: 'url',
-      openButtonInNewTab: true,
-      formulaText: '',
-      formulaFormatting: { type: 'text', precision: 2, currency: 'USD', dateFormat: 'YYYY-MM-DD' },
-      getBrowserTimeZone: () => 'UTC',
-    });
+    const result = buildFieldMeta({ ...linksParams });
 
     expect(result.error).toBe('Target table is required for relation fields');
+  });
+
+  it('sends the chosen display column, or an empty id to use the first text column', () => {
+    const target = { ...linksParams, selectedTableId: 't2', selectedTable: { id: 't2' }, currentTableId: 't1' };
+
+    const chosen = buildFieldMeta({ ...target, displayColumnId: 'col-b' });
+    expect(chosen.meta.display_column_id).toBe('col-b');
+    // the field in the linked table is not configured here: the server gives it the first text column
+    expect(chosen.meta.relation).toEqual({ with: 't2', type: 'one-to-one' });
+
+    expect(buildFieldMeta({ ...target }).meta.display_column_id).toBe('');
+
+    const selfLink = buildFieldMeta({ ...target, selectedTableId: 't1', selectedTable: { id: 't1' }, displayColumnId: 'col-a' });
+    expect(selfLink.meta.display_column_id).toBe('col-a');
+  });
+
+  it('sets a trimmed inverse title only when linking to another table', () => {
+    const target = { ...linksParams, selectedTableId: 't2', selectedTable: { id: 't2' }, currentTableId: 't1' };
+
+    const withInverse = buildFieldMeta({ ...target, inverseTitle: '  Parent  ' });
+    expect(withInverse.meta.relation).toEqual({ with: 't2', type: 'one-to-one', inverse_title: 'Parent' });
+
+    const blankInverse = buildFieldMeta({ ...target, inverseTitle: '   ' });
+    expect(blankInverse.meta.relation).toEqual({ with: 't2', type: 'one-to-one' });
+
+    const selfLink = buildFieldMeta({ ...target, selectedTableId: 't1', selectedTable: { id: 't1' }, inverseTitle: 'Parent' });
+    expect(selfLink.meta.relation).toEqual({ with: 't1', type: 'one-to-one' });
   });
 
   it('builds datetime meta including timezone and default datetime', () => {
@@ -159,7 +190,39 @@ describe('NewColumnModal.logic', () => {
     });
 
     expect(payload.name).toBe('Links 1');
-    expect(payload.meta).toEqual({ relation: { with: 'abc', type: 'one-to-one' } });
+    // the relation of an existing link can't change, and no display column was chosen
+    expect(payload.meta).toEqual({ relation: { with: 'abc', type: 'one-to-one' }, display_column_id: '' });
+  });
+
+  it('lets an existing link change its display column and nothing else in meta', () => {
+    const payload = buildColumnPayload({
+      fieldName: 'Orders',
+      selectedTypeKey: 'links',
+      description: '',
+      fields: [],
+      initialValues: { meta: { relation: { with: 'abc', type: 'one-to-one' }, relation_id: 'r1', entity_role: 'source', display_column_id: 'old' } },
+      meta: { relation: { with: 'xyz', type: 'has-many' }, display_column_id: 'new' },
+    });
+
+    expect(payload.meta).toEqual({
+      relation: { with: 'abc', type: 'one-to-one' },
+      relation_id: 'r1',
+      entity_role: 'source',
+      display_column_id: 'new',
+    });
+  });
+
+  it('clears the display column of an existing link when none is chosen', () => {
+    const payload = buildColumnPayload({
+      fieldName: 'Orders',
+      selectedTypeKey: 'links',
+      description: '',
+      fields: [],
+      initialValues: { meta: { relation: { with: 'abc', type: 'one-to-one' }, display_column_id: 'old' } },
+      meta: { relation: { with: 'abc', type: 'one-to-one' }, display_column_id: '' },
+    });
+
+    expect(payload.meta.display_column_id).toBe('');
   });
 
   it('formats title case and increments names with existing numbered suffixes', () => {
@@ -551,5 +614,62 @@ describe('NewColumnModal.logic', () => {
       displayTimeZone: false,
     });
     expect(durationMeta.meta.defaultValue).toBe(90);
+  });
+});
+
+describe('getBaseFormatDefaults', () => {
+  const meta = {
+    dateFormat: 'DD/MM/YYYY',
+    dateTimeFormat: { dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' },
+    currencyLocale: 'en-IN',
+    currencyType: 'INR',
+  };
+
+  it('returns the base date format for date fields', () => {
+    expect(getBaseFormatDefaults(meta, 'date')).toEqual({ dateFormat: 'DD/MM/YYYY' });
+  });
+
+  it('returns the base date-time format for datetime fields', () => {
+    expect(getBaseFormatDefaults(meta, 'datetime')).toEqual({ dateFormat: 'MM-DD-YYYY', timeFormat: 'HH:mm' });
+  });
+
+  it('returns the base time display and timezone options for datetime fields', () => {
+    const dateTimeMeta = {
+      dateTimeFormat: {
+        dateFormat: 'MM-DD-YYYY',
+        timeFormat: 'hh:mm',
+        hourFormat: '12',
+        displayTimeZone: true,
+        sameTimezone: true,
+        timeZone: 'Asia/Kolkata',
+      },
+    };
+    expect(getBaseFormatDefaults(dateTimeMeta, 'datetime')).toEqual({
+      dateFormat: 'MM-DD-YYYY',
+      timeFormat: 'hh:mm',
+      hourFormat: '12',
+      displayTimeZone: true,
+      sameTimezone: true,
+      timeZone: 'Asia/Kolkata',
+    });
+    expect(getBaseFormatDefaults(JSON.stringify(dateTimeMeta), 'createdTime').hourFormat).toBe('12');
+  });
+
+  it('ignores an invalid base hour format', () => {
+    expect(getBaseFormatDefaults({ dateTimeFormat: { hourFormat: '36' } }, 'datetime').hourFormat).toBeUndefined();
+  });
+
+  it('returns the base currency for currency fields', () => {
+    expect(getBaseFormatDefaults(meta, 'currency')).toEqual({ currencyLocale: 'en-IN', currencyType: 'INR' });
+  });
+
+  it('accepts meta as a JSON string', () => {
+    expect(getBaseFormatDefaults(JSON.stringify(meta), 'currency')).toEqual({ currencyLocale: 'en-IN', currencyType: 'INR' });
+  });
+
+  it('returns nothing for missing/invalid meta or unrelated field types', () => {
+    expect(getBaseFormatDefaults(undefined, 'date')).toEqual({});
+    expect(getBaseFormatDefaults('not json', 'date')).toEqual({});
+    expect(getBaseFormatDefaults(meta, 'text')).toEqual({});
   });
 });

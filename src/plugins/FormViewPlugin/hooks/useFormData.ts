@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
-import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView, useUpdateViewAppearance, useInsertRelationData, useAddAttachment } from '../../../hooks/useApi';
+import { useTable, useAddRow, useUpsertRow, useDeleteRecord, useInsertRowData, useUpdateField, useDeleteColumn, useCreateField, useUpdateView, useUpdateViewAppearance, useInsertRelationData, useAddAttachment } from '../../../hooks/useApi';
 import type { TableData } from '../../../types/api.types';
 import { fieldsToFilter } from '../../../types/constants';
 import { isFormulaField } from '../../../utils/fieldUtils';
+import { useRequiredKeyFields } from '../../../hooks/useRequiredKeyFields';
+import { isEmptyKeyValue, missingKeyMessage } from '../../../utils/primaryKeyFields';
 
 // Data layer for Form: fetch + CRUD orchestration; keeps UI components clean
 export interface UseFormDataOptions {
@@ -94,6 +97,9 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
 
   // Expose mutations as-is; UI decides how/when to call
   const addRow = useAddRow();
+  const upsertRow = useUpsertRow();
+  // Primary key fields (without Id) must be answered before the record can be created
+  const keyColumnIds = useRequiredKeyFields(tableData?.model?.id, tableData?.columns as any);
   const insertRowData = useInsertRowData();
   const deleteRecord = useDeleteRecord();
   const updateField = useUpdateField();
@@ -106,6 +112,14 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
 
   // Helper functions for submitForm to reduce cognitive complexity
   const validateRequiredFields = (formData: Record<string, any>, formFields: FormField[]): void => {
+    const missingKey = keyColumnIds.filter(id => isEmptyKeyValue(formData[id]));
+    if (missingKey.length > 0) {
+      const titles = missingKey.map(id => {
+        const field = formFields.find(f => f.id === id) ?? (tableData?.columns as any[] | undefined)?.find(c => String(c.id) === id);
+        return field?.title || field?.name || id;
+      });
+      throw new Error(missingKeyMessage(titles));
+    }
     const requiredFields = formFields.filter((field) => field.required);
     const missingRequired = requiredFields.filter((field) => !formData[field.id]);
 
@@ -122,7 +136,8 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
   };
 
   const ensureTitleValue = (field: FormField, formData: Record<string, any>, backendRowId: string): void => {
-    const isTitleField = field.title?.toLowerCase().includes('title') || field.column_name === 'title';
+    // Only the system Title of a table created before Title became an ordinary column is filled in when empty
+    const isTitleField = isLegacyTitleColumn(field);
     if (isTitleField && !formData[field.id]) {
       formData[field.id] = `Record ${backendRowId}`;
     }
@@ -238,9 +253,10 @@ export function useFormData({ tableId }: UseFormDataOptions): UseFormDataReturn 
   };
 
   const createRecord = async (rows?: Array<Record<string, any>>): Promise<string> => {
-    const createdRecord = await addRow.mutateAsync({
+    // Insert as an upsert: no row id, so the record is created with all its values in one call
+    const createdRecord = await upsertRow.mutateAsync({
       model_id: tableData?.model?.id || '',
-      rows
+      values: rows?.[0] ?? {},
     });
     return extractCreatedRowId(createdRecord);
   };

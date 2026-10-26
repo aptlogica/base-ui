@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useState } from 'react';
 import { GripVertical, Trash, ChevronDown, ChevronUp, SquarePen } from 'lucide-react';
 import FieldRenderer from '../shared/FieldRenderer';
@@ -55,6 +56,9 @@ const DescriptionWithSeeMore: React.FC<{ description: string; appearance?: NonNu
   );
 };
 
+// Where a dragged field is dropped on a target: on its left/right edge pairs the two fields in one row
+export type DropPosition = 'left' | 'right' | 'center';
+
 interface SortableFormFieldProps {
   field: FormField;
   isSelected?: boolean;
@@ -63,9 +67,10 @@ interface SortableFormFieldProps {
   draggable?: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
+  dropPosition?: DropPosition | null;
   onDragStart?: () => void;
-  onDragOver?: () => void;
-  onDrop?: () => void;
+  onDragOver?: (position: DropPosition) => void;
+  onDrop?: (position: DropPosition) => void;
   onDragEnd?: () => void;
   onDelete?: (fieldId: string) => void;
   appearance?: NonNullable<FormConfig['appearance']>;
@@ -204,6 +209,16 @@ const getFieldRendererProps = (
     };
   }
 
+  if (baseProps.type === 'longText') {
+    // Form View edits long text in place (rich text editor or plain textarea, per the field config).
+    // Rich text is on by default here unless the field explicitly disables it.
+    return {
+      ...baseProps,
+      config: { ...baseProps.config, richText: baseProps.config.richText ?? true },
+      inline: true
+    };
+  }
+
   return {
     ...baseProps,
     isBorder: true
@@ -219,7 +234,8 @@ const ActionButtons: React.FC<{
   onDragStart?: () => void;
   onDragEnd?: () => void;
   draggable: boolean;
-}> = ({ field, isReadOnly, onEdit, onDelete, onDragStart, onDragEnd, draggable }) => {
+  labelPosition?: string;
+}> = ({ field, isReadOnly, onEdit, onDelete, onDragStart, onDragEnd, draggable, labelPosition }) => {
   const hasActions = !isReadOnly && (onEdit || onDelete || (onDragStart && draggable));
   
   if (!hasActions) {
@@ -227,11 +243,25 @@ const ActionButtons: React.FC<{
   }
 
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <>
+    {onDragStart && (
+      <button
+        type="button"
+        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        draggable={draggable}
+        onDragStart={e => { e.stopPropagation(); onDragStart(); }}
+        onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
+        aria-label="Drag to reorder field"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+    )}
+    {/* With left-aligned labels the input sits on the first row, so lift the actions onto the top edge to avoid covering it */}
+    <div className={`absolute right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${labelPosition === 'left' ? '-top-4' : 'top-2'}`}>
       {!field.isSystem && onEdit && (
         <button
           type="button"
-          className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm"
+          className="p-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] bg-[var(--color-alpha-white)] rounded shadow-sm"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -240,18 +270,6 @@ const ActionButtons: React.FC<{
           aria-label="Edit field"
         >
           <SquarePen className="w-4 h-4" />
-        </button>
-      )}
-      {onDragStart && (
-        <button
-          type="button"
-          className="p-1 text-gray-400 hover:text-gray-600 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-grab active:cursor-grabbing"
-          draggable={draggable}
-          onDragStart={e => { e.stopPropagation(); onDragStart(); }}
-          onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
-          aria-label="Drag to reorder field"
-        >
-          <GripVertical className="w-4 h-4" />
         </button>
       )}
       {!field.isSystem && onDelete && (
@@ -269,31 +287,44 @@ const ActionButtons: React.FC<{
         </button>
       )}
     </div>
+    </>
   );
 };
 
 // Extract container className computation
-const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragOver: boolean, labelPosition?: string): string => {
+const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragOver: boolean, dropPosition?: DropPosition | null, labelPosition?: string): string => {
   const spacing = labelPosition === 'left' ? 'space-y-7' : 'space-y-2';
+  const isSideDrop = dropPosition === 'left' || dropPosition === 'right';
   return `relative group ${spacing} p-4 rounded-xl transition-all select-none
-    ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-gray-50'}
+    ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-[var(--color-hover-bg)]'}
     ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
-    ${isDragOver ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
+    ${isDragOver && !isSideDrop ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
+};
+
+// Edge zones (as a fraction of the field width) that place the dragged field beside the target
+const SIDE_DROP_ZONE = 0.25;
+
+const getDropPosition = (e: React.DragEvent): DropPosition => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  if (x < rect.width * SIDE_DROP_ZONE) return 'left';
+  if (x > rect.width * (1 - SIDE_DROP_ZONE)) return 'right';
+  return 'center';
 };
 
 // Extract drag handlers setup
 const createDragHandlers = (
-  onDragOver?: () => void,
-  onDrop?: () => void
+  onDragOver?: (position: DropPosition) => void,
+  onDrop?: (position: DropPosition) => void
 ) => {
   const handleDragOver = onDragOver ? (e: React.DragEvent) => {
     e.preventDefault();
-    onDragOver();
+    onDragOver(getDropPosition(e));
   } : undefined;
 
   const handleDrop = onDrop ? (e: React.DragEvent) => {
     e.preventDefault();
-    onDrop();
+    onDrop(getDropPosition(e));
   } : undefined;
 
   return { handleDragOver, handleDrop };
@@ -309,7 +340,7 @@ const FieldContent: React.FC<{
   isSubmitting?: boolean;
 }> = ({ field, appearance = {}, fieldRendererProps, onChange, isReadOnly, isSubmitting = false }) => {
   const labelPosition = appearance?.labelPosition === 'left' ? 'flex-row items-center' : 'flex-col';
-  const isSystemField = field.isSystem && field.column_name !== 'title' && field.title?.toLowerCase() !== 'title';
+  const isSystemField = field.isSystem && !isLegacyTitleColumn(field);
   
   return (
     <>
@@ -321,7 +352,7 @@ const FieldContent: React.FC<{
           {getFieldDisplayName(field)}
           {field.required && <span className="ml-1 field-component-required">*</span>}
         </label>
-        <div className={`flex-1 ${isSystemField || isSubmitting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
+        <div className={`flex-1 min-w-0 ${isSystemField || isSubmitting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
           <FieldRenderer
             {...fieldRendererProps}
             onChange={isReadOnly || isSubmitting ? undefined : onChange}
@@ -346,6 +377,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   draggable = false,
   isDragging = false,
   isDragOver = false,
+  dropPosition = null,
   onDragStart,
   onDragOver,
   onDrop,
@@ -372,7 +404,8 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
   );
 
   const { handleDragOver, handleDrop } = createDragHandlers(onDragOver, onDrop);
-  const containerClassName = getContainerClassName(isSelected ?? false, isDragging ?? false, isDragOver ?? false, appearance?.labelPosition);
+  const containerClassName = getContainerClassName(isSelected ?? false, isDragging ?? false, isDragOver ?? false, dropPosition, appearance?.labelPosition);
+  const sideDropIndicator = isDragOver && (dropPosition === 'left' || dropPosition === 'right') ? dropPosition : null;
 
   // Drag-and-drop zones are mouse/touch based and don't require keyboard handlers
   const ContainerTag = (handleDragOver || handleDrop) ? 'section' : 'div';
@@ -386,6 +419,12 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
       ...(handleDragOver || handleDrop ? { 'aria-label': 'Drag and drop zone' } : {})
     },
     <>
+      {sideDropIndicator && (
+        <span
+          data-testid={`side-drop-indicator-${sideDropIndicator}`}
+          className={`absolute top-2 bottom-2 w-1 rounded-full bg-[var(--color-brand-400)] ${sideDropIndicator === 'left' ? '-left-1' : '-right-1'}`}
+        />
+      )}
       <ActionButtons
         field={field}
         isReadOnly={isReadOnly}
@@ -394,6 +433,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         draggable={draggable}
+        labelPosition={appearance?.labelPosition}
       />
       <FieldContent
         field={field}

@@ -12,6 +12,9 @@ interface UseCellEditingOptions {
   insertRowDataMutation?: any;
   bulkUpdateColumnMutation?: any;
   onRecordsUpdate: (updater: (prev: any[]) => any[]) => void;
+  // Called when the server rejects a cell value (e.g. a unique key), so the grid can show the
+  // reason and put the saved value back
+  onSaveError?: (failure: { rowId: string; columnKey: string; error: unknown }) => void;
 }
 
 interface RecordWithId {
@@ -28,6 +31,7 @@ export function useCellEditing({
   insertRowDataMutation,
   bulkUpdateColumnMutation,
   onRecordsUpdate,
+  onSaveError,
 }: UseCellEditingOptions) {
   // Debounce refs for cell changes
   const debounceTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -314,8 +318,10 @@ export function useCellEditing({
       if (err instanceof Error && !err.message.includes('500')) {
         console.error('Failed to update cell:', err);
       }
+      // Nothing was saved: the original value stays the reference for the next edit
+      onSaveError?.({ rowId: change.rowId, columnKey: change.columnKey, error: err });
     }
-  }, [tableId, bulkUpdateColumnMutation, insertRowDataMutation, onRecordsUpdate, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
+  }, [tableId, bulkUpdateColumnMutation, insertRowDataMutation, onRecordsUpdate, onSaveError, hasValueChanged, isEmptyValue, isNewlyCreatedRow, updateLocalRecord]);
 
   // Update a single cell value (debounced to reduce API calls)
   const handleCellChange = useCallback(async (rowId: string, columnKey: string, value: any) => {

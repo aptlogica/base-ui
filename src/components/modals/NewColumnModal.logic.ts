@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { IdGeneration, UUID_DEFAULT_VERSION } from '../../types/uuid.types';
+
 export interface FormulaFormatting {
   type: 'number' | 'currency' | 'percent' | 'duration' | 'date' | 'text';
   precision: number;
@@ -56,6 +58,11 @@ export interface BuildFieldMetaParams {
   selectedTableId: string;
   selectedTable: any;
   relationType: 'one-to-one' | 'has-many' | 'many-to-many';
+  // Title of the column created on the other table (not used for a self-link, which has one column)
+  inverseTitle?: string;
+  // Column of the linked table this link shows for each linked record ('' = the first text column)
+  displayColumnId?: string;
+  currentTableId?: string;
   selectedRelationId: string;
   selectedLookupColumnId: string;
   linkFields: any[];
@@ -65,6 +72,8 @@ export interface BuildFieldMetaParams {
   formulaText: string;
   formulaFormatting: FormulaFormatting;
   getBrowserTimeZone: () => string;
+  // UUID fields: Auto-generated (with a version) or Manual
+  idGeneration?: IdGeneration;
 }
 
 export interface BuildFieldMetaResult {
@@ -79,6 +88,8 @@ export interface BuildColumnPayloadParams {
   fields: any[];
   initialValues?: any;
   meta: any;
+  // UUID fields turned to auto-generated: fill the records that have no value yet
+  backfill?: boolean;
 }
 
 export const isDuplicateFieldName = (params: {
@@ -273,6 +284,13 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       with: params.selectedTableId,
       type: params.relationType
     };
+    const inverseTitle = params.inverseTitle?.trim();
+    const isSelf = params.selectedTableId === params.currentTableId;
+    if (inverseTitle && !isSelf) {
+      config.relation.inverse_title = inverseTitle;
+    }
+    // '' lets the server pick the first text column (or clears the choice when a link is edited)
+    config.display_column_id = params.displayColumnId ?? '';
   };
 
   const handleLookup = (): BuildFieldMetaResult | void => {
@@ -293,6 +311,8 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       return { error: 'Selected link field does not have a valid relation_id' };
     }
     config.relation_id = relationIdFromMeta;
+    // Both columns of a self-link share relation_id, so the link field decides the direction.
+    config.link_column_id = params.selectedRelationId;
     config.lookup_column_id = params.selectedLookupColumnId;
   };
 
@@ -389,6 +409,13 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       config.openInNewTab = params.openButtonInNewTab;
     },
     json: applyTextDefault,
+    // A UUID field never has a default value: auto fields are generated, manual fields are typed in
+    uuid: () => {
+      delete config.defaultValue;
+      config.idGeneration = params.idGeneration?.mode === 'auto'
+        ? { mode: 'auto', version: params.idGeneration.version ?? UUID_DEFAULT_VERSION }
+        : { mode: 'manual' };
+    },
     formula: () => {
       config.formula = params.formulaText;
       config.formatting = {
@@ -417,7 +444,11 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
 
   let finalMeta = params.meta;
   if (params.selectedTypeKey === 'links' && params.initialValues) {
-    finalMeta = params.initialValues.meta || params.initialValues.config || {};
+    // The relation of an existing link can't change; only its display column can
+    finalMeta = {
+      ...(params.initialValues.meta || params.initialValues.config),
+      display_column_id: params.meta?.display_column_id ?? '',
+    };
   }
 
   return {
@@ -427,5 +458,58 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     type: params.selectedTypeKey,
     description: params.description,
     meta: finalMeta,
+    ...(params.backfill === undefined ? {} : { backfill: params.backfill }),
   };
+};
+
+export interface BaseFormatDefaults {
+  dateFormat?: string;
+  timeFormat?: string;
+  hourFormat?: '12' | '24';
+  displayTimeZone?: boolean;
+  sameTimezone?: boolean;
+  timeZone?: string;
+  currencyLocale?: string;
+  currencyType?: string;
+}
+
+const DATE_TIME_FIELD_TYPES = new Set(['datetime', 'createdTime', 'lastModifiedTime']);
+
+/**
+ * Resolves the format defaults saved in a base's `meta` (set on base creation)
+ * for the given field type. `meta` may arrive as an object or a JSON string.
+ */
+export const getBaseFormatDefaults = (meta: unknown, fieldTypeKey: string): BaseFormatDefaults => {
+  let parsed: any = meta;
+  if (typeof meta === 'string') {
+    try {
+      parsed = JSON.parse(meta);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+
+  if (fieldTypeKey === 'date') {
+    return { dateFormat: parsed.dateFormat || undefined };
+  }
+  if (DATE_TIME_FIELD_TYPES.has(fieldTypeKey)) {
+    const dateTime = parsed.dateTimeFormat || {};
+    const hourFormat = String(dateTime.hourFormat ?? '');
+    return {
+      dateFormat: dateTime.dateFormat || undefined,
+      timeFormat: dateTime.timeFormat || undefined,
+      hourFormat: hourFormat === '12' || hourFormat === '24' ? hourFormat : undefined,
+      displayTimeZone: typeof dateTime.displayTimeZone === 'boolean' ? dateTime.displayTimeZone : undefined,
+      sameTimezone: typeof dateTime.sameTimezone === 'boolean' ? dateTime.sameTimezone : undefined,
+      timeZone: dateTime.timeZone || undefined,
+    };
+  }
+  if (fieldTypeKey === 'currency') {
+    return {
+      currencyLocale: parsed.currencyLocale || undefined,
+      currencyType: parsed.currencyType || undefined,
+    };
+  }
+  return {};
 };

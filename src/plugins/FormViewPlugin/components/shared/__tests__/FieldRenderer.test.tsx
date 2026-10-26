@@ -8,6 +8,12 @@ vi.mock('../../../../../components/common/Fields/SingleLineText', () => ({
   ),
 }));
 
+vi.mock('../../../../../components/common/Fields/UUIDField', () => ({
+  UUIDField: (props: { value?: string }) => (
+    <input data-testid="uuid-field" value={props.value ?? ''} readOnly />
+  ),
+}));
+
 vi.mock('../../../../../components/common/Fields/NumberField', () => ({
   NumberField: (props: { value?: number }) => (
     <input data-testid="number-field" type="number" value={props.value ?? 0} readOnly />
@@ -280,11 +286,11 @@ describe('FieldRenderer', () => {
   });
 
   describe('UUID field', () => {
-    it('should render uuid as single line text', async () => {
-      render(<FieldRenderer type="uuid" value="abc-123" />);
+    it('should render uuid with the UUID field', async () => {
+      render(<FieldRenderer type="uuid" value="3f6c2a9e-1b47-4d8a-9e05-7c2b4f1a8d63" />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('single-line-text')).toBeInTheDocument();
+        expect(screen.getByTestId('uuid-field')).toBeInTheDocument();
       });
     });
   });

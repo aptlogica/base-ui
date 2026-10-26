@@ -13,7 +13,10 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const refetchQueries = vi.fn();
 const loadNextPage = vi.fn();
-let mockRecords: Array<{ id: number; title: string }> = [
+let mockColumns: Array<Record<string, unknown>> = [
+  { id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 },
+];
+let mockRecords: Array<Record<string, unknown>> = [
   { id: 1, title: 'Record One' },
   { id: 2, title: 'Record Two' },
 ];
@@ -22,7 +25,7 @@ let mockHasMore = false;
 
 vi.mock('../../../../hooks/useApi', () => ({
   useTable: () => ({
-    data: { data: { records: mockRecords } },
+    data: { data: { records: mockRecords, columns: mockColumns } },
     isLoading: mockIsLoading,
   }),
   useInsertRelationData: () => ({ mutateAsync: mutateAsyncMock }),
@@ -72,6 +75,7 @@ describe('LinksField', () => {
     toastSuccess.mockReset();
     toastError.mockReset();
     loadNextPage.mockReset();
+    mockColumns = [{ id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 }];
     mockRecords = [
       { id: 1, title: 'Record One' },
       { id: 2, title: 'Record Two' },
@@ -224,6 +228,33 @@ describe('LinksField', () => {
     );
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('resolves stored primary-key values to the linked records', async () => {
+    // A composite-key table stores [{code, dept}] instead of ids
+    mockRecords = [
+      { id: 1, title: 'India HR', code: 'IN', dept: 'HR' },
+      { id: 2, title: 'US HR', code: 'US', dept: 'HR' },
+    ] as any;
+    mockIsLoading = false;
+    mutateAsyncMock.mockResolvedValue({});
+    const onChange = vi.fn();
+
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'has-many' } } }}
+        value={[{ code: 'US', dept: 'HR' }, { code: 'UK', dept: 'OPS' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    expect(screen.getByText('US HR')).toBeInTheDocument();
+    expect(screen.queryByText('India HR')).not.toBeInTheDocument();
+    // A key without a loaded record shows its values
+    expect(screen.getByText('Record UK / OPS')).toBeInTheDocument();
+    expect(screen.queryByText(/object Object/)).not.toBeInTheDocument();
   });
 
   it('shows empty state when no records exist', async () => {
@@ -449,5 +480,181 @@ describe('LinksField', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     expect(onChange).toHaveBeenLastCalledWith(originalValue);
+  });
+
+  it('hides the current row from the options on a self-link', async () => {
+    const user = userEvent.setup();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl1', type: 'many-to-many' } } }}
+        value={[]}
+        onChange={vi.fn()}
+        currentRowId={1}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+
+    expect(screen.queryByRole('option', { name: /record one/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /record two/i })).toBeInTheDocument();
+  });
+
+  it('unlinks an already selected record when its option is clicked', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }, 2]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record one/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([2]));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith(expect.objectContaining({ action: 'unlink' })));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Record unlinked successfully'));
+  });
+
+  it('appends to existing links on a many-to-many field and keeps the dropdown open', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record two/i }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange.mock.calls[0][0]).toEqual([
+      { id: 1, title: 'Record One' },
+      expect.objectContaining({ title: 'Record Two' }),
+    ]);
+    expect(screen.getByRole('listbox', { name: 'Available records' })).toBeInTheDocument();
+  });
+
+  it('toggles local selection on a many-to-many field without persisting', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <LinksField
+        field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'many-to-many' } } }}
+        value={[{ id: 1, title: 'Record One' }]}
+        onChange={onChange}
+        currentRowId={10}
+        currentTableId="tbl1"
+        persistImmediately={false}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /rel/i }));
+    await user.click(screen.getByRole('option', { name: /record one/i }));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+
+    await user.click(screen.getByRole('option', { name: /record two/i }));
+    expect(onChange.mock.calls[1][0]).toEqual([
+      expect.objectContaining({ title: 'Record One' }),
+      expect.objectContaining({ title: 'Record Two' }),
+    ]);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+  describe('display column', () => {
+    const people = [
+      { id: 1, title: 'Alpha', company: 'Acme Corp' },
+      { id: 2, title: 'Beta', company: 'Globex' },
+    ];
+    const columns = [
+      { id: 'c-title', column_name: 'title', uidt: 'text', order_index: 1 },
+      { id: 'c-company', column_name: 'company', uidt: 'text', order_index: 2 },
+    ];
+
+    it('shows the column chosen for the link, not Title', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[{ id: 1 }]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getAllByText('Acme Corp').length).toBeGreaterThan(0);
+      expect(screen.getByText('Globex')).toBeInTheDocument();
+      expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    });
+
+    it('falls back to the first text column when none is chosen', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getByText('Alpha')).toBeInTheDocument();
+      expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+    });
+
+    it('shows Record <id> when the display value is empty', async () => {
+      const user = userEvent.setup();
+      mockRecords = [{ id: 7, title: 'Alpha', company: '' }];
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+
+      expect(screen.getByText('Record 7')).toBeInTheDocument();
+    });
+
+    it('searches the chosen column', async () => {
+      const user = userEvent.setup();
+      mockRecords = people;
+      mockColumns = columns;
+      render(
+        <LinksField
+          field={{ id: 'col1', title: 'Rel', meta: { display_column_id: 'c-company', relation: { with: 'tbl2', type: 'has-many' } } }}
+          value={[]}
+          currentRowId={10}
+          currentTableId="tbl1"
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /rel/i }));
+      await user.type(screen.getByRole('textbox'), 'globex');
+
+      await waitFor(() => expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument());
+      expect(screen.getByText('Globex')).toBeInTheDocument();
+    });
   });
 });

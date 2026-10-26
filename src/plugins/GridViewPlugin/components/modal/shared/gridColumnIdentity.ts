@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import type { GridColumn } from '../../../types/grid.types';
 import { normalizeFieldType, type FieldRendererType } from '../../../../../utils/fieldType';
+import { isAutoUuidColumn } from '../../../../../utils/uuid';
 
 const GRID_DATA_OPERATION_EXCLUDED_FIELD_TYPES = new Set<FieldRendererType>([
   'attachment',
@@ -22,9 +23,11 @@ export const getGridColumnValueKey = (column: GridColumn) =>
 export const getGridColumnFieldType = (column: GridColumn): FieldRendererType =>
   normalizeFieldType(String(column.uidt || ''));
 
+// Auto-generated UUID fields are owned by the backend, so data operations can't rewrite them
 export const isGridDataOperationSelectableColumn = (column: GridColumn): boolean =>
   Boolean(getGridColumnIdentity(column))
-  && !GRID_DATA_OPERATION_EXCLUDED_FIELD_TYPES.has(getGridColumnFieldType(column));
+  && !GRID_DATA_OPERATION_EXCLUDED_FIELD_TYPES.has(getGridColumnFieldType(column))
+  && !isAutoUuidColumn(column);
 
 export const filterGridDataOperationColumns = (columns: GridColumn[]): GridColumn[] =>
   columns.filter(isGridDataOperationSelectableColumn);

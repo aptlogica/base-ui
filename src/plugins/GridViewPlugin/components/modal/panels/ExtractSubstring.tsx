@@ -159,7 +159,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
                       value={startAfter}
                       onChange={(event) => onStartAfterChange(event.target.value)}
                       placeholder="Enter starting value"
-                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)]"
+                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] text-[var(--color-text-primary)]"
                     />
                   </div>
                   <div>
@@ -169,7 +169,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
                       value={endBefore}
                       onChange={(event) => onEndBeforeChange(event.target.value)}
                       placeholder="Enter ending value"
-                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)]"
+                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] text-[var(--color-text-primary)]"
                     />
                   </div>
                 </div>

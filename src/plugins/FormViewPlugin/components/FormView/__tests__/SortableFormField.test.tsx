@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, createEvent } from '@testing-library/react';
 import { SortableFormField } from '../SortableFormField';
 import type { FormField } from '../../../../../types/form';
 
 vi.mock('../../shared/FieldRenderer', () => ({
-  default: (props: { type?: string; value?: unknown; onChange?: (v: unknown) => void }) => (
+  default: (props: { type?: string; value?: unknown; inline?: boolean; config?: { richText?: boolean }; onChange?: (v: unknown) => void }) => (
     <div data-testid="field-renderer">
       <span data-testid="field-type">{props.type ?? 'unknown'}</span>
+      <span data-testid="field-inline">{String(!!props.inline)}</span>
+      <span data-testid="field-rich-text">{String(props.config?.richText)}</span>
       <input
         data-testid="field-input"
         value={String(props.value ?? '')}
@@ -105,6 +107,36 @@ describe('SortableFormField', () => {
       expect(screen.getByText('See more')).toBeInTheDocument();
       fireEvent.click(screen.getByText('See more'));
       expect(screen.getByText('See less')).toBeInTheDocument();
+    });
+  });
+
+  describe('Long text', () => {
+    it('renders long text fields with the inline rich text editor', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText' };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-type')).toHaveTextContent('longText');
+      expect(screen.getByTestId('field-inline')).toHaveTextContent('true');
+    });
+
+    it('enables rich text by default when the field config does not set it', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText' };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-rich-text')).toHaveTextContent('true');
+    });
+
+    it('keeps rich text disabled when the field config explicitly disables it', () => {
+      const longTextField: FormField = { ...mockField, type: 'longText', config: { richText: false } };
+      render(<SortableFormField field={longTextField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-rich-text')).toHaveTextContent('false');
+    });
+
+    it('does not render other fields inline', () => {
+      render(<SortableFormField field={mockField} value="" onChange={mockOnChange} />);
+
+      expect(screen.getByTestId('field-inline')).toHaveTextContent('false');
     });
   });
 
@@ -261,6 +293,50 @@ describe('SortableFormField', () => {
 
       expect(screen.getByLabelText('Drag and drop zone')).toBeInTheDocument();
     });
+
+    it('reports the side of the field the cursor is on', () => {
+      const onDragOver = vi.fn();
+      const onDrop = vi.fn();
+      render(
+        <SortableFormField
+          field={mockField}
+          value=""
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        />
+      );
+
+      const zone = screen.getByLabelText('Drag and drop zone');
+      vi.spyOn(zone, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 400 } as DOMRect);
+
+      // jsdom ignores clientX in drag event init, so set it on the event directly
+      const fireAt = (type: 'dragOver' | 'drop', clientX: number) => {
+        const event = createEvent[type](zone);
+        Object.defineProperty(event, 'clientX', { value: clientX });
+        fireEvent(zone, event);
+      };
+      fireAt('dragOver', 20);
+      fireAt('dragOver', 200);
+      fireAt('drop', 390);
+
+      expect(onDragOver).toHaveBeenNthCalledWith(1, 'left');
+      expect(onDragOver).toHaveBeenNthCalledWith(2, 'center');
+      expect(onDrop).toHaveBeenCalledWith('right');
+    });
+
+    it('shows a side indicator for a side drop', () => {
+      render(
+        <SortableFormField
+          field={mockField}
+          value=""
+          isDragOver
+          dropPosition="left"
+          onDragOver={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('side-drop-indicator-left')).toBeInTheDocument();
+    });
   });
 
   describe('Edge cases', () => {
@@ -288,7 +364,7 @@ describe('SortableFormField', () => {
       expect(input).toHaveValue('');
     });
 
-    it('uses default duration value when value is undefined', () => {
+    it('does not apply a default duration value when value is undefined', () => {
       const durationField: FormField = {
         ...mockField,
         type: 'duration',
@@ -304,7 +380,7 @@ describe('SortableFormField', () => {
       );
 
       const input = screen.getByTestId('field-input');
-      expect(input).toHaveValue('15');
+      expect(input).not.toHaveValue('15');
     });
 
     it('keeps boolean false value instead of default', () => {

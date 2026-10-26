@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
 import { SortItem, filterValidSorts } from '../../../utils/sortUtils';
@@ -80,11 +81,10 @@ export function useKanbanViewConfig({
             const isSelectField = col.type === 'select' || col.uidt === 'select' || col.uidt === 'singleSelect';
             // Include attachment fields - they can be toggled and shown as fields (like Gallery)
             const isFormulaFieldType = isFormulaField(col);
-            // Allow Title field even if it's a system field
-            const isTitleField = col.title?.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
+            // Allow the Title of a table created before Title became an ordinary column, even though it is a system field
             const isSystemField = col.system || col.hidden || false;
-            // Exclude if it's select/formula, OR if it's a system field that's NOT Title
-            return isSelectField || isFormulaFieldType || (isSystemField && !isTitleField);
+            // Exclude if it's select/formula, OR if it's a system field that's NOT the legacy Title
+            return isSelectField || isFormulaFieldType || (isSystemField && !isLegacyTitleColumn(col));
           }
         );
 

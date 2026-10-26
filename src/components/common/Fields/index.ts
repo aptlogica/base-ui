@@ -32,3 +32,4 @@ export { MultiLineText } from './MultiLineText';
 export { LinksField } from './LinksField';
 export { Formula } from './Formula';
 export { Lookup } from './Lookup';
+export { UUIDField } from './UUIDField';

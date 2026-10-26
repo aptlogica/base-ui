@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useMemo, Suspense, lazy } from 'react';
 import { FormPreview } from './FormPreview';
 import { RightPanel } from './RightPanel';
@@ -16,8 +17,10 @@ import type { FormField } from '../../../../types/form';
 import { Plus, PanelRight, PanelRightClose } from 'lucide-react';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../../../utils/fieldUsageUtils';
 import { useAllViews } from '../../../../hooks/useApi';
+import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
+import { isAutoUuidColumn } from '../../../../utils/uuid';
 import { Loader } from '../../../../components/ui/Loader';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
@@ -53,8 +56,13 @@ interface FormViewProps {
 
 // Extract field filtering logic
 const shouldIncludeFieldInForm = (column: any): boolean => {
-  // Always allow Title field even if marked as system
-  if (column.column_name === 'title' || column.title === 'Title' || column.title?.toLowerCase().includes('title')) {
+  // Auto-generated UUID fields are filled in by the backend, so a form can't ask for them
+  if (isAutoUuidColumn(column)) {
+    return false;
+  }
+
+  // Always allow the Title of a table created before Title became an ordinary column, even though it is a system field
+  if (isLegacyTitleColumn(column)) {
     return true;
   }
   
@@ -81,7 +89,9 @@ const shouldIncludeFieldInForm = (column: any): boolean => {
 };
 
 // Extract field transformation logic
-const transformColumnToFormField = (column: any): FormField => {
+// Primary key fields are required questions and always part of the form
+const transformColumnToFormField = (column: any, keyColumnIds: string[] = []): FormField => {
+  const isKey = keyColumnIds.includes(String(column.id));
   return {
     id: String(column.id),
     key: String(column.column_name || column.title || column.id),
@@ -92,8 +102,8 @@ const transformColumnToFormField = (column: any): FormField => {
     uidt: column.uidt,
     position: column.position || column.order_index || 0,
     order_index: column.order_index || 0,
-    required: Boolean(column.required),
-    enabled: !column.isHidden && !column.is_hidden,
+    required: Boolean(column.required) || isKey,
+    enabled: isKey || (!column.isHidden && !column.is_hidden),
     description: column.description || '',
     config: column.meta || {},
     isSystem: Boolean(column.system),
@@ -212,11 +222,17 @@ const detectFieldChanges = (editingField: FormField, updates: any): any => {
   if (JSON.stringify(editingField.config ?? {}) !== JSON.stringify(updates.config ?? {})) {
     changes.config = updates.config;
   }
+  // UUID field turned to auto-generated: fill the records that have no value yet
+  if (changes.meta && typeof updates.backfill === 'boolean') {
+    changes.backfill = updates.backfill;
+  }
 
   return { changes, uidtChanged };
 };
 
 export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId, onRefresh, actions }) => {
+  // Primary key fields (without Id) are required questions
+  const keyColumnIds = useRequiredKeyFields(tableData?.model?.id, tableData?.columns as any);
   // Get all views for field usage validation
   const { data: allViews = [] } = useAllViews();
 
@@ -344,9 +360,9 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
 
   const formFields = useMemo(() => {
     return allColumns
-      .filter(shouldIncludeFieldInForm)
-      .map(transformColumnToFormField);
-  }, [allColumns]);
+      .filter(column => shouldIncludeFieldInForm(column) || keyColumnIds.includes(String(column.id)))
+      .map(column => transformColumnToFormField(column, keyColumnIds));
+  }, [allColumns, keyColumnIds]);
 
   // Create formFieldsMap for O(1) lookups in handler functions
   // MUST be called before early return
@@ -739,6 +755,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
               onClose={handleCloseNewColumnModal}
               onSave={handleCreateNewField}
               isAddNewField={true}
+              defaultRichText={true}
               fields={formFields}
             />
           </div>
@@ -788,6 +805,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
                 fields={formFields}
                 isAddNewColumn={false}
                 isAddNewField={true}
+                defaultRichText={true}
                 currentTableId={tableId}
               />
             </div>

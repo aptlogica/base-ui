@@ -3,7 +3,6 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useMemo } from 'react';
-import { Key } from 'lucide-react';
 import type { ImportColumnMapping, ImportPreview } from './ImportTypes';
 import { getFieldTypeIconComponent } from '../../../types/fieldTypes';
 import AdvancedDropdown from '../../common/dropdown/AdvancedDropdown';
@@ -15,12 +14,9 @@ type Props = {
   preview: ImportPreview;
   mappings: Record<string, ImportColumnMapping>;
   onChange: (key: string, patch: Partial<ImportColumnMapping>) => void;
-  primaryKey: string | null;
-  primaryColumnError?: string | null;
-  onPrimaryKeyChange: (key: string | null) => void;
 };
 
-export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChange, primaryKey, primaryColumnError, onPrimaryKeyChange }) => {
+export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChange }) => {
   const columns = preview.columns;
   const includedCount = columns.filter((col) => mappings[col.key]?.include !== false).length;
   const rowTemplate = 'grid-cols-[20px_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.95fr)_minmax(0,0.9fr)] items-center';
@@ -34,39 +30,12 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
     []
   );
 
-  const primaryKeyOptions = useMemo(
-    () =>
-      columns.map((col) => ({
-        label: col.label,
-        value: col.label, // Use actual column name (CSV header), not normalized key
-      })),
-    [columns]
-  );
-
   return (
     <div className="overflow-hidden">
       <div className="flex items-center justify-start flex-wrap gap-4 py-4">
         <div className="text-sm font-semibold text-primary">Configure Columns</div>
         <div className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-secondary">
           {columns.length} columns detected &bull; {includedCount} columns selected for import
-        </div>
-      </div>
-
-      <div className="flex items-center justify-start gap-4 py-4">
-        <div className="text-sm font-semibold text-primary">Primary Column</div>
-        <div className="w-48">
-          <AdvancedDropdown
-            options={primaryKeyOptions}
-            value={primaryKey || ''}
-            onChange={(value: string | string[]) => {
-              onPrimaryKeyChange(getSingleDropdownValue(value) || null);
-            }}
-            placeholder="Select primary key column"
-            className="text-xs"
-            searchable={true}
-            maxHeight={120}
-            portal={true}
-          />
         </div>
       </div>
 
@@ -85,13 +54,11 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
           const include = m?.include !== false;
           const fieldType = m?.fieldType || 'text';
           const defaultValue = m?.defaultValue || '';
-          const isPrimaryColumn = primaryKey === col.label;
-          const showPrimaryError = isPrimaryColumn && Boolean(primaryColumnError);
 
           return (
             <div
               key={key}
-              className={`grid ${rowTemplate} gap-3 items-start p-3 border-b last:border-b-0 ${showPrimaryError ? 'bg-red-50/50' : ''}`}
+              className={`grid ${rowTemplate} gap-3 items-start p-3 border-b last:border-b-0`}
             >
               <div className="h-6 w-6 inline-flex items-center justify-center">
                 <input
@@ -104,7 +71,6 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
               </div>
 
               <div className="flex items-center gap-2">
-                {isPrimaryColumn && <Key className="w-4 h-4 text-brand-600 mt-0.5" />}
                 <div className="text-sm text-primary truncate font-medium" title={col.label}>
                   {col.label}
                 </div>
@@ -143,11 +109,6 @@ export const ImportColumnMapper: React.FC<Props> = ({ preview, mappings, onChang
                   disabled={!include}
                   onChange={(v) => onChange(key, { defaultValue: v })}
                 />
-                {showPrimaryError && (
-                  <div className="pointer-events-none absolute right-0 top-12 z-10 w-[120px] rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 shadow-sm">
-                    {primaryColumnError}
-                  </div>
-                )}
               </div>
             </div>
           );

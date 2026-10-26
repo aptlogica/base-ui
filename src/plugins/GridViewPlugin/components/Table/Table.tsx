@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { GroupPopover } from '../../../../components/shared/table/GroupPopover';
 import { SortPopover } from '../../../../components/shared/table/SortPopover';
@@ -17,10 +18,16 @@ import { VirtualizedTableBody } from './components/VirtualizedTableBody';
 import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
-import { Plus, List, Lock } from 'lucide-react';
+import { Plus, List, Lock, KeyRound } from 'lucide-react';
+import { isAutoUuidColumn, uuidCellProblem } from '../../../../utils/uuid';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
+import CreateRecordModal from '../../../../components/modals/CreateRecordModal';
+import { NewRowSplitButton } from './components/NewRowSplitButton';
+import { isSystemField, isAttachmentField, isLinksField } from '../../../../components/modals/RecordModalParts';
+import { isFormulaField, processFieldValue } from '../../../../utils/fieldUtils';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
+import { apiErrorMessage } from '../../../../utils/apiErrors';
 import { sortRowsByDataKey } from '../../../../utils/sortUtils';
 import { applyFilters } from '../../../../utils/filterUtils';
 import { formatCompactNumber } from '../../../../utils/helpers';
@@ -28,7 +35,10 @@ const NewColumnModal = lazy(() =>
   import('../../../../components/modals/NewColumnModal').then(m => ({ default: m.NewColumnModal }))
 );
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
-import { useAllViews } from '../../../../hooks/useApi';
+import { useAllViews, usePrimaryKey, useUpsertRow } from '../../../../hooks/useApi';
+import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
+import { useDraftRows, isDraftRowId } from '../../hooks/useDraftRows';
+import { isEmptyKeyValue } from '../../../../utils/primaryKeyFields';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -69,6 +79,110 @@ interface TableProps {
   actions?: TableActions;
 }
 
+
+// Server code for a record that repeats the values of a unique key
+const UNIQUE_KEY_VIOLATION = 'TCN_1012';
+const UUID_INVALID_CODE = 'UID_1001';
+// Input types treated as text fields for "Enter on last row adds a row"
+// Cell types that keyboard navigation only focuses: clicking their trigger would change the value
+// (checkbox, rating) or open a modal that keyboard navigation could not close again.
+const FOCUS_ONLY_TYPES = new Set(['boolean', 'rating', 'json', 'attachment', 'longText', 'lookup']);
+const opensOnKeyboardEdit = (column?: { type?: string; uidt?: string }): boolean =>
+  !FOCUS_ONLY_TYPES.has(normalizeFieldType(column?.type || column?.uidt || 'text'));
+
+// Opens a cell's editor/popup: inline fields use a role="button" wrapper, popup fields a plain button
+const CELL_EDIT_TRIGGER = '[role="button"], button:not([tabindex="-1"]):not([disabled])';
+
+const TEXT_INPUT_TYPES = new Set(['text', 'number', 'email', 'tel', 'url', 'search']);
+
+// Same id resolution as TableRow, so ids match the rendered data-row-id attribute
+const getRecordRowId = (row: TableData): string => String((row as any)?._meta?.id || (row as any)?.id || '');
+
+// --- Keyboard navigation helpers (see handleTableBodyKeyDown) ---
+
+type KeyMove =
+  | { action: 'move'; rowIdx: number; colIdx: number }
+  | { action: 'create'; colKey: string }
+  | { action: 'stay' } // swallow the key, nothing moves
+  | { action: 'leave' }; // let the browser handle the key (e.g. Tab out of the grid)
+
+const ARROW_STEPS: Record<string, [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
+const isTypingTarget = (target: HTMLElement): boolean =>
+  target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+  || target instanceof HTMLSelectElement || target.isContentEditable;
+
+// Left/Right only leave a text input when the caret is at that edge with nothing selected
+const isCaretAtEdge = (input: HTMLInputElement, key: string): boolean => {
+  const { selectionStart: start, selectionEnd: end, value } = input;
+  if (start === null || start !== end) return false;
+  return key === 'ArrowLeft' ? start === 0 : start === value.length;
+};
+
+// Whether this key press, coming from `target`, should move the grid selection
+const shouldNavigate = (e: React.KeyboardEvent, target: HTMLElement): boolean => {
+  const { key, shiftKey } = e;
+  const isArrow = key.startsWith('Arrow');
+  if (key !== 'Enter' && key !== 'Tab' && !isArrow) return false;
+  if (e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (isArrow && shiftKey) return false;
+
+  const isTextInput = target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
+  if (key === 'Enter') return isTextInput;
+  if (!isArrow || !isTypingTarget(target)) return true;
+  // In a single-line text input, Up/Down always navigate; Left/Right only at the caret's edge
+  if (!isTextInput) return false;
+  return key === 'ArrowUp' || key === 'ArrowDown' || isCaretAtEdge(target as HTMLInputElement, key);
+};
+
+// The data cell a navigation key came from; portaled popovers are not DOM descendants of a cell, so they yield null
+const getKeyboardCell = (e: React.KeyboardEvent): { colKey: string; rowId: string } | null => {
+  const target = e.target;
+  if (!(target instanceof HTMLElement) || !shouldNavigate(e, target)) return null;
+  const colKey = target.closest<HTMLElement>('[data-col-key]')?.dataset.colKey;
+  const rowId = target.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
+  return colKey && rowId ? { colKey, rowId } : null;
+};
+
+const getNextPosition = (key: string, shiftKey: boolean, rowIdx: number, colIdx: number, colCount: number) => {
+  const step = shiftKey ? -1 : 1;
+  if (key === 'Enter') return { rowIdx: rowIdx + step, colIdx };
+  if (key === 'Tab') {
+    const next = colIdx + step;
+    if (next >= colCount) return { rowIdx: rowIdx + 1, colIdx: 0 };
+    if (next < 0) return { rowIdx: rowIdx - 1, colIdx: colCount - 1 };
+    return { rowIdx, colIdx: next };
+  }
+  const [rowStep, colStep] = ARROW_STEPS[key];
+  return { rowIdx: rowIdx + rowStep, colIdx: colIdx + colStep };
+};
+
+// Decide what a navigation key does: only data cells take part; at the grid edges Tab/Shift+Tab leave the grid,
+// Enter on the last row creates a row, and Shift+Enter/arrows stay put.
+const planKeyMove = (
+  key: string,
+  shiftKey: boolean,
+  rowIds: string[],
+  colKeys: string[],
+  cell: { colKey: string; rowId: string },
+): KeyMove => {
+  const rowIdx = rowIds.indexOf(cell.rowId);
+  const colIdx = colKeys.indexOf(cell.colKey);
+  // A cell whose column is not visible can only continue with Enter, from the first column
+  if (rowIdx < 0 || colKeys.length === 0 || (colIdx < 0 && key !== 'Enter')) return { action: 'leave' };
+
+  const next = getNextPosition(key, shiftKey, rowIdx, Math.max(colIdx, 0), colKeys.length);
+  if (next.rowIdx >= rowIds.length && key === 'Enter') return { action: 'create', colKey: colKeys[next.colIdx] };
+  if (next.rowIdx < 0 || next.rowIdx >= rowIds.length) return { action: key === 'Tab' ? 'leave' : 'stay' };
+  if (next.colIdx < 0 || next.colIdx >= colKeys.length) return { action: 'stay' };
+  return { action: 'move', ...next };
+};
+
 export const Table: React.FC<TableProps> = ({
   tableData,
   viewId,
@@ -94,6 +208,9 @@ export const Table: React.FC<TableProps> = ({
 
   // Extract IDs from tableData.model
   const tableId = useMemo(() => String(tableData?.model?.id ?? ''), [tableData?.model?.id]);
+  // Primary key fields get a key icon in their header; the position matters for composite keys
+  const { data: primaryKey } = usePrimaryKey(tableId);
+  const primaryKeyColumnIds = useMemo(() => primaryKey?.column_ids ?? [], [primaryKey]);
   const baseId = useMemo(() => String(tableData?.model?.base_id ?? ''), [tableData?.model?.base_id]);
 
   // Check permissions for read-only access
@@ -132,6 +249,8 @@ export const Table: React.FC<TableProps> = ({
       .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
       .map((apiColumn: any): ColumnConfig => {
         const parsedMeta = parseApiColumnMeta(apiColumn.meta);
+        const columnName = String(apiColumn.column_name ?? '').toLowerCase();
+        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && !isLegacyTitleColumn(apiColumn);
         return {
           id: apiColumn.id ? String(apiColumn.id) : undefined,
           key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
@@ -142,8 +261,8 @@ export const Table: React.FC<TableProps> = ({
           width: 235,
           position: apiColumn.order_index ?? 0,
           order_index: apiColumn.order_index ?? 0,
-          isSystem: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
-          system: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
+          isSystem: isSystemColumn,
+          system: isSystemColumn,
           hidden: Boolean(apiColumn.hidden),
           is_hidden: Boolean(apiColumn.is_hidden),
           description: apiColumn.description || '', // Include description from API
@@ -153,12 +272,11 @@ export const Table: React.FC<TableProps> = ({
       });
   }, [tableData?.columns]);
 
-  // Get searchable columns (exclude system fields except Title)
+  // Get searchable columns (exclude system fields except the Title of an older table)
   const searchableColumns = useMemo(() => {
     return columns.filter(col => {
       const isSystemField = col.isSystem || col.system;
-      const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-      return !isSystemField || isTitle;
+      return !isSystemField || isLegacyTitleColumn(col);
     });
   }, [columns]);
 
@@ -280,7 +398,7 @@ export const Table: React.FC<TableProps> = ({
 
   // Memoized filter update handler to prevent recreation
   const handleUpdateFilter = useCallback((index: number, updates: Partial<any>) => {
-    handleUpdateFilterFromHook(index, updates);
+    void handleUpdateFilterFromHook(index, updates);
   }, [handleUpdateFilterFromHook]);
 
   // Memoized search handler to prevent recreation
@@ -299,17 +417,66 @@ export const Table: React.FC<TableProps> = ({
     handleCloseColMenu,
   } = useTableModals();
 
+  // Tables with a custom primary key add rows as drafts: nothing is saved until every key cell has a value,
+  // then the draft is inserted (upsert) in one call
+  const keyColumnIds = useRequiredKeyFields(tableId, columns);
+  const upsertRowMutation = useUpsertRow();
+  const draftRowsState = useDraftRows({
+    tableId,
+    columns,
+    savedRows: allRecords,
+    keyColumnIds,
+    keyIncludesId: primaryKeyColumnIds.some(id => columns.find(c => String(c.id) === id)?.key === 'id'),
+    upsert: upsertRowMutation.mutateAsync,
+    onSaved: () => {
+      toast.success('Record added', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    },
+    onError: message => toast.error(message, { title: 'Not saved', duration: 6000 }),
+  });
+  const { draftRows, invalidCells, addDraft, updateDraft, removeDraft, savedKeyProblem } = draftRowsState;
+
+  // Refreshing the page would lose unsaved drafts, so reload shortcuts (F5, Ctrl/Cmd+R) open our own confirm modal
+  const [reloadConfirmOpen, setReloadConfirmOpen] = useState(false);
+  useEffect(() => {
+    if (draftRows.length === 0) return undefined;
+    const interceptReload = (e: KeyboardEvent) => {
+      const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r');
+      if (!isReload) return;
+      e.preventDefault();
+      setReloadConfirmOpen(true);
+    };
+    // Capture phase so cell editors that stop key propagation can't let the shortcut through to the browser
+    globalThis.addEventListener('keydown', interceptReload, true);
+    return () => {
+      globalThis.removeEventListener('keydown', interceptReload, true);
+    };
+  }, [draftRows.length]);
+
+  const handleConfirmReload = useCallback(() => {
+    globalThis.location.reload();
+  }, []);
+
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
+  // "New row - Form" modal state
+  const [isCreateRecordModalOpen, setIsCreateRecordModalOpen] = useState(false);
+  // Existing record shown in the "New row - Form" via Previous / Next; null shows the blank new-row form
+  const [formRecordId, setFormRecordId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const openEditRecordModal = useCallback((rowId: string) => {
+    if (isDraftRowId(rowId)) {
+      handleCloseContextMenu();
+      toast.info?.('Fill in the primary key cells to save this record first.', { title: 'Not saved yet' });
+      return;
+    }
     setSelectedRecordId(rowId);
     setIsEditRecordModalOpen(true);
     handleCloseContextMenu();
-  }, [handleCloseContextMenu]);
+  }, [handleCloseContextMenu, toast]);
 
   const closeEditRecordModal = useCallback(() => {
     setIsEditRecordModalOpen(false);
@@ -551,6 +718,40 @@ export const Table: React.FC<TableProps> = ({
     initialPage: 1,
   });
 
+  // A failed cell save (e.g. the value breaks a unique key) shows the server's reason and
+  // remounts that cell, so it shows the saved value again instead of what was typed
+  const [cellResets, setCellResets] = useState<Record<string, number>>({});
+  const [saveErrorCells, setSaveErrorCells] = useState<Set<string>>(() => new Set());
+  const saveErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const handleCellSaveError = useCallback(({ rowId, columnKey, error }: { rowId: string; columnKey: string; error: unknown }) => {
+    const { message, code } = (error ?? {}) as { message?: string; code?: string };
+    // TCN_1012: the value repeats a unique key (Settings > Unique Key); UID_1001: not a valid UUID
+    let title = 'Not saved';
+    if (code === UNIQUE_KEY_VIOLATION) title = 'Duplicate value not allowed';
+    else if (code === UUID_INVALID_CODE) title = 'Invalid UUID';
+    toast.error(apiErrorMessage(error, message || 'The value could not be saved'), { title, duration: 5000 });
+    const cellKey = `${rowId}-${columnKey}`;
+    setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
+    // Box the cell in red while the toast is shown
+    setSaveErrorCells(prev => new Set(prev).add(cellKey));
+    clearTimeout(saveErrorTimeouts.current.get(cellKey));
+    saveErrorTimeouts.current.set(cellKey, setTimeout(() => {
+      saveErrorTimeouts.current.delete(cellKey);
+      setSaveErrorCells(prev => {
+        const next = new Set(prev);
+        next.delete(cellKey);
+        return next;
+      });
+    }, 5000));
+    // Reload the saved values (e.g. after a duplicate or empty primary key)
+    onRefresh?.();
+  }, [toast, onRefresh]);
+
+  useEffect(() => {
+    const timeouts = saveErrorTimeouts.current;
+    return () => timeouts.forEach(clearTimeout);
+  }, []);
+
   const { handleCellChange } = useCellEditing({
     data: paginatedData,
     columns,
@@ -558,7 +759,41 @@ export const Table: React.FC<TableProps> = ({
     insertRowDataMutation: actions?.insertRowData,
     bulkUpdateColumnMutation: actions?.bulkUpdateColumn,
     onRecordsUpdate: () => { },
+    onSaveError: handleCellSaveError,
   });
+
+  // Drafts are shown after the saved rows (in their own group when the grid is grouped)
+  const rowsWithDrafts = useMemo(() => (draftRows.length ? [...paginatedData, ...draftRows] : paginatedData), [paginatedData, draftRows]);
+  const DRAFT_GROUP = { groupColumn: '__drafts', groupValue: 'New records' };
+  const groupedDataWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return groupedData;
+    return [...groupedData, { ...DRAFT_GROUP, groupDirection: 'asc', level: 0, rows: draftRows }];
+  }, [groupedData, draftRows]);
+  const expandedGroupsWithDrafts = useMemo(() => {
+    if (!groupedData || draftRows.length === 0) return expandedGroups;
+    return new Set([...expandedGroups, `${DRAFT_GROUP.groupColumn}-${DRAFT_GROUP.groupValue}-0`]);
+  }, [groupedData, draftRows.length, expandedGroups]);
+
+  // Draft cells stay in the browser. On saved rows a primary key cell is checked before it is sent: an empty
+  // value or one that repeats another row's key is not saved; the cell is boxed in red and shows the saved value.
+  const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
+    // A manual UUID cell only takes a valid UUID; anything else is refused the same way, on drafts too
+    const uuidProblem = uuidCellProblem(columns.find(c => c.key === columnKey), value);
+    if (uuidProblem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: uuidProblem, code: UUID_INVALID_CODE } });
+      return;
+    }
+    if (isDraftRowId(rowId)) {
+      updateDraft(rowId, columnKey, value);
+      return;
+    }
+    const problem = savedKeyProblem(rowId, columnKey, value);
+    if (problem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: problem, code: isEmptyKeyValue(value) ? 'PKY_1007' : 'PKY_1008' } });
+      return;
+    }
+    void handleCellChange(rowId, columnKey, value);
+  }, [columns, updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height
   useEffect(() => {
@@ -625,22 +860,157 @@ export const Table: React.FC<TableProps> = ({
   }, [visibleRowIds]);
 
   // Add a new row via mutation; list refresh is handled via onRefresh/react-query
-  const addNewRow = useCallback(async () => {
+  const addNewRow = useCallback(async (): Promise<boolean> => {
+    // Custom key: add a draft in the grid; it is inserted once its key cells are filled in
+    if (draftRowsState.enabled) {
+      addDraft();
+      return false;
+    }
     try {
-      if (!addRowMutation) return;
+      if (!addRowMutation) return false;
 
       await addRowMutation.mutateAsync({ model_id: tableId });
 
       toast.success('Row added', { title: 'Success', duration: 3000 });
       onRefresh?.();
+      return true;
     } catch (err) {
       console.error('Failed to add row', err);
-      toast.error('Failed to add row', { title: 'Error', duration: 3500 });
+      toast.error(apiErrorMessage(err, 'Failed to add row'), { title: 'Error', duration: 3500 });
+      return false;
     }
-  }, [addRowMutation, tableId, toast, onRefresh]);
+  }, [addRowMutation, tableId, toast, onRefresh, draftRowsState.enabled, addDraft]);
+
+  // Pressing Enter in a text field of the last row creates a new row; once that row
+  // shows up in the data, its first cell is activated and opened for editing.
+  const pendingNewRowRef = useRef<{ previousRowIds: Set<string>; colKey?: string } | null>(null);
+  // Cell to focus; `edit` opens it for editing, `rowIndex` (ungrouped data) helps scroll it into the virtualized window
+  const [newRowFocusTarget, setNewRowFocusTarget] = useState<{ rowId: string; colKey: string; edit: boolean; rowIndex?: number } | null>(null);
+
+  // Add a row and, once it shows up in the data, open its first cell for editing
+  const addNewRowAndFocus = useCallback(() => {
+    if (pendingNewRowRef.current) return;
+    if (!groupedData) {
+      pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))) };
+    }
+    void addNewRow().then((created) => {
+      if (!created) pendingNewRowRef.current = null;
+    });
+  }, [groupedData, allRecords, addNewRow]);
+
+  // Enter on the last row creates a row through the usual flow, only when creation is allowed
+  const createRowAfterLast = useCallback((colKey: string) => {
+    if (pendingNewRowRef.current || groupedData || hasMore) return;
+    if (isBaseReadOnly() || !canCreateRecord()) return;
+    pendingNewRowRef.current = { previousRowIds: new Set(allRecords.map(row => getRecordRowId(row))), colKey };
+    void addNewRow().then((created) => {
+      if (!created) pendingNewRowRef.current = null;
+    });
+  }, [groupedData, hasMore, isBaseReadOnly, canCreateRecord, allRecords, addNewRow]);
+
+  // Excel-like keyboard navigation:
+  //  - Enter / Shift+Enter (in a text input): edit the same column of the next / previous row;
+  //    on the last row, Enter creates a row through the usual flow when creation is allowed
+  //  - Tab / Shift+Tab: edit the next / previous cell, wrapping across rows
+  //  - Arrow keys: move between cells without editing (inside a text input only Up/Down, or Left/Right at the caret's edge)
+  // Only data cells take part; the row-number/checkbox and add-column cells are skipped.
+  // At the grid edges Tab/Shift+Tab leave the grid; Enter/Shift+Enter/arrows stay put.
+  const handleTableBodyKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const cell = getKeyboardCell(e);
+    if (!cell) return;
+
+    const colKeys = (visibleColumns ?? []).map(col => col.key);
+    const rowIds = groupedData
+      ? Array.from(tableRef.current?.querySelectorAll<HTMLElement>('[data-row-id]') ?? []).map(el => el.dataset.rowId ?? '')
+      : paginatedData.map(getRecordRowId);
+    const move = planKeyMove(e.key, e.shiftKey, rowIds, colKeys, cell);
+    if (move.action === 'leave') return;
+
+    e.preventDefault();
+    if (move.action === 'create') createRowAfterLast(move.colKey);
+    if (move.action !== 'move') return;
+
+    // Close any popup left open on the cell being left, as a click elsewhere would
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    const nextColKey = colKeys[move.colIdx];
+    const edit = !e.key.startsWith('Arrow') && opensOnKeyboardEdit(visibleColumns?.find(col => col.key === nextColKey));
+    setActiveCell({ rowId: rowIds[move.rowIdx], colKey: nextColKey });
+    setNewRowFocusTarget({ rowId: rowIds[move.rowIdx], colKey: nextColKey, edit, rowIndex: groupedData ? undefined : move.rowIdx });
+  }, [groupedData, paginatedData, visibleColumns, createRowAfterLast]);
+
+  // Resolve the pending new row once the refreshed records include it
+  useEffect(() => {
+    const pending = pendingNewRowRef.current;
+    if (!pending) return;
+
+    const newRow = allRecords.find(row => !pending.previousRowIds.has(getRecordRowId(row)));
+    if (!newRow) return;
+    const newRowId = getRecordRowId(newRow);
+
+    // Hidden by the current filter/search: nothing to focus
+    if (!filteredAndSortedData.some(row => getRecordRowId(row) === newRowId)) {
+      pendingNewRowRef.current = null;
+      return;
+    }
+    // Not loaded yet by frontend pagination: load the next page and try again
+    if (!paginatedData.some(row => getRecordRowId(row) === newRowId)) {
+      if (hasMore) loadNextPage();
+      return;
+    }
+
+    pendingNewRowRef.current = null;
+    const colKey = pending.colKey ?? visibleColumns?.[0]?.key;
+    if (!colKey) return;
+    setActiveCell({ rowId: newRowId, colKey });
+    setNewRowFocusTarget({ rowId: newRowId, colKey, edit: opensOnKeyboardEdit(visibleColumns?.find(col => col.key === colKey)) });
+  }, [allRecords, filteredAndSortedData, paginatedData, hasMore, loadNextPage, visibleColumns]);
+
+  // Scroll the new row into view and put its first cell into edit mode
+  useEffect(() => {
+    if (!newRowFocusTarget) return;
+    const container = tableRef.current;
+    if (!container) return;
+
+    const selector = `[data-row-id="${CSS.escape(newRowFocusTarget.rowId)}"] [data-col-key="${CSS.escape(newRowFocusTarget.colKey)}"]`;
+    let frame = 0;
+    let attempts = 0;
+
+    const focusCell = () => {
+      const cell = container.querySelector<HTMLElement>(selector);
+      if (cell) {
+        cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        // Field components enter edit mode on click of their [role="button"] wrapper
+        const editTrigger = cell.querySelector<HTMLElement>(CELL_EDIT_TRIGGER);
+        (editTrigger ?? cell).focus();
+        if (newRowFocusTarget.edit) editTrigger?.click();
+        setNewRowFocusTarget(null);
+        return;
+      }
+      if (attempts >= 10) {
+        setNewRowFocusTarget(null);
+        return;
+      }
+      // Row is not rendered by the virtualizer yet: scroll to it, or to the bottom for a new (last) row
+      if (attempts === 0) {
+        container.scrollTop = newRowFocusTarget.rowIndex === undefined
+          ? container.scrollHeight
+          : Math.max(0, newRowFocusTarget.rowIndex * 40 - container.clientHeight / 2);
+      }
+      attempts++;
+      frame = requestAnimationFrame(focusCell);
+    };
+
+    frame = requestAnimationFrame(focusCell);
+    return () => cancelAnimationFrame(frame);
+  }, [newRowFocusTarget]);
 
   // Delete a row by id (memoized to prevent recreation)
   const handleDelete = useCallback(async (rowId: string) => {
+    // A draft was never saved: just drop it
+    if (isDraftRowId(rowId)) {
+      removeDraft(rowId);
+      return;
+    }
     try {
       const numericRowId = resolveNumericRowId(rowId);
       if (!tableId || numericRowId === null) {
@@ -650,13 +1020,15 @@ export const Table: React.FC<TableProps> = ({
       await deleteRecordMutation.mutateAsync({ model_id: String(tableId), row_id: numericRowId });
 
       // We don't update local state directly; records will be refetched via react-query
-      toast.success('Row deleted', { title: 'Success' });
+      toast.success('1 row deleted', { title: 'Success' });
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Delete] Failed to delete record:', rowId, err);
-      alert('Failed to delete record. Please try again.');
+      // The server's reason, e.g. an error raised by a trigger on the table
+      const reason = err instanceof Error && err.message ? err.message : 'Please try again.';
+      toast.error(reason, { title: 'Failed to delete record', duration: 6000 });
     }
-  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId]);
+  }, [deleteRecordMutation, tableId, toast, onRefresh, resolveNumericRowId, removeDraft]);
 
   // Bulk delete selected rows
   const handleBulkDelete = useCallback(async () => {
@@ -664,12 +1036,22 @@ export const Table: React.FC<TableProps> = ({
       return;
     }
 
+    // Selected drafts were never saved: just drop them
+    const selectedDrafts = Array.from(selectedRows).filter(isDraftRowId);
+    selectedDrafts.forEach(removeDraft);
+    if (selectedDrafts.length === selectedRows.size) {
+      setSelectedRows(new Set());
+      return;
+    }
+
     try {
       // Convert selected row IDs to numeric IDs
       const rowIds: number[] = [];
       for (const rowId of selectedRows) {
+        if (isDraftRowId(rowId)) continue;
         const numericRowId = resolveNumericRowId(rowId);
-        if (numericRowId !== null) {
+        // Several ids of the same row (e.g. its key and its record id) must not count twice
+        if (numericRowId !== null && !rowIds.includes(numericRowId)) {
           rowIds.push(numericRowId);
         }
       }
@@ -679,27 +1061,95 @@ export const Table: React.FC<TableProps> = ({
         return;
       }
 
-      await bulkDeleteRecordsMutation.mutateAsync({
+      const result: any = await bulkDeleteRecordsMutation.mutateAsync({
         model_id: String(tableId),
         row_ids: rowIds
       });
+      // Report what the server deleted; fall back to what was sent
+      const reported = Number(result?.data?.deleted_count ?? result?.deleted_count);
+      const deletedCount = Number.isFinite(reported) ? reported : rowIds.length;
 
       // Clear selection after successful deletion
       setSelectedRows(new Set());
 
-      toast.success(`${rowIds.length} row${rowIds.length > 1 ? 's' : ''} deleted`, { title: 'Success' });
+      toast.success(`${deletedCount} row${deletedCount === 1 ? '' : 's'} deleted`, { title: 'Success' });
       try { onRefresh?.(); } catch { }
     } catch (err) {
       console.error('[Bulk Delete] Failed to delete records:', err);
       toast.error('Failed to delete records. Please try again.', { title: 'Error' });
     }
-  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId]);
+  }, [selectedRows, tableId, bulkDeleteRecordsMutation, toast, onRefresh, setSelectedRows, resolveNumericRowId, removeDraft]);
 
   const selectedRecordApiId = useMemo(() => {
     const resolvedId = resolveNumericRowId(selectedRecordId);
     if (resolvedId !== null) return String(resolvedId);
     return selectedRecordId || '';
   }, [resolveNumericRowId, selectedRecordId]);
+
+  // "New row - Form" navigation: the form opens blank (formRecordId null); Previous / Next step through the
+  // saved records in the grid's current filter and sort order, and Next past the last record returns to the blank form
+  const formRecordIds = useMemo(
+    () => filteredAndSortedData.map(row => String(row.id)).filter(id => !isDraftRowId(id)),
+    [filteredAndSortedData]
+  );
+  const formRecordIndex = formRecordId === null ? -1 : formRecordIds.indexOf(formRecordId);
+  const formRecordApiId = useMemo(() => {
+    const resolvedId = resolveNumericRowId(formRecordId);
+    if (resolvedId !== null) return String(resolvedId);
+    return formRecordId || '';
+  }, [resolveNumericRowId, formRecordId]);
+
+  const closeRecordForm = useCallback(() => {
+    setIsCreateRecordModalOpen(false);
+    setFormRecordId(null);
+  }, []);
+
+  // Duplicate record: add a copy of the record straight into the table, no form
+  const handleDuplicateRecord = useCallback(async (sourceRecordId: string | null) => {
+    if (!sourceRecordId) return;
+    const columns = tableData?.columns || [];
+    const source = buildInitialValuesForEdit({ recordId: sourceRecordId, columns, rawRecords: tableData?.records || [] });
+    const values: Record<string, any> = {};
+    columns.forEach((col: any) => {
+      if (isSystemField(col) || isAttachmentField(col) || isLinksField(col) || isFormulaField(col) || isAutoUuidColumn(col)) return;
+      const value = source[col.id];
+      if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return;
+      values[col.id] = processFieldValue(col, value);
+    });
+    closeEditRecordModal();
+    closeRecordForm();
+    try {
+      await upsertRowMutation.mutateAsync({ model_id: String(tableId), values });
+      toast.success('Record duplicated successfully', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to duplicate record', err);
+      toast.error(apiErrorMessage(err, 'Failed to duplicate record'), { title: 'Error', duration: 5000 });
+    }
+  }, [tableData, tableId, upsertRowMutation, closeEditRecordModal, closeRecordForm, toast, onRefresh]);
+
+  const showPreviousFormRecord = useCallback(() => {
+    if (formRecordIds.length === 0) return;
+    // From the blank form (or a record no longer in the grid) go to the last record
+    const nextIndex = formRecordIndex === -1 ? formRecordIds.length - 1 : formRecordIndex - 1;
+    if (nextIndex >= 0) setFormRecordId(formRecordIds[nextIndex]);
+  }, [formRecordIds, formRecordIndex]);
+
+  const showNextFormRecord = useCallback(() => {
+    const nextIndex = formRecordIndex + 1;
+    setFormRecordId(formRecordIndex !== -1 && nextIndex < formRecordIds.length ? formRecordIds[nextIndex] : null);
+  }, [formRecordIds, formRecordIndex]);
+
+  // "Edit record" navigation: Previous / Next step through the saved records in the grid's current filter and sort order
+  const selectedRecordIndex = selectedRecordId === null ? -1 : formRecordIds.indexOf(selectedRecordId);
+
+  const showPreviousEditRecord = useCallback(() => {
+    if (selectedRecordIndex > 0) setSelectedRecordId(formRecordIds[selectedRecordIndex - 1]);
+  }, [formRecordIds, selectedRecordIndex]);
+
+  const showNextEditRecord = useCallback(() => {
+    if (selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1) setSelectedRecordId(formRecordIds[selectedRecordIndex + 1]);
+  }, [formRecordIds, selectedRecordIndex]);
 
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
@@ -755,11 +1205,13 @@ export const Table: React.FC<TableProps> = ({
   const getColumnHeaderClassName = useCallback((column: ColumnConfig, index: number) => {
     const isEditing = editModalOpen && editColumnIndex === index;
     const isNew = (column as any).isNew !== undefined && (column as any).isNew;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
     const isDragging = dragColumnIndex === index;
     const isHovering = hoverColumnIndex === index;
     return [
       'relative flex-shrink-0 bg-gray-100 border-b group border-r',
       isEditing ? 'overflow-visible' : 'overflow-hidden',
+      isLocked ? '!bg-[var(--color-readonly-header)]' : '',
       isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : '',
       isDragging ? 'opacity-50' : '',
       isHovering ? 'bg-blue-50' : ''
@@ -776,6 +1228,7 @@ export const Table: React.FC<TableProps> = ({
     const isPinned = pinnedColumnIds.includes(columnIdentity);
     const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
     const isEditing = editModalOpen && editColumnIndex === index;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
 
     const handleColumnContextMenu = (e: React.MouseEvent) => {
       if (column.isSystem || column.system) {
@@ -802,6 +1255,22 @@ export const Table: React.FC<TableProps> = ({
       if (isColumnDraggable) {
         e.preventDefault();
       }
+    };
+
+    const handleColumnDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!canShowColumnDropdown(column) || !canUpdateColumn()) {
+        return;
+      }
+      // Ignore double-clicks on the dropdown toggle button itself
+      if ((e.target as HTMLElement).closest('button')) {
+        return;
+      }
+      e.preventDefault();
+      setOpenColumnDropdownIndex(null);
+      handleCloseColMenu();
+      // Anchor to the dropdown button so the popup is positioned the same as "Edit" from the menu
+      const anchorEl = e.currentTarget.querySelector<HTMLElement>('button[title="Column options"]') ?? e.currentTarget;
+      handleEditColumn(column, index, { target: anchorEl });
     };
 
     const handleDropdownOpenChange = (open: boolean) => {
@@ -833,6 +1302,7 @@ export const Table: React.FC<TableProps> = ({
           boxShadow: isLastPinned ? '2px 0 4px -3px rgba(15,23,42,0.14)' : undefined,
         }}
         onContextMenu={handleColumnContextMenu}
+        onDoubleClick={handleColumnDoubleClick}
         draggable={isColumnDraggable}
         onDragStart={handleDragStart}
         onDragEnter={handleDragEnter}
@@ -855,10 +1325,21 @@ export const Table: React.FC<TableProps> = ({
               style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             >
               {column.title}
-              {column.isSystem && (
+              {isLocked && (
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
+            {/* Primary key marker */}
+            {column.id && primaryKeyColumnIds.includes(String(column.id)) && (() => {
+              const label = primaryKeyColumnIds.length > 1
+                ? `Primary key field ${primaryKeyColumnIds.indexOf(String(column.id)) + 1} of ${primaryKeyColumnIds.length}`
+                : 'Primary key';
+              return (
+                <span title={label} aria-label={label} role="img" className="flex-shrink-0 inline-flex" data-testid={`primary-key-icon-${column.id}`}>
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                </span>
+              );
+            })()}
           </div>
           {/* Column dropdown - hide for readonly users */}
           {canShowColumnDropdown(column) && (
@@ -891,8 +1372,10 @@ export const Table: React.FC<TableProps> = ({
     handleEditColumn,
     openColumnDropdownIndex,
     canShowColumnDropdown,
+    canUpdateColumn,
     getColumnHeaderClassName,
-    setOpenColumnDropdownIndex
+    setOpenColumnDropdownIndex,
+    primaryKeyColumnIds
   ]);
 
   const getEstimatedItemCount = useCallback(() => {
@@ -1057,24 +1540,28 @@ export const Table: React.FC<TableProps> = ({
               </div>
             </div>
 
-            <div ref={tableBodyRef}>
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+            <div ref={tableBodyRef} onKeyDown={handleTableBodyKeyDown}>
               <VirtualizedTableBody
-                data={paginatedData}
+                data={rowsWithDrafts}
                 columns={visibleColumns}
                 columnWidths={columnWidths}
                 pinnedColumnIds={pinnedColumnIds}
                 pinnedColumnOffsets={pinnedColumnOffsets}
                 selectedRows={selectedRows}
                 onRowSelect={handleRowSelect}
-                onCellChange={handleCellChange}
+                onCellChange={handleGridCellChange}
+                cellResets={cellResets}
+                invalidCells={invalidCells}
+                saveErrorCells={saveErrorCells}
                 onContextMenu={handleContextMenu}
                 activeCell={activeCell}
                 setActiveCell={setActiveCell}
                 tableId={tableId}
                 height={tableBodyHeight}
                 width={totalTableWidth}
-                groupedData={groupedData}
-                expandedGroups={expandedGroups}
+                groupedData={groupedDataWithDrafts}
+                expandedGroups={expandedGroupsWithDrafts}
                 setExpandedGroups={setExpandedGroups}
                 visibleColumns={visibleColumns}
                 outerRef={tableRef}
@@ -1088,7 +1575,7 @@ export const Table: React.FC<TableProps> = ({
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
                   <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
-                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRow(); }}>
+                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}>
                       <Plus className="w-5 h-5 text-secondary" />
                     </button>
                   </div>
@@ -1109,14 +1596,10 @@ export const Table: React.FC<TableProps> = ({
       {/* Fixed Footer */}
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         {!isBaseReadOnly() && canCreateRecord() && (
-          <button
-            onClick={() => { setActiveCell(null); addNewRow(); }}
-            className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
-            title="Add new row"
-          >
-            <Plus className="w-5 h-5" />
-            Add Row
-          </button>
+          <NewRowSplitButton
+            onAddGridRow={() => { setActiveCell(null); addNewRowAndFocus(); }}
+            onAddFormRow={() => { setActiveCell(null); setFormRecordId(null); setIsCreateRecordModalOpen(true); }}
+          />
         )}
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
@@ -1161,10 +1644,10 @@ export const Table: React.FC<TableProps> = ({
             // If multiple rows are selected, delete all selected rows using bulk delete
             // Otherwise, delete just the right-clicked row
             if (selectedRows.size > 1 && selectedRows.has(contextMenu.rowId!)) {
-              handleBulkDelete();
+              void handleBulkDelete();
             } else {
               // Delete just the right-clicked row
-              handleDelete(contextMenu.rowId!);
+              void handleDelete(contextMenu.rowId!);
             }
             handleCloseContextMenu();
           }}
@@ -1191,7 +1674,7 @@ export const Table: React.FC<TableProps> = ({
               handleCloseColMenu();
             }}
             onDelete={() => {
-              handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
+              void handleDeleteColumn(visibleColumns[colMenu.colIndex!].id!);
               handleCloseColMenu();
             }}
             canUpdate={canUpdateColumn()}
@@ -1250,6 +1733,15 @@ export const Table: React.FC<TableProps> = ({
         />
       )}
 
+      <DeleteConfirmModal
+        isOpen={reloadConfirmOpen}
+        title="Unsaved changes"
+        message="You have unsaved changes on this page. Reloading now will discard them. Do you want to continue?"
+        confirmLabel="Reload"
+        onClose={() => setReloadConfirmOpen(false)}
+        onConfirm={handleConfirmReload}
+      />
+
       {updateFieldConfirmModalOpen &&
         <UpdateFieldConfirmModal
           isOpen={updateFieldConfirmModalOpen}
@@ -1280,8 +1772,55 @@ export const Table: React.FC<TableProps> = ({
             closeEditRecordModal();
           }
         }}
+        onDuplicate={() => handleDuplicateRecord(selectedRecordId)}
         title="Edit record"
         submitLabel="Update record"
+        onPrevious={showPreviousEditRecord}
+        onNext={showNextEditRecord}
+        hasPrevious={selectedRecordIndex > 0}
+        hasNext={selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1}
+      />
+
+      {/* New Row Form Modal */}
+      <CreateRecordModal
+        isOpen={isCreateRecordModalOpen && formRecordId === null}
+        onClose={closeRecordForm}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        title="New row"
+        submitLabel="Save Record"
+        layout="record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIds.length > 0}
+        hasNext={false}
+      />
+
+      {/* Existing record reached from the "New row - Form" via Previous / Next */}
+      <EditRecordModal
+        isOpen={isCreateRecordModalOpen && formRecordId !== null}
+        onClose={closeRecordForm}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        recordId={formRecordApiId}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        initialValues={buildInitialValuesForEdit({ recordId: formRecordId ?? undefined, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        onDelete={async (id: string) => {
+          try {
+            await handleDelete(id);
+          } catch { }
+          finally {
+            closeRecordForm();
+          }
+        }}
+        onDuplicate={() => handleDuplicateRecord(formRecordId)}
+        title="Edit record"
+        submitLabel="Update record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIndex > 0}
+        hasNext={formRecordIndex !== -1}
       />
     </div>
 

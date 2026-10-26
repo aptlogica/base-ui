@@ -186,3 +186,12 @@ export function getInitials(name: string, fallback: string = 'U'): string {
   const result = name.substring(0, 2).toUpperCase();
   return result || name.charAt(0).toUpperCase() || fallback;
 }
+
+/**
+ * Extracts the created table's id from a create-table API response.
+ * Handles `{ data: { id } }`, `{ data: { model: { id } } }` and `{ id }` shapes.
+ */
+export function getCreatedTableId(response: unknown): string | undefined {
+  const res = response as any;
+  return res?.data?.id ?? res?.data?.model?.id ?? res?.model?.id ?? res?.id;
+}

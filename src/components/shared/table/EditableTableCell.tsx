@@ -31,7 +31,8 @@ import {
   LinksField,
   Formula,
   Lookup,
-  NumberField
+  NumberField,
+  UUIDField
 } from '../../../components/common/Fields';
 import { normalizeFieldType } from '../../../utils/fieldType';
 import { utcISOToZoned } from '../../../utils/dateUtils';
@@ -75,52 +76,21 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
   rowData,
   allColumns
 }) => {
-  const getDefaultValueFromConfig = (fieldConfig: any, fieldType: string): any => {
-    if (!fieldConfig || typeof fieldConfig !== 'object') return '';
-    // Check for defaultValue in config
-    if (fieldConfig.defaultValue !== undefined && fieldConfig.defaultValue !== null) {
-      return fieldConfig.defaultValue;
-    }
-
-    // Type-specific default values based on canonical type keys
-    const normalizedType = normalizeFieldType(fieldType);
-    switch (normalizedType) {
+  // Cells render exactly what the backend returned: a null/empty value stays an empty cell and
+  // never falls back to meta.defaultValue (the DB applies the default on insert).
+  const getDefaultValueFromConfig = (_fieldConfig: any, fieldType: string): any => {
+    switch (normalizeFieldType(fieldType)) {
       case 'boolean':
-        return fieldConfig.checkboxDefault || false;
+        return false;
       case 'rating':
-        return fieldConfig.ratingDefault || 0;
-      case 'number':
-      case 'decimal':
-      case 'currency':
-      case 'percent':
-        return fieldConfig.defaultValue || '';
-      case 'select':
-        return fieldConfig.singleDefault || '';
+        return 0;
       case 'multiSelect':
-        return fieldConfig.multiDefault || [];
-      case 'datetime':
-        return fieldConfig.dateTimeDefault || '';
+        return [];
       case 'date':
-        return fieldConfig.dateDefault || null;
-      case 'time':
-        return fieldConfig.timeDefault || '';
       case 'year':
-        return fieldConfig.yearDefault || null;
-      case 'phoneNumber':
-        return fieldConfig.phoneDefault || '';
-      case 'email':
-        return fieldConfig.emailDefault || '';
-      case 'url':
-        return fieldConfig.urlDefault || '';
-      case 'duration':
-        return fieldConfig.durationDefault || '';
-      case 'longText':
-      case 'text':
-      case 'json':
-      case 'formula':
-        return fieldConfig.defaultValue || '';
+        return null;
       default:
-        return fieldConfig.defaultValue || '';
+        return '';
     }
   };
 
@@ -485,6 +455,19 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       />
     );
 
+    // Auto UUID fields stay read-only whatever allowEdit says; UUIDField reads the mode from the config
+    const renderUuid = () => (
+      <UUIDField
+        value={value ?? null}
+        onChange={isSystemField ? () => { } : onChange}
+        disabled={isSystemField}
+        config={parsedConfig}
+        allowEdit={true}
+        readOnly={!allowEdit}
+        isBorder={isBorder}
+      />
+    );
+
     const renderDefault = () => (
       <SingleLineText {...commonProps} allowEdit={true} readOnly={!allowEdit} isBorder={isBorder} />
     );
@@ -518,6 +501,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       attachment: renderAttachment,
       lookup: renderLookup,
       formula: renderFormula,
+      uuid: renderUuid,
     };
 
     return (renderers[fieldType] || renderDefault)();

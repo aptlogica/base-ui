@@ -155,13 +155,25 @@ export const buildImportPreview = async (file: File): Promise<ImportPreview> => 
   throw new Error('Preview is currently available for CSV and JSON files only.');
 };
 
+// Titles of the system columns every table has. An imported column can't share one of them, so it is renamed
+// here, the same way the server does: "id" becomes "id (1)".
+const SYSTEM_COLUMN_TITLES = new Set(['id', 'created time', 'last modified time', 'created by', 'last modified by']);
+
+export const avoidSystemColumnTitle = (title: string): string => {
+  const trimmed = title.trim();
+  if (!SYSTEM_COLUMN_TITLES.has(trimmed.toLowerCase())) return title;
+  let index = 1;
+  while (SYSTEM_COLUMN_TITLES.has(`${trimmed} (${index})`.toLowerCase())) index += 1;
+  return `${trimmed} (${index})`;
+};
+
 export const buildInitialMappings = (preview: ImportPreview): Record<string, ImportColumnMapping> => {
   const mappings: Record<string, ImportColumnMapping> = {};
 
   preview.columns.forEach((column) => {
     const normalizedType = normalizeImportFieldType(column.inferredFieldType || FieldType.Text);
     mappings[column.key] = {
-      sourceName: column.label,
+      sourceName: avoidSystemColumnTitle(column.label),
       include: true,
       fieldType: normalizedType,
       defaultValue: column.inferredDefaultValue || EMPTY_VALUE,

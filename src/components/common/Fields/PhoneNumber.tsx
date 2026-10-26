@@ -5,6 +5,7 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useEffect, useRef } from "react";
 import { useClickHandler } from "../../../utils/helpers";
+import { useOptionalToast } from "../Toast";
 
 interface PhoneNumberProps {
   label?: string;
@@ -50,6 +51,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
     placeholder: configPlaceholder = placeholder,
   } = config;
 
+  const toast = useOptionalToast();
   const [localValue, setLocalValue] = useState<string>(value ?? defaultValue ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -120,9 +122,17 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
 
   // allowEdit controls single vs double-click behavior
   // readOnly completely prevents editing
+  const startEditing = () => {
+    // Existing value may predate the "valid phone numbers only" setting
+    if (phoneValid && localValue.trim() !== "" && !validatePhone(localValue)) {
+      toast?.error("Invalid phone number", { title: "Error", duration: 3000 });
+    }
+    setIsEditing(true);
+  };
+
   const handleClick = useClickHandler(
-    () => !readOnly && allowEdit && !disabled && setIsEditing(true), // Single click when allowEdit=true
-    () => !readOnly && !allowEdit && !disabled && setIsEditing(true), // Double click when allowEdit=false
+    () => !readOnly && allowEdit && !disabled && startEditing(), // Single click when allowEdit=true
+    () => !readOnly && !allowEdit && !disabled && startEditing(), // Double click when allowEdit=false
     1
   );
 
