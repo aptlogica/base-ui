@@ -121,3 +121,15 @@ const KIND_BY_UIDT: Record<string, FieldKind> = {
 };
 
 export const fieldKind = (uidt?: string): FieldKind => KIND_BY_UIDT[(uidt || '').toLowerCase()] ?? 'any';
+
+// Types the guided categories have no condition for, though their kind is number or date
+const NOT_GUIDED = new Set(['rating', 'time']);
+
+// Whether a field type can be picked in a category: guided categories only offer the kinds their
+// conditions work on; Custom SQL offers every field
+export const suitsCategory = (category: CheckCategory, uidt?: string): boolean => {
+  if (category.key === CUSTOM_CATEGORY) return true;
+  const type = (uidt || '').toLowerCase();
+  if (NOT_GUIDED.has(type)) return false;
+  return category.suits.includes(fieldKind(type));
+};

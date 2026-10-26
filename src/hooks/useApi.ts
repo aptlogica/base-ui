@@ -1490,15 +1490,15 @@ export const useFuzzyDeduplication = () => {
     }) =>
       fuzzyDuplicatesService({ model_id, columns, threshold, duplicate, keep_rule, deduplication_mode, row_actions }),
     onSuccess: (_, { model_id }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.records(model_id),
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tables', String(model_id)],
         refetchType: 'active',
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
     },
   });
 };

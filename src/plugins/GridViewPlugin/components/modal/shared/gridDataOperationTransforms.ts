@@ -1082,6 +1082,12 @@ function similarityScore(str1: string, str2: string, reorderWeight = DEFAULT_REO
 
 
 
+const getFuzzyThreshold = (sensitivity: string | undefined) => {
+  if (sensitivity === 'low') return 0.9;
+  if (sensitivity === 'high') return 0.7;
+  return 0.8;
+};
+
 const getLastModifiedTime = (row: Record<string, any>) => {
   const rawTime = row?.last_modified_time || row?.updated_at ||
     row?.data?.last_modified_time || row?.data?.updated_at ||
@@ -1089,6 +1095,282 @@ const getLastModifiedTime = (row: Record<string, any>) => {
     row?.meta?.last_modified_time || row?.meta?.updated_at;
   if (!rawTime) return 0;
   return new Date(rawTime).getTime() || 0;
+};
+
+interface FuzzyEntry {
+  row: Record<string, any>;
+  index: number;
+  id: string;
+  original: Record<string, any>;
+  values: Record<string, any>;
+  changedColumns: string[];
+  rowState: GridDataOperationPreviewRow['rowState'];
+}
+
+const buildFuzzyEntries = (records: Record<string, any>[]): FuzzyEntry[] =>
+  records.map((row, index) => {
+    const original = normalizeRow(row);
+    return {
+      row,
+      index,
+      id: getRowId(row, index),
+      original,
+      values: { ...original },
+      changedColumns: [],
+      rowState: 'unchanged',
+    };
+  });
+
+const selectFuzzyColumns = (columns: GridColumn[], selectedColumnIds: string[]) => {
+  const selectedColumnIdSet = new Set(selectedColumnIds.map(String));
+  return columns
+    .filter((column) => column.id || column.key)
+    .filter((column) => {
+      const columnKey = getGridColumnValueKey(column);
+      const columnIdentity = getGridColumnIdentity(column);
+      return selectedColumnIdSet.has(columnIdentity) || selectedColumnIdSet.has(columnKey);
+    });
+};
+
+const buildFuzzyCacheKey = (
+  records: Record<string, any>[],
+  state: GridDataOperationState,
+  threshold: number,
+  keepRule: string,
+) =>
+  [
+    records.length,
+    records[0]?.id ?? '',
+    records.at(-1)?.id ?? '',
+    state.selectedColumnIds.map(String).join(','),
+    threshold,
+    keepRule,
+    state.scope ?? 'all',
+  ].join('|');
+
+const createUnionFind = (size: number) => {
+  const parent = Array.from({ length: size }, (_, i) => i);
+
+  const find = (i: number): number => {
+    let root = i;
+    while (root !== parent[root]) {
+      root = parent[root];
+    }
+    let curr = i;
+    while (curr !== root) {
+      const next = parent[curr];
+      parent[curr] = root;
+      curr = next;
+    }
+    return root;
+  };
+
+  const union = (i: number, j: number) => {
+    const rootI = find(i);
+    const rootJ = find(j);
+    if (rootI !== rootJ) {
+      parent[rootI] = rootJ;
+    }
+  };
+
+  return { find, union };
+};
+
+const hasFuzzyValue = (entry: FuzzyEntry, columnKeys: string[]) =>
+  columnKeys.some((columnKey) => entry.values[columnKey] != null && String(entry.values[columnKey]).trim() !== '');
+
+const fuzzyValuesMatch = (rawI: string | number | boolean | null | undefined, rawJ: string | number | boolean | null | undefined, threshold: number, lengthSlack?: number) => {
+  const valI = String(rawI ?? '').trim();
+  const valJ = String(rawJ ?? '').trim();
+
+  if (valI === '' && valJ === '') return true;
+  if (valI === '' || valJ === '') return false;
+
+  if (lengthSlack !== undefined) {
+    const maxLen = Math.max(valI.length, valJ.length);
+    const minLen = Math.min(valI.length, valJ.length);
+    if (maxLen > 0 && minLen / maxLen < threshold - lengthSlack) return false;
+  }
+
+  return similarityScore(valI.toLowerCase(), valJ.toLowerCase()) >= threshold;
+};
+
+// Unions entry `i` with every later non-empty entry whose selected columns all match fuzzily.
+const unionFuzzyMatches = (
+  entries: FuzzyEntry[],
+  i: number,
+  columnKeys: string[],
+  threshold: number,
+  union: (i: number, j: number) => void,
+  lengthSlack?: number,
+) => {
+  if (!hasFuzzyValue(entries[i], columnKeys)) return;
+
+  for (let j = i + 1; j < entries.length; j++) {
+    if (!hasFuzzyValue(entries[j], columnKeys)) continue;
+    const isMatch = columnKeys.every((columnKey) =>
+      fuzzyValuesMatch(entries[i].values[columnKey], entries[j].values[columnKey], threshold, lengthSlack)
+    );
+    if (isMatch) union(i, j);
+  }
+};
+
+const compareFuzzyKeepOrder = (keepRule: string) => (a: FuzzyEntry, b: FuzzyEntry) => {
+  if (keepRule === 'keep_latest_updated') {
+    const timeA = getLastModifiedTime(a.row);
+    const timeB = getLastModifiedTime(b.row);
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+  }
+
+  const isNumA = /^-?\d+(\.\d+)?$/.test(a.id.trim());
+  const isNumB = /^-?\d+(\.\d+)?$/.test(b.id.trim());
+
+  if (isNumA && isNumB) {
+    const numA = Number(a.id);
+    const numB = Number(b.id);
+    if (numA !== numB) {
+      return keepRule === 'keep_last' ? numB - numA : numA - numB;
+    }
+  }
+
+  return keepRule === 'keep_last' ? b.index - a.index : a.index - b.index;
+};
+
+const logFuzzyMatches = (keeper: FuzzyEntry, duplicate: FuzzyEntry, columnKeys: string[], threshold: number) => {
+  columnKeys.forEach((columnKey) => {
+    const valKept = String(keeper.values[columnKey] ?? '').trim();
+    const valRow = String(duplicate.values[columnKey] ?? '').trim();
+    const score = similarityScore(valRow.toLowerCase(), valKept.toLowerCase());
+
+    console.log(
+      `[Fuzzy Deduplication] Match: Master Row ${keeper.id} ("${valKept}") vs Duplicate Row ${duplicate.id} ("${valRow}") | Score: ${(score * 100).toFixed(1)}% | Column: "${columnKey}" | Threshold: ${(threshold * 100).toFixed(0)}%`
+    );
+  });
+};
+
+// Picks the keeper of every multi-member group; everything else is a duplicate.
+const classifyFuzzyGroups = (
+  groupMap: Map<number, FuzzyEntry[]>,
+  keepRule: string,
+  columnKeys: string[],
+  threshold: number,
+) => {
+  const keptRows: FuzzyEntry[] = [];
+  const duplicateEntries: FuzzyEntry[] = [];
+
+  groupMap.forEach((group) => {
+    if (group.length <= 1) {
+      keptRows.push(group[0]);
+      return;
+    }
+
+    const sortedGroup = [...group].sort(compareFuzzyKeepOrder(keepRule));
+    const keeper = sortedGroup[0];
+    keptRows.push(keeper);
+
+    sortedGroup.slice(1).forEach((duplicate) => {
+      duplicateEntries.push(duplicate);
+      logFuzzyMatches(keeper, duplicate, columnKeys, threshold);
+    });
+  });
+
+  return { keptRows, duplicateEntries };
+};
+
+const computeFuzzyGroups = (
+  sourceEntries: FuzzyEntry[],
+  columnKeys: string[],
+  keepRule: string,
+  threshold: number,
+) => {
+  const { find, union } = createUnionFind(sourceEntries.length);
+
+  // Perform fuzzy comparisons between all pairs of non-empty rows
+  for (let i = 0; i < sourceEntries.length; i++) {
+    unionFuzzyMatches(sourceEntries, i, columnKeys, threshold, union);
+  }
+
+  // Collect entries into their respective groups.
+  const groupMap = new Map<number, FuzzyEntry[]>();
+  sourceEntries.forEach((entry, i) => {
+    const root = hasFuzzyValue(entry, columnKeys) ? find(i) : i;
+    const current = groupMap.get(root) ?? [];
+    current.push(entry);
+    groupMap.set(root, current);
+  });
+
+  const { keptRows, duplicateEntries } = classifyFuzzyGroups(groupMap, keepRule, columnKeys, threshold);
+
+  const rowGroupIdMap = new Map<string, string>();
+  groupMap.forEach((group, rootIndex) => {
+    if (group.length > 1) {
+      const rootId = sourceEntries[rootIndex].id;
+      group.forEach((entry) => {
+        rowGroupIdMap.set(entry.id, rootId);
+      });
+    }
+  });
+
+  return {
+    duplicateIds: new Set(duplicateEntries.map((e) => e.id)),
+    keptIds: new Set(keptRows.map((e) => e.id)),
+    rowGroupIdMap,
+  };
+};
+
+const clearFuzzyColumns = (entry: FuzzyEntry, columnKeys: string[], source: Record<string, any>) => {
+  columnKeys.forEach((columnKey) => {
+    if (source[columnKey] != null && String(source[columnKey]) !== '') {
+      entry.values[columnKey] = '';
+      entry.changedColumns.push(columnKey);
+    }
+  });
+};
+
+const applyFuzzyAutomaticState = (
+  entry: FuzzyEntry,
+  duplicateIds: Set<string>,
+  keptIds: Set<string>,
+  duplicateAction: GridDataOperationState['duplicateAction'],
+  columnKeys: string[],
+) => {
+  if (!duplicateIds.has(entry.id)) {
+    if (keptIds.has(entry.id)) {
+      entry.rowState = 'kept';
+    }
+    return;
+  }
+
+  if (duplicateAction !== 'remove_duplicates') {
+    entry.rowState = 'removed';
+    return;
+  }
+
+  clearFuzzyColumns(entry, columnKeys, entry.values);
+  if (entry.changedColumns.length > 0) {
+    entry.rowState = 'changed';
+  }
+};
+
+const FUZZY_OVERRIDE_STATES = new Map<string, GridDataOperationPreviewRow['rowState']>([
+  ['keep', 'kept'],
+  ['delete', 'removed'],
+  ['clear', 'changed'],
+  ['none', 'unchanged'],
+]);
+
+const applyFuzzyManualOverride = (entry: FuzzyEntry, override: string | undefined, columnKeys: string[]) => {
+  const rowState = override === undefined ? undefined : FUZZY_OVERRIDE_STATES.get(override);
+  if (!rowState) return;
+
+  entry.rowState = rowState;
+  entry.changedColumns = [];
+  entry.values = { ...entry.original };
+  if (override === 'clear') {
+    clearFuzzyColumns(entry, columnKeys, entry.original);
+  }
 };
 
 const buildFuzzyDeduplicationPreview = (
@@ -1099,30 +1381,9 @@ const buildFuzzyDeduplicationPreview = (
   const previewRows: GridDataOperationPreviewRow[] = [];
   const changedRowIds: string[] = [];
   const affectedColumnsSet = new Set<string>();
-  let affectedRows = 0;
-  let affectedCells = 0;
 
-  const selectedColumnIdSet = new Set(state.selectedColumnIds.map(String));
-  const previewColumns = columns.filter((column) => column.id || column.key);
-  const sourceEntries = records.map((row, index) => {
-    const original = normalizeRow(row);
-    const values = { ...original };
-    return {
-      row,
-      index,
-      id: getRowId(row, index),
-      original,
-      values,
-      changedColumns: [] as string[],
-      rowState: 'unchanged' as GridDataOperationPreviewRow['rowState'],
-    };
-  });
-
-  const selectedColumns = previewColumns.filter((column) => {
-    const columnKey = getGridColumnValueKey(column);
-    const columnIdentity = getGridColumnIdentity(column);
-    return selectedColumnIdSet.has(columnIdentity) || selectedColumnIdSet.has(columnKey);
-  });
+  const sourceEntries = buildFuzzyEntries(records);
+  const selectedColumns = selectFuzzyColumns(columns, state.selectedColumnIds);
 
   if (selectedColumns.length === 0) {
     sourceEntries.forEach((entry) => {
@@ -1148,267 +1409,43 @@ const buildFuzzyDeduplicationPreview = (
     };
   }
 
+  const columnKeys = selectedColumns.map(getGridColumnValueKey);
   const keepRule = state.duplicateKeepRule || 'keep_first';
-  const threshold = state.fuzzySensitivity === 'low' ? 0.9 : state.fuzzySensitivity === 'high' ? 0.7 : 0.8;
+  const threshold = getFuzzyThreshold(state.fuzzySensitivity);
+  const currentCacheKey = buildFuzzyCacheKey(records, state, threshold, keepRule);
 
-  // 1. Group records into connected components of fuzzy similarity.
-  const parent = Array.from({ length: sourceEntries.length }, (_, i) => i);
-
-  const find = (i: number): number => {
-    let root = i;
-    while (root !== parent[root]) {
-      root = parent[root];
-    }
-    let curr = i;
-    while (curr !== root) {
-      const next = parent[curr];
-      parent[curr] = root;
-      curr = next;
-    }
-    return root;
-  };
-
-  const union = (i: number, j: number) => {
-    const rootI = find(i);
-    const rootJ = find(j);
-    if (rootI !== rootJ) {
-      parent[rootI] = rootJ;
-    }
-  };
-
-  const currentCacheKey = [
-    records.length,
-    records[0]?.id ?? '',
-    records[records.length - 1]?.id ?? '',
-    state.selectedColumnIds.map(String).join(','),
-    threshold,
-    keepRule,
-    state.scope ?? 'all',
-  ].join('|');
-
-  let duplicateIds: Set<string>;
-  let keptIds: Set<string>;
-  let rowGroupIdMap: Map<string, string>;
-
-  if (fuzzyDeduplicationCache && fuzzyDeduplicationCache.cacheKey === currentCacheKey) {
-    duplicateIds = fuzzyDeduplicationCache.duplicateIds;
-    keptIds = fuzzyDeduplicationCache.keptIds;
-    rowGroupIdMap = fuzzyDeduplicationCache.rowGroupIdMap;
-    console.log(`[Fuzzy Deduplication] Active similarity groups: ${new Set(rowGroupIdMap.values()).size} | Threshold: ${(threshold * 100).toFixed(0)}%`);
+  let groups: NonNullable<typeof fuzzyDeduplicationCache>;
+  if (fuzzyDeduplicationCache?.cacheKey === currentCacheKey) {
+    groups = fuzzyDeduplicationCache;
+    console.log(`[Fuzzy Deduplication] Active similarity groups: ${new Set(groups.rowGroupIdMap.values()).size} | Threshold: ${(threshold * 100).toFixed(0)}%`);
   } else {
-    // Perform fuzzy comparisons between all pairs of non-empty rows
-    for (let i = 0; i < sourceEntries.length; i++) {
-      let emptyI = true;
-      for (const column of selectedColumns) {
-        const columnKey = getGridColumnValueKey(column);
-        if (sourceEntries[i].values[columnKey] != null && String(sourceEntries[i].values[columnKey]).trim() !== '') {
-          emptyI = false;
-          break;
-        }
-      }
-      if (emptyI) continue;
-
-      for (let j = i + 1; j < sourceEntries.length; j++) {
-        let emptyJ = true;
-        for (const column of selectedColumns) {
-          const columnKey = getGridColumnValueKey(column);
-          if (sourceEntries[j].values[columnKey] != null && String(sourceEntries[j].values[columnKey]).trim() !== '') {
-            emptyJ = false;
-            break;
-          }
-        }
-        if (emptyJ) continue;
-
-        let match = true;
-        for (const column of selectedColumns) {
-          const columnKey = getGridColumnValueKey(column);
-          const valI = String(sourceEntries[i].values[columnKey] ?? '').trim();
-          const valJ = String(sourceEntries[j].values[columnKey] ?? '').trim();
-
-          if (valI === '' && valJ === '') {
-            continue;
-          }
-          if (valI === '' || valJ === '') {
-            match = false;
-            break;
-          }
-
-          const score = similarityScore(valI.toLowerCase(), valJ.toLowerCase());
-          if (score < threshold) {
-            match = false;
-            break;
-          }
-        }
-        if (match) {
-          union(i, j);
-        }
-      }
-    }
-
-    // 2. Collect entries into their respective groups.
-    const groupMap = new Map<number, typeof sourceEntries>();
-    for (let i = 0; i < sourceEntries.length; i++) {
-      let emptyRow = true;
-      for (const column of selectedColumns) {
-        const columnKey = getGridColumnValueKey(column);
-        if (sourceEntries[i].values[columnKey] != null && String(sourceEntries[i].values[columnKey]).trim() !== '') {
-          emptyRow = false;
-          break;
-        }
-      }
-
-      const root = emptyRow ? i : find(i);
-      const current = groupMap.get(root) ?? [];
-      current.push(sourceEntries[i]);
-      groupMap.set(root, current);
-    }
-
-    // 3. For each group, determine which one to keep and which ones are duplicates.
-    const keptRows: typeof sourceEntries = [];
-    const duplicateEntries: typeof sourceEntries = [];
-
-    groupMap.forEach((group) => {
-      if (group.length <= 1) {
-        keptRows.push(group[0]);
-        return;
-      }
-
-      // Sort the group members according to the keepRule to decide the keeper
-      const sortedGroup = [...group];
-      sortedGroup.sort((a, b) => {
-        if (keepRule === 'keep_latest_updated') {
-          const timeA = getLastModifiedTime(a.row);
-          const timeB = getLastModifiedTime(b.row);
-          if (timeA !== timeB) {
-            return timeB - timeA;
-          }
-        }
-
-        const idA = a.id;
-        const idB = b.id;
-        const isNumA = /^-?\d+(\.\d+)?$/.test(idA.trim());
-        const isNumB = /^-?\d+(\.\d+)?$/.test(idB.trim());
-
-        if (isNumA && isNumB) {
-          const numA = Number(idA);
-          const numB = Number(idB);
-          if (numA !== numB) {
-            if (keepRule === 'keep_last') {
-              return numB - numA;
-            }
-            return numA - numB;
-          }
-        }
-
-        if (keepRule === 'keep_last') {
-          return b.index - a.index;
-        }
-        return a.index - b.index;
-      });
-
-      const keeper = sortedGroup[0];
-      keptRows.push(keeper);
-
-      // All other members are duplicates
-      for (let idx = 1; idx < sortedGroup.length; idx++) {
-        const duplicate = sortedGroup[idx];
-        duplicateEntries.push(duplicate);
-
-        selectedColumns.forEach((column) => {
-          const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-          const valKept = String(keeper.values[columnKey] ?? '').trim();
-          const valRow = String(duplicate.values[columnKey] ?? '').trim();
-          const score = similarityScore(valRow.toLowerCase(), valKept.toLowerCase());
-
-          console.log(
-            `[Fuzzy Deduplication] Match: Master Row ${keeper.id} ("${valKept}") vs Duplicate Row ${duplicate.id} ("${valRow}") | Score: ${(score * 100).toFixed(1)}% | Column: "${columnKey}" | Threshold: ${(threshold * 100).toFixed(0)}%`
-          );
-        });
-      }
-    });
-
-    rowGroupIdMap = new Map<string, string>();
-    groupMap.forEach((group, rootIndex) => {
-      if (group.length > 1) {
-        const rootId = sourceEntries[rootIndex].id;
-        group.forEach((entry) => {
-          rowGroupIdMap.set(entry.id, rootId);
-        });
-      }
-    });
-
-    duplicateIds = new Set(duplicateEntries.map(e => e.id));
-    keptIds = new Set(keptRows.map(e => e.id));
-
-    fuzzyDeduplicationCache = {
-      cacheKey: currentCacheKey,
-      duplicateIds,
-      keptIds,
-      rowGroupIdMap,
-    };
+    groups = { cacheKey: currentCacheKey, ...computeFuzzyGroups(sourceEntries, columnKeys, keepRule, threshold) };
+    fuzzyDeduplicationCache = groups;
   }
+  const { duplicateIds, keptIds, rowGroupIdMap } = groups;
 
   let finalAffectedRows = 0;
   let finalAffectedCells = 0;
 
   sourceEntries.forEach((entry) => {
-    if (duplicateIds.has(entry.id)) {
-      if (state.duplicateAction === 'remove_duplicates') {
-        selectedColumns.forEach((column) => {
-          const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-          if (entry.values[columnKey] != null && String(entry.values[columnKey]) !== '') {
-            entry.values[columnKey] = '';
-            entry.changedColumns.push(columnKey);
-          }
-        });
-        if (entry.changedColumns.length > 0) {
-          entry.rowState = 'changed';
-        }
-      } else {
-        entry.rowState = 'removed';
-      }
-    } else if (keptIds.has(entry.id)) {
-      entry.rowState = 'kept';
-    }
+    applyFuzzyAutomaticState(entry, duplicateIds, keptIds, state.duplicateAction, columnKeys);
+    applyFuzzyManualOverride(
+      entry,
+      state.deduplicationMode === 'manual' ? state.rowActions?.[entry.id] : undefined,
+      columnKeys,
+    );
 
-    const override = state.deduplicationMode === 'manual' ? state.rowActions?.[entry.id] : undefined;
-    if (override === 'keep') {
-      entry.rowState = 'kept';
-      entry.changedColumns = [];
-      entry.values = { ...entry.original };
-    } else if (override === 'delete') {
-      entry.rowState = 'removed';
-      entry.changedColumns = [];
-      entry.values = { ...entry.original };
-    } else if (override === 'clear') {
-      entry.rowState = 'changed';
-      entry.changedColumns = [];
-      entry.values = { ...entry.original };
-      selectedColumns.forEach((column) => {
-        const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-        if (entry.original[columnKey] != null && String(entry.original[columnKey]) !== '') {
-          entry.values[columnKey] = '';
-          entry.changedColumns.push(columnKey);
-        }
-      });
-    } else if (override === 'none') {
-      entry.rowState = 'unchanged';
-      entry.changedColumns = [];
-      entry.values = { ...entry.original };
-    }
-
-    if (entry.rowState === 'removed') {
+    const isRemoved = entry.rowState === 'removed';
+    const isChanged = entry.rowState === 'changed' && entry.changedColumns.length > 0;
+    if (isRemoved || isChanged) {
       finalAffectedRows += 1;
       if (!changedRowIds.includes(entry.id)) {
         changedRowIds.push(entry.id);
       }
-    } else if (entry.rowState === 'changed' && entry.changedColumns.length > 0) {
-      finalAffectedRows += 1;
+    }
+    if (isChanged) {
       finalAffectedCells += entry.changedColumns.length;
       entry.changedColumns.forEach((col) => affectedColumnsSet.add(col));
-      if (!changedRowIds.includes(entry.id)) {
-        changedRowIds.push(entry.id);
-      }
     }
 
     previewRows.push({
@@ -1416,7 +1453,7 @@ const buildFuzzyDeduplicationPreview = (
       original: entry.original,
       values: entry.values,
       changedColumns: entry.changedColumns,
-      rowState: entry.rowState as GridDataOperationPreviewRow['rowState'],
+      rowState: entry.rowState,
       groupId: rowGroupIdMap.get(entry.id),
     });
   });
@@ -1639,6 +1676,20 @@ export const buildGridDataOperationPreview = ({
   };
 };
 
+const countFuzzyDuplicatesUpTo = (find: (i: number) => number, lastIndex: number) => {
+  const currentRoots = new Set<number>();
+  let duplicateCount = 0;
+  for (let idx = 0; idx <= lastIndex; idx++) {
+    const root = find(idx);
+    if (currentRoots.has(root)) {
+      duplicateCount++;
+    } else {
+      currentRoots.add(root);
+    }
+  }
+  return duplicateCount;
+};
+
 export const buildGridDataOperationPreviewAsync = async (
   context: GridDataOperationContext
 ): Promise<GridDataOperationPreviewResult> => {
@@ -1649,143 +1700,41 @@ export const buildGridDataOperationPreviewAsync = async (
     return buildGridDataOperationPreview(context);
   }
 
-  const selectedColumnIdSet = new Set(context.state.selectedColumnIds.map(String));
-  const previewColumns = context.columns.filter((column) => column.id || column.key);
-  const selectedColumns = previewColumns.filter((column) => {
-    const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-    const columnIdentity = String(column.id || columnKey);
-    return selectedColumnIdSet.has(columnIdentity) || selectedColumnIdSet.has(columnKey);
-  });
+  const selectedColumns = selectFuzzyColumns(context.columns, context.state.selectedColumnIds);
 
   if (selectedColumns.length === 0) {
     return buildGridDataOperationPreview(context);
   }
 
-  const threshold = context.state.fuzzySensitivity === 'low' ? 0.9 : context.state.fuzzySensitivity === 'high' ? 0.7 : 0.8;
+  const columnKeys = selectedColumns.map(getGridColumnValueKey);
+  const threshold = getFuzzyThreshold(context.state.fuzzySensitivity);
   const keepRule = context.state.duplicateKeepRule || 'keep_first';
-  const currentCacheKey = [
-    records.length,
-    records[0]?.id ?? '',
-    records[records.length - 1]?.id ?? '',
-    context.state.selectedColumnIds.map(String).join(','),
-    threshold,
-    keepRule,
-    context.state.scope ?? 'all',
-  ].join('|');
+  const currentCacheKey = buildFuzzyCacheKey(records, context.state, threshold, keepRule);
 
   // Instant hit on checkbox tick / untick (< 1ms)
-  if (fuzzyDeduplicationCache && fuzzyDeduplicationCache.cacheKey === currentCacheKey) {
+  if (fuzzyDeduplicationCache?.cacheKey === currentCacheKey) {
     const result = buildGridDataOperationPreview(context);
     const finalDuplicates = result.previewRows.filter((r) => r.rowState === 'removed' || r.rowState === 'changed').length;
     context.onProgress?.({ scannedRows: totalRows, totalRows, duplicatesDetected: finalDuplicates });
     return result;
   }
 
-  const sourceEntries = records.map((row, index) => {
-    const original = normalizeRow(row);
-    const values = { ...original };
-    return {
-      row,
-      index,
-      id: getRowId(row, index),
-      original,
-      values,
-      changedColumns: [] as string[],
-      rowState: 'unchanged' as 'unchanged' | 'changed' | 'removed' | 'kept',
-    };
-  });
-
-  const parent = Array.from({ length: sourceEntries.length }, (_, i) => i);
-  const find = (i: number): number => {
-    let root = i;
-    while (root !== parent[root]) root = parent[root];
-    let curr = i;
-    while (curr !== root) {
-      const next = parent[curr];
-      parent[curr] = root;
-      curr = next;
-    }
-    return root;
-  };
-  const union = (i: number, j: number) => {
-    const rootI = find(i);
-    const rootJ = find(j);
-    if (rootI !== rootJ) parent[rootI] = rootJ;
-  };
+  const sourceEntries = buildFuzzyEntries(records);
+  const { find, union } = createUnionFind(sourceEntries.length);
 
   // Micro-task batching yielding 10ms every 15 rows so UI thread stays 100% fluid & clickable
   const BATCH_SIZE = 15;
   for (let i = 0; i < sourceEntries.length; i++) {
-    let emptyI = true;
-    for (const column of selectedColumns) {
-      const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-      if (sourceEntries[i].values[columnKey] != null && String(sourceEntries[i].values[columnKey]).trim() !== '') {
-        emptyI = false;
-        break;
-      }
-    }
-
-    if (!emptyI) {
-      for (let j = i + 1; j < sourceEntries.length; j++) {
-        let emptyJ = true;
-        for (const column of selectedColumns) {
-          const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-          if (sourceEntries[j].values[columnKey] != null && String(sourceEntries[j].values[columnKey]).trim() !== '') {
-            emptyJ = false;
-            break;
-          }
-        }
-        if (emptyJ) continue;
-
-        let match = true;
-        for (const column of selectedColumns) {
-          const columnKey = String(column.key || column.column_name || column.id || column.title || '');
-          const valI = String(sourceEntries[i].values[columnKey] ?? '').trim();
-          const valJ = String(sourceEntries[j].values[columnKey] ?? '').trim();
-
-          if (valI === '' && valJ === '') continue;
-          if (valI === '' || valJ === '') {
-            match = false;
-            break;
-          }
-
-          const maxLen = Math.max(valI.length, valJ.length);
-          const minLen = Math.min(valI.length, valJ.length);
-          if (maxLen > 0 && minLen / maxLen < threshold - 0.15) {
-            match = false;
-            break;
-          }
-
-          const score = similarityScore(valI.toLowerCase(), valJ.toLowerCase());
-          if (score < threshold) {
-            match = false;
-            break;
-          }
-        }
-
-        if (match) union(i, j);
-      }
-    }
+    unionFuzzyMatches(sourceEntries, i, columnKeys, threshold, union, 0.15);
 
     if (i % BATCH_SIZE === 0 || i === sourceEntries.length - 1) {
-      const currentRoots = new Set<number>();
-      let duplicateCount = 0;
-      for (let idx = 0; idx <= i; idx++) {
-        const root = find(idx);
-        if (currentRoots.has(root)) {
-          duplicateCount++;
-        } else {
-          currentRoots.add(root);
-        }
-      }
-
       context.onProgress?.({
         scannedRows: i + 1,
         totalRows,
-        duplicatesDetected: duplicateCount,
+        duplicatesDetected: countFuzzyDuplicatesUpTo(find, i),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10)); // NOSONAR: intentional sequential yield so the UI thread stays responsive
     }
   }
 
