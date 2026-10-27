@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { LabelColumn } from '../recordLabel';
 import {
+  buildUserNameMap,
   getDefaultDisplayColumn,
   getDisplayColumnId,
   getLinkDisplayColumn,
@@ -139,5 +140,44 @@ describe('getDefaultDisplayColumn', () => {
   it('falls back to the first text column, then to nothing', () => {
     expect(getDefaultDisplayColumn([age, name])?.id).toBe('n');
     expect(getDefaultDisplayColumn([age])).toBeUndefined();
+  });
+});
+
+describe('user display column', () => {
+  const owner = { id: 'o', column_name: 'owner_1_ab12', uidt: 'user', order_index: 1 };
+  const names = buildUserNameMap([
+    { id: 'u1', display_name: 'John Carter' },
+    { id: 'u2', first_name: 'Jane', last_name: 'Doe' },
+    { id: 'u3', email: 'x@y.com' },
+  ]);
+
+  it('builds names from display name, full name, then email', () => {
+    expect(names).toEqual({ u1: 'John Carter', u2: 'Jane Doe', u3: 'x@y.com' });
+    expect(buildUserNameMap(undefined)).toEqual({});
+  });
+
+  it('labels a record by the user name instead of the id', () => {
+    expect(getRecordLabel({ id: 1, owner_1_ab12: 'u1' }, owner, names)).toBe('John Carter');
+    expect(getRecordLabel({ id: 1, owner_1_ab12: ['u1', 'u2'] }, owner, names)).toBe('John Carter, Jane Doe');
+    expect(getRecordLabel({ id: 1, owner_1_ab12: 'u1, u9' }, owner, names)).toBe('John Carter, u9');
+  });
+
+  it('skips invalid users and ignores non-string name fields', () => {
+    const map = buildUserNameMap([null, {}, { id: 'a', display_name: 5, first_name: 'Sam' }, { id: 'b', email: 7 }]);
+    expect(map).toEqual({ a: 'Sam', b: 'b' });
+  });
+
+  it('keeps raw values without a name map or for non-user columns', () => {
+    expect(getRecordLabel({ id: 1, owner_1_ab12: 'u1' }, owner)).toBe('u1');
+    expect(getRecordLabel({ id: 1, t: 'u1' }, { column_name: 't', uidt: 'text' }, names)).toBe('u1');
+  });
+
+  it('drops objects and blanks from a user list and falls back when nothing is left', () => {
+    expect(getRecordLabel({ id: 1, owner_1_ab12: ['u1', {}, ' '] }, owner, names)).toBe('John Carter');
+    expect(getRecordLabel({ id: 7, owner_1_ab12: [{}] }, owner, names)).toBe('Record 7');
+  });
+
+  it('searches by the user name', () => {
+    expect(getRecordSearchText({ id: 1, owner_1_ab12: 'u1' }, owner, names)).toBe('john carter');
   });
 });

@@ -111,6 +111,40 @@ export const getLinkDisplayColumn = <T extends LabelColumn>(linkMeta: unknown, c
 
 const isBlank = (value: unknown): boolean => value === undefined || value === null || String(value as string | number).trim() === '';
 
+// User ids to display names, used to label a record by a User column
+export type UserNameMap = Record<string, string>;
+
+const USER_TYPES = new Set(['user', 'createdby', 'lastmodifiedby']);
+
+// Whether the column holds user ids rather than readable text
+export const isUserColumn = (column: LabelColumn | null | undefined): boolean => !!column && USER_TYPES.has(columnType(column));
+
+const stringOrEmpty = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+// Builds the id -> name map from the tenant users: display name, then full name, then email
+export const buildUserNameMap = (users: unknown): UserNameMap => {
+  const map: UserNameMap = {};
+  if (!Array.isArray(users)) return map;
+  for (const user of users as Array<Record<string, unknown> | null | undefined>) {
+    if (!user?.id) continue;
+    const id = String(user.id as string | number);
+    const fullName = `${stringOrEmpty(user.first_name)} ${stringOrEmpty(user.last_name)}`.trim();
+    map[id] = stringOrEmpty(user.display_name) || fullName || stringOrEmpty(user.email) || id;
+  }
+  return map;
+};
+
+// A user id (or a comma separated list of ids) as a name; unknown ids are kept as they are
+const userNameText = (value: unknown, names: UserNameMap): string => {
+  const ids: unknown[] = Array.isArray(value) ? value : String(value as string | number).split(',');
+  return ids
+    .filter(id => typeof id !== 'object')
+    .map(id => String(id as string | number).trim())
+    .filter(Boolean)
+    .map(id => names[id] ?? id)
+    .join(', ');
+};
+
 // A value as shown in a label: lists are joined, objects are not shown
 const labelText = (value: unknown): string => {
   if (Array.isArray(value)) return value.filter(item => !isBlank(item) && typeof item !== 'object').map(String).join(', ');
@@ -122,18 +156,23 @@ const labelText = (value: unknown): string => {
   return '';
 };
 
+// The text of a column value, resolving user ids to names when the column holds users
+const columnText = (value: unknown, column: LabelColumn, userNames?: UserNameMap): string =>
+  userNames && isUserColumn(column) ? userNameText(value, userNames) : labelText(value);
+
 export const recordFallbackLabel = (recordId: unknown): string => `Record ${String((recordId ?? '') as string | number)}`.trim();
 
 // The label of a record: the value of the column, or "Record <id>" when the column is missing or empty
 export const getRecordLabel = (
   record: Record<string, unknown> | null | undefined,
   column: LabelColumn | null | undefined,
+  userNames?: UserNameMap,
 ): string => {
   if (!record) return '';
   if (column) {
     const value = record[columnName(column)];
     if (!isBlank(value)) {
-      const text = labelText(value);
+      const text = columnText(value, column, userNames);
       if (text) return text;
     }
   }
@@ -144,4 +183,8 @@ export const getRecordLabel = (
 export const getRecordSearchText = (
   record: Record<string, unknown> | null | undefined,
   column: LabelColumn | null | undefined,
-): string => (record && column && !isBlank(record[columnName(column)]) ? labelText(record[columnName(column)]).toLowerCase() : '');
+  userNames?: UserNameMap,
+): string => {
+  if (!record || !column || isBlank(record[columnName(column)])) return '';
+  return columnText(record[columnName(column)], column, userNames).toLowerCase();
+};
