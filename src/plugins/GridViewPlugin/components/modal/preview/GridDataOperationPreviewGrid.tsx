@@ -252,7 +252,7 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
                   <table className="min-w-full text-xs text-left">
                     <thead>
                       <tr className="border-b bg-gray-50 text-secondary">
-                        <th className="px-3 py-2 font-medium w-[240px]">Resolution Action</th>
+                        <th className="px-3 py-2 font-medium w-px whitespace-nowrap">Resolution Action</th>
                         {visibleColumns.map((col) => (
                           <th key={String(col.key || col.id)} className="px-3 py-2 font-medium">
                             {col.title}
