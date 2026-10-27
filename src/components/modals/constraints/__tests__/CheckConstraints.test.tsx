@@ -37,6 +37,9 @@ const COLUMNS: Column[] = [
   col('c-age', 'Age', { column_name: 'age_179', uidt: 'number' }),
   col('c-status', 'Status', { column_name: 'status_179', uidt: 'singleSelect' }),
   col('c-start', 'Start', { column_name: 'start_179', uidt: 'date' }),
+  col('c-end', 'End', { column_name: 'end_179', uidt: 'date' }),
+  col('c-rating', 'Score', { uidt: 'rating' }),
+  col('c-flag', 'Active', { uidt: 'checkbox' }),
   col('c-link', 'Dept', { uidt: 'links' }),
 ];
 
@@ -103,7 +106,7 @@ describe('check SQL helpers', () => {
   });
 
   it('offers ordinary fields and Title, not system or computed ones', () => {
-    expect(checkableColumns(COLUMNS).map(c => c.title)).toEqual(['Title', 'Age', 'Status', 'Start']);
+    expect(checkableColumns(COLUMNS).map(c => c.title)).toEqual(['Title', 'Age', 'Status', 'Start', 'End', 'Score', 'Active']);
   });
 
   it('has 3 categories in order, custom last, and shows unknown ones as custom', () => {
@@ -252,7 +255,7 @@ describe('CheckConstraintFormModal', () => {
     renderForm();
     await userEvent.click(screen.getByRole('button', { name: 'Select a field' }));
     const options = screen.getAllByRole('listitem').map(li => li.querySelector('.font-medium')?.textContent);
-    expect(options).toEqual(['Title', 'Age', 'Status', 'Start']);
+    expect(options).toEqual(['Title', 'Age', 'Status', 'Start', 'End']);
   });
 
   it('offers the conditions of the field type and saves a text or number / date category', async () => {
@@ -310,18 +313,26 @@ describe('CheckConstraintFormModal', () => {
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
   });
 
+  it('lists only fields the category supports', async () => {
+    renderForm();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Select a field' })[0]);
+    expect(screen.getAllByText('Age').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Score')).toBeNull();
+    expect(screen.queryByText('Active')).toBeNull();
+  });
+
   it('compares two fields', async () => {
     renderForm();
     await toCategory('Compare Two Fields');
     await pick('Select a field', 'Start', 0);
-    await pick('Select a field', 'Age', 0);
+    await pick('Select a field', 'End', 0);
     await pick('Select a condition', 'First ≤ second');
-    expect(preview()).toContain('CHECK (Start <= Age);');
+    expect(preview()).toContain('CHECK (Start <= End);');
 
     // Another condition replaces it without a browser alert
     const confirm = vi.spyOn(window, 'confirm');
     await pick('First ≤ second', 'Different');
-    expect(preview()).toContain('CHECK (Start <> Age);');
+    expect(preview()).toContain('CHECK (Start <> End);');
     expect(confirm).not.toHaveBeenCalled();
   });
 
