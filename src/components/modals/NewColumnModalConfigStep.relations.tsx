@@ -236,7 +236,7 @@ export function renderRelationsConfigStep(props: any) {
       return (
         <>
           <div className="flex flex-col md:flex-row gap-3">
-            <div className="mb-4 w-full">
+            <div className="mb-4 w-full min-w-0">
               <label htmlFor='linkField' className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
                 Link Field
               </label>
@@ -259,7 +259,7 @@ export function renderRelationsConfigStep(props: any) {
               )}
             </div>
 
-            <div className="mb-4 w-full">
+            <div className="mb-4 w-full min-w-0">
               <label htmlFor='lookupField' className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
                 Lookup Field
               </label>

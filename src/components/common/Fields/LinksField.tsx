@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, Plus, Search, X, ChevronDown } from 'lucide-react';
-import { useTable, useInsertRelationData } from '../../../hooks/useApi';
+import { useTable, useInsertRelationData, useGetTenantUsers } from '../../../hooks/useApi';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { useToast } from '../../common/Toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,7 +16,7 @@ import { Loader } from '../../ui/Loader';
 import { formatCompactNumber } from '../../../utils/helpers';
 import { calculateDropdownPosition } from '../../../utils/dropdownPosition';
 import { linkItemIdentity, linkItemLabel, linkItems, resolveLinkRowId } from '../../../utils/linkValues';
-import { getLinkDisplayColumn, getRecordLabel, getRecordSearchText } from '../../../utils/recordLabel';
+import { buildUserNameMap, getLinkDisplayColumn, getRecordLabel, getRecordSearchText, isUserColumn } from '../../../utils/recordLabel';
 
 interface LinksFieldProps {
     value?: any;
@@ -165,12 +165,23 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         return getLinkDisplayColumn(field?.meta, payload?.data?.columns);
     }, [tableData, field?.meta]);
 
+    // A User display column holds user ids, so their names are needed to label and search records
+    const { data: tenantUsers } = useGetTenantUsers({
+        enabled: isUserColumn(displayColumn),
+        staleTime: 5 * 60 * 1000,
+        refetchOnMount: false,
+    });
+    const userNames = useMemo(
+        () => (isUserColumn(displayColumn) ? buildUserNameMap(tenantUsers) : undefined),
+        [displayColumn, tenantUsers],
+    );
+
     const recordsSearchIndex = useMemo(() => {
         return records.map((record: RelatedRecord) => ({
             record,
-            searchText: getRecordSearchText(record, displayColumn),
+            searchText: getRecordSearchText(record, displayColumn, userNames),
         }));
-    }, [records, displayColumn]);
+    }, [records, displayColumn, userNames]);
 
     const selectedRecords = useMemo(() => {
         // Handle empty objects, null, undefined, or empty arrays
@@ -421,7 +432,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
         if (record._isPlaceholder) {
             return record.title || 'Loading...';
         }
-        return getRecordLabel(record, displayColumn);
+        return getRecordLabel(record, displayColumn, userNames);
     };
 
     // Keyboard navigation - use paginatedRecords since that's what's actually rendered

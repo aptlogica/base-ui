@@ -22,6 +22,7 @@ let mockRecords: Array<Record<string, unknown>> = [
 ];
 let mockIsLoading = false;
 let mockHasMore = false;
+let mockUsers: any[] = [];
 
 vi.mock('../../../../hooks/useApi', () => ({
   useTable: () => ({
@@ -29,6 +30,7 @@ vi.mock('../../../../hooks/useApi', () => ({
     isLoading: mockIsLoading,
   }),
   useInsertRelationData: () => ({ mutateAsync: mutateAsyncMock }),
+  useGetTenantUsers: () => ({ data: mockUsers }),
 }));
 
 vi.mock('../../../common/Toast', () => ({
@@ -82,6 +84,7 @@ describe('LinksField', () => {
     ];
     mockIsLoading = false;
     mockHasMore = false;
+    mockUsers = [];
   });
 
   it('opens dropdown and links a record', async () => {
