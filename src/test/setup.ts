@@ -173,8 +173,9 @@ function createStorageMock() {
   };
 }
 
-globalThis.localStorage = createStorageMock() as any;
-globalThis.sessionStorage = createStorageMock() as any;
+// Vitest 5 exposes localStorage/sessionStorage as getter-only on globalThis, so redefine instead of assigning
+Object.defineProperty(globalThis, 'localStorage', { value: createStorageMock(), configurable: true, writable: true });
+Object.defineProperty(globalThis, 'sessionStorage', { value: createStorageMock(), configurable: true, writable: true });
 
 // Mock window.location to prevent jsdom navigation errors
 delete (globalThis as any).location;

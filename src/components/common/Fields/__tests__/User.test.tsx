@@ -277,7 +277,7 @@ describe('User Component', () => {
       expect(mockOnChange).toHaveBeenCalledWith('1');
 
       // Reopen and deselect
-      fireEvent.click(screen.getByRole('button', { name: /john doe john doe/i }));
+      fireEvent.click(screen.getByRole('button', { name: /john doe\s*john doe/i }));
       fireEvent.click(screen.getByRole('button', { name: /select john doe/i }));
 
       expect(mockOnChange).toHaveBeenCalledWith(null);
