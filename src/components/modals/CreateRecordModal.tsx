@@ -132,8 +132,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     // Emptying a text input again means the typed text is gone, so it no longer counts as a change
     const handleInput = (e: React.FormEvent<HTMLElement>) => {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-        const isTextEntry = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-        setHasTyped(isTextEntry ? target.value !== '' : true);
+        // Long text (textarea / rich text editor) only counts once its text is saved into rowData
+        if (target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        setHasTyped(target.tagName === 'INPUT' ? target.value !== '' : true);
     };
 
     const handleFieldChange =(field: any, value: unknown) => {
