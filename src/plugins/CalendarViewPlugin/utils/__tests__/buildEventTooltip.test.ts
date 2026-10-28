@@ -371,6 +371,7 @@ describe('buildEventTooltip', () => {
       };
 
       const columns = [
+        { id: '0', key: 'name', columnName: 'name', title: 'Name', type: 'text' }, // the event heading
         { id: '1', key: 'description', columnName: 'description', title: 'Description', type: 'text' }
       ];
 
@@ -393,6 +394,7 @@ describe('buildEventTooltip', () => {
       };
 
       const columns = [
+        { id: '0', key: 'name', columnName: 'name', title: 'Name', type: 'text' }, // the event heading
         { id: '1', key: 'content', columnName: 'content', title: 'Content', type: 'longtext', uidt: 'longText' }
       ];
 
@@ -569,7 +571,9 @@ describe('buildEventTooltipLines - additional coverage', () => {
       owner: 'Alice',
     };
 
-    const columns = [{ id: '1', columnName: 'owner', type: 'text' }];
+    const columns = [
+        { id: '0', key: 'name', columnName: 'name', title: 'Name', type: 'text' }, // the event heading
+        { id: '1', columnName: 'owner', type: 'text' }];
     const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
 
     expect(lines.join(' ')).toContain('Alice');
@@ -597,7 +601,9 @@ describe('buildEventTooltipLines - additional coverage', () => {
       data: { notes: longText },
     };
 
-    const columns = [{ id: '1', columnName: 'notes', type: 'text' }];
+    const columns = [
+        { id: '0', key: 'name', columnName: 'name', title: 'Name', type: 'text' }, // the event heading
+        { id: '1', columnName: 'notes', type: 'text' }];
     const lines = buildEventTooltipLines({ event, columns, options: { formatTime } });
 
     expect(lines.join(' ')).toContain('...' );

@@ -20,6 +20,7 @@ import { useBaseAccess } from '../../../hooks/useBaseAccess';
 // Custom hooks
 import { useGalleryViewConfig } from '../hooks/useGalleryViewConfig';
 import { useGalleryModals } from '../hooks/useGalleryModals';
+import { getRecordLabel, getRecordTitleColumn } from '../../../utils/recordLabel';
 import { getSearchableColumns } from '../utils/galleryColumns';
 
 const applySearchFilter = (
@@ -294,7 +295,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         table={tableData?.model}
         fields={galleryData.columns}
         title="New record"
-        submitLabel="Save record"
+        submitLabel="Save Record"
       />
 
       <EditRecordModal
@@ -315,7 +316,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
         title="Delete Record"
-        message={`Are you sure you want to delete "${selectedRecord?.title || 'this record'}"?`}
+        message={`Are you sure you want to delete "${selectedRecord ? getRecordLabel(selectedRecord, getRecordTitleColumn(galleryData.columns)) : 'this record'}"?`}
       />
     </div>
   );

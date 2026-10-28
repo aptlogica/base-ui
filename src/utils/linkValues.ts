@@ -40,7 +40,6 @@ export const resolveLinkRowId = (item: unknown, records: LinkRecord[] = []): str
 // A readable label for an item whose record isn't loaded, e.g. "IN / HR"
 export const linkItemLabel = (item: unknown): string => {
   if (!isObject(item)) return String(item as string | number);
-  if (typeof item.title === 'string' && item.title) return item.title;
   return Object.values(item).map(String).join(' / ');
 };
 

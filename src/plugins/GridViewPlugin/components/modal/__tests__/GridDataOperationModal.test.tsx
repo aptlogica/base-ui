@@ -24,8 +24,8 @@ vi.mock('../shared/GridDataOperationPanel', () => ({
       <button data-testid="set-sep-custom" onClick={() => props.onStateChange?.({ splitSeparatorType: 'custom', splitCustomSeparator: '||' })}>custom</button>
       <button data-testid="set-mode-fixed" onClick={() => props.onStateChange?.({ splitMode: 'fixed_length', splitCharacterCount: '3', splitFixedDirection: 'after' })}>fixed</button>
       <button data-testid="set-mode-pattern" onClick={() => props.onStateChange?.({ splitMode: 'pattern', splitPattern: String.raw`\d+` })}>pattern</button>
-      <button data-testid="set-merge-custom-empty" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '', selectedColumnIds: ['a','b'] })}>merge-empty</button>
-      <button data-testid="set-merge-custom-filled" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '|' , selectedColumnIds: ['a','b'] })}>merge-filled</button>
+      <button data-testid="set-merge-custom-empty" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '', selectedColumnIds: ['a', 'b'] })}>merge-empty</button>
+      <button data-testid="set-merge-custom-filled" onClick={() => props.onStateChange?.({ mergeFormat: 'custom', mergeCustomSeparator: '|', selectedColumnIds: ['a', 'b'] })}>merge-filled</button>
       <button data-testid="set-source-nonexist" onClick={() => props.onStateChange?.({ splitSourceColumnId: 'nonexist' })}>set-source-nonexist</button>
       <button data-testid="set-extract-end" onClick={() => props.onStateChange?.({ extractPlacement: 'end_of_table' })}>extract-end</button>
       <button data-testid="set-split-end" onClick={() => props.onStateChange?.({ splitPlacement: 'end_of_table' })}>split-end</button>
@@ -47,6 +47,7 @@ const mockSplitColumn = vi.fn().mockResolvedValue({});
 const mockRemoveSpecialCharacters = vi.fn().mockResolvedValue({});
 const mockExtractSubstring = vi.fn().mockResolvedValue({});
 const mockRemoveFormatting = vi.fn().mockResolvedValue({});
+const mockFuzzyDeduplication = vi.fn().mockResolvedValue({});
 
 vi.mock('../../../../../hooks/useApi', () => ({
   useCaseNormalize: () => ({ mutateAsync: mockCaseNormalize }),
@@ -58,6 +59,7 @@ vi.mock('../../../../../hooks/useApi', () => ({
   useRemoveFormatting: () => ({ mutateAsync: mockRemoveFormatting }),
   useTrimWhitespace: () => ({ mutateAsync: mockTrimWhitespace }),
   useSplitColumn: () => ({ mutateAsync: mockSplitColumn }),
+  useFuzzyDeduplication: () => ({ mutateAsync: mockFuzzyDeduplication }),
 }));
 
 vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
@@ -65,7 +67,7 @@ vi.mock('../../../../../components/common/Toast', async (importOriginal) => {
   const mockSuccess = vi.fn();
   const mockError = vi.fn();
   return {
-    ...actual,
+    ...(actual as any),
     useToast: () => ({
       success: mockSuccess,
       error: mockError,
@@ -86,7 +88,7 @@ import { getGridDataOperationAdapter } from '../shared/gridDataOperationRegistry
 
 const createWrapper = () => {
   const client = new QueryClient();
-  return ({ children }: { children: React.ReactElement }) => (
+  return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>
       <ToastProvider>{children}</ToastProvider>
     </QueryClientProvider>
@@ -139,7 +141,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows error toast when applying without table data', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const adapter = { buildPreview: () => ({ foo: true }), buildApplyPlan: () => ({ kind: 'other', columnUpdates: [] }) };
     (getGridDataOperationAdapter as any).mockReturnValue(adapter);
 
@@ -173,9 +175,9 @@ describe('GridDataOperationModal', () => {
   });
 
   it('applies merge action and shows success toast', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const tableData = { model: { id: 'table-1' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-1', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' } } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-1', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' } } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -252,8 +254,9 @@ describe('GridDataOperationModal', () => {
     ['remove_duplicates', mockRemoveDuplicates, { removeDuplicates: { modelId: 't', columns: ['c'], duplicateAction: 'remove_row', keepRule: 'keep_first' } }],
     ['split_column', mockSplitColumn, { splitColumn: { modelId: 't', sourceColumnId: 'col1' } }],
     ['remove_special_characters', mockRemoveSpecialCharacters, { removeSpecialCharacters: { modelId: 't', columns: ['c'], specialCharactersType: 'symbols', custom: '' } }],
-    ['extract_substring', mockExtractSubstring, { extractSubstring: { modelId: 't', sourceColumnId: 'col1', outputColumnTitle: 'Out', extractionMethod: 'extraction_type', extractionType: 'email', keepOriginalColumn: true, placement: 'end_of_table' } }],
+    ['extract_substring', mockExtractSubstring, { extractSubstring: { modelId: 't', sourceColumnId: 'col1', outputColumnTitle: 'Out', outputColumnId: 'out', extractionMethod: 'extraction_type', extractionType: 'email', keepOriginalColumn: true, placement: 'end_of_table' } }],
     ['remove_formatting', mockRemoveFormatting, { removeFormatting: { modelId: 't', columns: ['c'], formatting: 'currency', customPattern: '' } }],
+    ['fuzzy_deduplication', mockFuzzyDeduplication, { fuzzyDeduplication: { modelId: 't', columns: ['c'], threshold: 'medium', duplicateAction: 'remove_row', keepRule: 'keep_first' } }],
   ])('applies %s handler and closes', async (kind, mockFn, payload) => {
     const tableData = { model: { id: 't' }, columns: [{ id: 'col1', order_index: 0 }] } as any;
     const applyPlan = { kind, ...payload, columnUpdates: [] } as any;
@@ -398,9 +401,9 @@ describe('GridDataOperationModal', () => {
   });
 
   it('applies merge action with custom separator and shows success toast', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const tableData = { model: { id: 'table-2' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-2', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'custom', mergeCustomSeparator: '|', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-2', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'custom', mergeCustomSeparator: '|', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -425,10 +428,12 @@ describe('GridDataOperationModal', () => {
 
   it('falls back to bulkUpdateFieldService for multiple update groups', async () => {
     const tableData = { model: { id: 'table-3' } } as any;
-    const fallbackPlan = { kind: 'unknown_kind', columnUpdates: [
-      { columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] },
-      { columnId: 'col2', updates: [{ id: 'r2', value: 'v2' }] },
-    ], optimisticRecords: [{ id: 'r1' }, { id: 'r2' }] } as any;
+    const fallbackPlan = {
+      kind: 'unknown_kind', columnUpdates: [
+        { columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] },
+        { columnId: 'col2', updates: [{ id: 'r2', value: 'v2' }] },
+      ], optimisticRecords: [{ id: 'r1' }, { id: 'r2' }]
+    } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -480,7 +485,7 @@ describe('GridDataOperationModal', () => {
     const prevData = { data: { columns: [], records: [] } };
     client.setQueryData(['tables', 'table-err'], prevData);
 
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
@@ -513,7 +518,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it.each([
-    'trim_whitespace','case_normalization','find_replace','remove_duplicates','merge_column','split_column','remove_special_characters','extract_substring','remove_formatting',
+    'trim_whitespace', 'case_normalization', 'find_replace', 'remove_duplicates', 'merge_column', 'split_column', 'remove_special_characters', 'extract_substring', 'remove_formatting', 'fuzzy_deduplication',
   ])('falls back to bulkUpdateFieldService when %s handler config missing', async (kind) => {
     const tableData = { model: { id: `tb-${kind}` } } as any;
     const fallbackPlan = { kind, columnUpdates: [{ columnId: 'col1', updates: [{ id: 'r1', value: 'v' }] }], optimisticRecords: [] } as any;
@@ -572,7 +577,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows merge custom separator validation error when custom separator is empty', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    await import('../../../../../components/common/Toast');
     const mergeAction = { ...defaultAction, id: 'merge_column' } as any;
     (getGridDataOperationAdapter as any).mockReturnValue({ buildPreview: () => null, buildApplyPlan: () => null });
 
@@ -590,7 +595,7 @@ describe('GridDataOperationModal', () => {
   });
 
   it.each([
-    'url','domain','keywords','mentions','tags','emoji','phone','prefix','',
+    'url', 'domain', 'keywords', 'mentions', 'tags', 'emoji', 'phone', 'prefix', '',
   ])('applies extract_substring for type %s with keepOriginal true', async (etype) => {
     const tableData = { model: { id: 't' }, columns: [{ id: 'src', order_index: 0 }, { id: 'other', order_index: 1 }] } as any;
     const extractPlan = { kind: 'extract_substring', extractSubstring: { modelId: 't', sourceColumnId: 'src', outputColumnTitle: '', outputColumnId: '', extractionMethod: 'extraction_type', extractionType: etype || 'email', keepOriginalColumn: true, placement: 'next_to_original' }, columnUpdates: [] } as any;
@@ -659,7 +664,7 @@ describe('GridDataOperationModal', () => {
     const tableData = { model: { id: 't' } } as any;
     const mergeAction = { ...defaultAction, id: 'merge_column' } as any;
     const preview = { virtualColumns: [{ id: 'merged', title: 'Merged' }] } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 't', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 't', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => preview,
@@ -721,16 +726,16 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows error toast with nested response message on apply failure', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const client = new QueryClient();
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
     );
 
     const tableData = { model: { id: 'table-err2' }, columns: [{ id: 'src', order_index: 0 }] } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err2', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err2', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -779,16 +784,16 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows error toast with response.data.message on apply failure', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const client = new QueryClient();
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
     );
 
     const tableData = { model: { id: 'table-err3' } } as any;
-    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err3', sourceColumnIds: ['a','b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
+    const mergeApplyPlan = { kind: 'merge_column', mergeColumn: { modelId: 'table-err3', sourceColumnIds: ['a', 'b'], mergedColumnTitle: 'M', mergeFormat: 'space', mergeCustomSeparator: '', mergeKeepOriginalColumns: true, mergePlacement: 'next_to_original' }, columnUpdates: [] } as any;
 
     (getGridDataOperationAdapter as any).mockReturnValue({
       buildPreview: () => ({ virtualColumns: [] }),
@@ -811,9 +816,9 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows error toast with error.message on apply failure', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const client = new QueryClient();
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
@@ -843,9 +848,9 @@ describe('GridDataOperationModal', () => {
   });
 
   it('shows fallback error message when no error details available', async () => {
-    const { __mock } = await import('../../../../../components/common/Toast');
+    const { __mock } = (await import('../../../../../components/common/Toast')) as any;
     const client = new QueryClient();
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
@@ -916,7 +921,7 @@ describe('GridDataOperationModal', () => {
     const existingData = { data: { records: [{ id: 'r1' }], columns: [] } };
     client.setQueryData(['tables', 'table-opt'], existingData);
 
-    const wrapper = ({ children }: { children: React.ReactElement }) => (
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={client}>
         <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>

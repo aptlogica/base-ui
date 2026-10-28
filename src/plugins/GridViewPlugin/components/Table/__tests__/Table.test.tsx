@@ -276,9 +276,23 @@ vi.mock('../../../../../components/modals/DeleteConfirmModal', () => ({
 
 vi.mock('../../../../../components/modals/EditRecordModal', () => ({
   __esModule: true,
-  default: ({ isOpen, onClose, onSuccess, onDelete }: any) =>
+  default: ({ isOpen, onClose, onSuccess, onDelete, onDuplicate, onPrevious, onNext, hasPrevious, hasNext, recordId }: any) =>
     isOpen ? (
-      <div data-testid="edit-record-modal">
+      <div
+        data-testid="edit-record-modal"
+        data-record-id={recordId}
+        data-has-previous={String(Boolean(hasPrevious))}
+        data-has-next={String(Boolean(hasNext))}
+      >
+        <button type="button" onClick={() => onDuplicate?.()}>
+          Duplicate From Edit Record
+        </button>
+        <button type="button" onClick={() => onPrevious?.()}>
+          Previous Edit Record
+        </button>
+        <button type="button" onClick={() => onNext?.()}>
+          Next Edit Record
+        </button>
         <button type="button" onClick={() => onClose?.()}>
           Close Edit Record
         </button>
@@ -290,6 +304,28 @@ vi.mock('../../../../../components/modals/EditRecordModal', () => ({
         </button>
         <button type="button" onClick={() => onDelete?.('invalid-id')}>
           Delete Invalid From Edit
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../../../../../components/modals/CreateRecordModal', () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose, onSuccess, onPrevious, onNext, hasPrevious, title }: any) =>
+    isOpen ? (
+      <div data-testid="create-record-modal" data-has-previous={String(Boolean(hasPrevious))}>
+        <span>{title}</span>
+        <button type="button" onClick={() => onSuccess?.()}>
+          Success Create Record
+        </button>
+        <button type="button" onClick={() => onPrevious?.()}>
+          Previous Create Record
+        </button>
+        <button type="button" onClick={() => onNext?.()}>
+          Next Create Record
+        </button>
+        <button type="button" onClick={() => onClose?.()}>
+          Close Create Record
         </button>
       </div>
     ) : null,
@@ -1132,6 +1168,37 @@ describe('Table', () => {
     fireEvent.click(addButtons[0]);
 
     expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+  });
+
+  describe('new row split button', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('adds a row in the grid by default', () => {
+      const mutateAsync = vi.fn().mockResolvedValue(undefined);
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'New row - Grid' }));
+
+      expect(mutateAsync).toHaveBeenCalledWith({ model_id: 'tbl-1' });
+      expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+    });
+
+    it('opens the record form when New row - Form is chosen and keeps it as the default', () => {
+      const mutateAsync = vi.fn().mockResolvedValue(undefined);
+      renderWithToast(<Table tableData={tableData as any} onRefresh={vi.fn()} actions={{ addRow: { mutateAsync } } as any} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /choose how to add a new row/i }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'New row - Form' }));
+
+      expect(screen.getByTestId('create-record-modal')).toHaveTextContent('New row');
+      expect(mutateAsync).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close Create Record' }));
+      expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'New row - Form' }));
+      expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+    });
   });
 
   describe('custom primary key', () => {
@@ -2221,6 +2288,262 @@ describe('Table', () => {
     const headers = screen.getAllByRole('columnheader');
     fireEvent.dragStart(headers[0]);
     expect(handleColumnDragStart).not.toHaveBeenCalled();
+  });
+});
+
+describe('Table - record form navigation, duplicate and uuid cells', () => {
+  const threeRecords = {
+    ...tableData,
+    records: [
+      { id: '1', name: 'Row 1', value: 10 },
+      { id: '2', name: 'Row 2', value: 20 },
+      { id: '3', name: 'Row 3', value: 30 },
+    ],
+  };
+
+  const openContextMenuOn = (rowId: string) => {
+    mockUseTableModals.mockReturnValue({
+      contextMenu: { open: true, rowId, x: 10, y: 10 },
+      handleContextMenu: vi.fn(),
+      handleCloseContextMenu: vi.fn(),
+      colMenu: { open: false, colIndex: null, x: 0, y: 0 },
+      handleColContextMenu: vi.fn(),
+      handleCloseColMenu: vi.fn(),
+    });
+  };
+
+  const openRecordForm = () => {
+    fireEvent.click(screen.getByRole('button', { name: /choose how to add a new row/i }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'New row - Form' }));
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    setupDefaultMocks();
+    (globalThis as any).ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    if (!Table) {
+      ({ Table } = await import('../Table'));
+    }
+  }, 30000);
+
+  it('steps through records from the new row form and back to the blank form', () => {
+    const onRefresh = vi.fn();
+    renderWithToast(<Table tableData={threeRecords as any} onRefresh={onRefresh} />);
+    openRecordForm();
+
+    expect(screen.getByTestId('create-record-modal')).toHaveAttribute('data-has-previous', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Success Create Record' }));
+    expect(onRefresh).toHaveBeenCalled();
+
+    // Previous from the blank form goes to the last record
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Create Record' }));
+    let edit = screen.getByTestId('edit-record-modal');
+    expect(edit).toHaveAttribute('data-record-id', '3');
+    expect(edit).toHaveAttribute('data-has-previous', 'true');
+    expect(edit).toHaveAttribute('data-has-next', 'true');
+    expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    edit = screen.getByTestId('edit-record-modal');
+    expect(edit).toHaveAttribute('data-record-id', '1');
+    expect(edit).toHaveAttribute('data-has-previous', 'false');
+
+    // Previous on the first record stays there
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toHaveAttribute('data-record-id', '1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toHaveAttribute('data-record-id', '2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Success Edit Record' }));
+    expect(onRefresh).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toHaveAttribute('data-record-id', '3');
+
+    // Next past the last record returns to the blank form
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+  });
+
+  it('closes the form record view and swallows refresh errors', () => {
+    const onRefresh = vi.fn(() => {
+      throw new Error('refresh boom');
+    });
+    renderWithToast(<Table tableData={threeRecords as any} onRefresh={onRefresh} />);
+    openRecordForm();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Success Create Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Create Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Success Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Edit Record' }));
+    expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('create-record-modal')).not.toBeInTheDocument();
+  });
+
+  it('deletes a record reached from the new row form and closes the form', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    renderWithToast(
+      <Table tableData={threeRecords as any} onRefresh={vi.fn()} actions={{ deleteRecord: { mutateAsync } } as any} />
+    );
+    openRecordForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Create Record' }));
+
+    fireEvent.click(screen.getByRole('button', { name: /delete from edit record/i }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument());
+  });
+
+  it('does not move from the blank form when there are no records', () => {
+    renderWithToast(<Table tableData={{ ...tableData, records: [] } as any} onRefresh={vi.fn()} />);
+    openRecordForm();
+
+    expect(screen.getByTestId('create-record-modal')).toHaveAttribute('data-has-previous', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Create Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next Create Record' }));
+    expect(screen.getByTestId('create-record-modal')).toBeInTheDocument();
+    expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument();
+  });
+
+  it('steps through records in the edit record modal', () => {
+    openContextMenuOn('2');
+    renderWithToast(<Table tableData={threeRecords as any} onRefresh={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /context edit/i }));
+
+    let edit = screen.getByTestId('edit-record-modal');
+    expect(edit).toHaveAttribute('data-record-id', '2');
+    expect(edit).toHaveAttribute('data-has-previous', 'true');
+    expect(edit).toHaveAttribute('data-has-next', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    edit = screen.getByTestId('edit-record-modal');
+    expect(edit).toHaveAttribute('data-record-id', '3');
+    expect(edit).toHaveAttribute('data-has-next', 'false');
+
+    // Next on the last record stays there
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toHaveAttribute('data-record-id', '3');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toHaveAttribute('data-record-id', '1');
+  });
+
+  it('does not navigate the edit record modal when its record is not in the grid', () => {
+    openContextMenuOn('missing');
+    renderWithToast(<Table tableData={threeRecords as any} onRefresh={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /context edit/i }));
+
+    const edit = screen.getByTestId('edit-record-modal');
+    expect(edit).toHaveAttribute('data-has-previous', 'false');
+    expect(edit).toHaveAttribute('data-has-next', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Edit Record' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next Edit Record' }));
+    expect(screen.getByTestId('edit-record-modal')).toBeInTheDocument();
+  });
+
+  it('duplicates a record with only the copyable values and refreshes', async () => {
+    const duplicateColumns = [
+      { id: 'c-text', title: 'Name', column_name: 'name', uidt: 'SingleLineText', order_index: 0 },
+      { id: 'c-num', title: 'Value', column_name: 'value', uidt: 'Number', order_index: 1 },
+      { id: 'c-empty', title: 'Notes', column_name: 'notes', uidt: 'LongText', order_index: 2 },
+      { id: 'c-null', title: 'Other', column_name: 'other', uidt: 'SingleLineText', order_index: 3 },
+      { id: 'c-tags', title: 'Tags', column_name: 'tags', uidt: 'MultiSelect', order_index: 4 },
+      { id: 'c-sys', title: 'Created', column_name: 'created_at', uidt: 'createdTime', system: true, order_index: 5 },
+      { id: 'c-att', title: 'Files', column_name: 'files', uidt: 'attachment', order_index: 6 },
+      { id: 'c-link', title: 'Links', column_name: 'links', uidt: 'links', order_index: 7 },
+      { id: 'c-formula', title: 'Calc', column_name: 'calc', uidt: 'formula', order_index: 8 },
+      { id: 'c-uuid', title: 'Ref', column_name: 'ref', uidt: 'uuid', meta: { idGeneration: { mode: 'auto', version: 'v4' } }, order_index: 9 },
+    ];
+    const { buildInitialValuesForEdit } = await import('../../../../../utils/initialValues');
+    vi.mocked(buildInitialValuesForEdit).mockReturnValue({
+      'c-text': 'Row 2',
+      'c-num': 20,
+      'c-empty': '',
+      'c-null': null,
+      'c-tags': [],
+      'c-sys': '2026-01-01',
+      'c-att': [{ url: 'x' }],
+      'c-link': [1],
+      'c-formula': 'f',
+      'c-uuid': '11111111-1111-4111-8111-111111111111',
+    });
+    mockUpsertRow.mockResolvedValue({});
+    const onRefresh = vi.fn();
+    openContextMenuOn('2');
+    renderWithToast(<Table tableData={{ ...threeRecords, columns: duplicateColumns } as any} onRefresh={onRefresh} />);
+    fireEvent.click(screen.getByRole('button', { name: /context edit/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate From Edit Record' }));
+
+    await waitFor(() => expect(mockUpsertRow).toHaveBeenCalled());
+    const { model_id, values } = mockUpsertRow.mock.calls[0][0];
+    expect(model_id).toBe('tbl-1');
+    expect(Object.keys(values).sort()).toEqual(['c-num', 'c-text']);
+    expect(values['c-text']).toBe('Row 2');
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Record duplicated successfully', expect.anything()));
+    expect(onRefresh).toHaveBeenCalled();
+    expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument();
+    vi.mocked(buildInitialValuesForEdit).mockReturnValue({ name: 'Row 1' });
+  });
+
+  it('shows an error toast when duplicating a record fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockUpsertRow.mockRejectedValue(new Error('boom'));
+    renderWithToast(<Table tableData={threeRecords as any} onRefresh={vi.fn()} />);
+    openRecordForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Create Record' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate From Edit Record' }));
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ title: 'Error' })));
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to duplicate record', expect.any(Error));
+    expect(screen.queryByTestId('edit-record-modal')).not.toBeInTheDocument();
+    consoleSpy.mockRestore();
+  });
+
+  it('refuses an invalid value in a manual uuid cell', () => {
+    const uuidTable = {
+      ...tableData,
+      columns: [
+        { id: 'col-1', title: 'Name', column_name: 'name', uidt: 'uuid', meta: { idGeneration: { mode: 'manual' } }, order_index: 0 },
+      ],
+    };
+    renderWithToast(<Table tableData={uuidTable as any} onRefresh={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fill Last Name' }));
+
+    expect(mockToastError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ title: 'Invalid UUID' }));
+    expect(mockHandleCellChange).not.toHaveBeenCalled();
+  });
+
+  it('locks auto uuid and id columns and keeps the legacy Title column searchable', () => {
+    mockUseTableViewConfig.mockReturnValue({
+      ...mockUseTableViewConfig(),
+      visibleColumns: [
+        { id: 'col-1', key: 'name', column_name: 'name', title: 'Name', type: 'text', isSystem: false, system: false },
+        { id: 'col-u', key: 'ref', column_name: 'ref', title: 'Ref', type: 'uuid', uidt: 'uuid', meta: { idGeneration: { mode: 'auto' } }, isSystem: false, system: false },
+      ],
+    });
+    const legacyTable = {
+      ...tableData,
+      columns: [
+        { id: 'col-id', title: 'Id', column_name: 'id', uidt: 'number', order_index: 0 },
+        { id: 'col-t', title: 'Title', column_name: 'title', uidt: 'SingleLineText', system: true, order_index: 1 },
+        { id: 'col-u', title: 'Ref', column_name: 'ref', uidt: 'uuid', meta: { idGeneration: { mode: 'auto' } }, order_index: 2 },
+      ],
+    };
+    const { container } = renderWithToast(<Table tableData={legacyTable as any} onRefresh={vi.fn()} />);
+
+    expect(container.querySelectorAll('.lucide-lock').length).toBeGreaterThan(0);
   });
 });
 

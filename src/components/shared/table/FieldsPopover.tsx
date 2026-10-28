@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Eye, EyeOff, List } from 'lucide-react';
@@ -167,11 +168,8 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
     }
   }, [fieldConfig]);
 
-  const isTitleField = (col: ColumnConfig) => {
-    const title = (col.title || '').toLowerCase();
-    const columnName = (col.column_name || '').toLowerCase();
-    return title === 'title' || columnName === 'title';
-  };
+  // Only the system Title of a table created before Title became an ordinary column is listed with the regular fields
+  const isTitleField = (col: ColumnConfig) => isLegacyTitleColumn(col);
 
   // Sort columns by position from fieldConfig, then separate regular from system fields
   const sortedColumns = [...columns].sort((a, b) => {

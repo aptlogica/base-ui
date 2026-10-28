@@ -109,14 +109,11 @@ const createMappings = (): Record<string, ImportColumnMapping> => ({
 
 describe('ImportColumnMapper', () => {
   const mockOnChange = vi.fn();
-  const mockOnPrimaryKeyChange = vi.fn();
 
   const defaultProps = {
     preview: createPreview(),
     mappings: createMappings(),
     onChange: mockOnChange,
-    primaryKey: null as string | null,
-    onPrimaryKeyChange: mockOnPrimaryKeyChange,
   };
 
   beforeEach(() => {
@@ -137,10 +134,11 @@ describe('ImportColumnMapper', () => {
       expect(screen.getByText(/2 columns selected for import/)).toBeInTheDocument();
     });
 
-    it('should render primary column section', () => {
+    it('should not ask for a primary column: every column is just a column', () => {
       render(<ImportColumnMapper {...defaultProps} />);
 
-      expect(screen.getByText('Primary Column')).toBeInTheDocument();
+      expect(screen.queryByText('Primary Column')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('Select primary key column')).not.toBeInTheDocument();
     });
 
     it('should render column header labels', () => {
@@ -255,62 +253,6 @@ describe('ImportColumnMapper', () => {
 
       const defaultInput = screen.getByTestId(`default-value-${FieldType.Text}`);
       expect(defaultInput).toBeDisabled();
-    });
-  });
-
-  describe('Primary key', () => {
-    it('should call onPrimaryKeyChange when primary key is selected', async () => {
-      const user = userEvent.setup();
-      render(<ImportColumnMapper {...defaultProps} />);
-
-      await user.selectOptions(
-        screen.getByTestId('Select primary key column'),
-        'Name'
-      );
-
-      expect(mockOnPrimaryKeyChange).toHaveBeenCalledWith('Name');
-    });
-
-    it('should call onPrimaryKeyChange with null when primary key is cleared', async () => {
-      const user = userEvent.setup();
-      render(<ImportColumnMapper {...defaultProps} primaryKey="Name" />);
-
-      await user.selectOptions(
-        screen.getByTestId('Select primary key column'),
-        'none'
-      );
-
-      expect(mockOnPrimaryKeyChange).toHaveBeenCalledWith(null);
-    });
-
-    it('should show key icon for primary column row', () => {
-      render(<ImportColumnMapper {...defaultProps} primaryKey="Name" />);
-
-      expect(screen.getByTestId('key-icon')).toBeInTheDocument();
-    });
-
-    it('should display primary column error message', () => {
-      render(
-        <ImportColumnMapper
-          {...defaultProps}
-          primaryKey="Name"
-          primaryColumnError="Primary column has empty values"
-        />
-      );
-
-      expect(screen.getByText('Primary column has empty values')).toBeInTheDocument();
-    });
-
-    it('should not display primary column error when primary key is not selected', () => {
-      render(
-        <ImportColumnMapper
-          {...defaultProps}
-          primaryKey={null}
-          primaryColumnError="Primary column has empty values"
-        />
-      );
-
-      expect(screen.queryByText('Primary column has empty values')).not.toBeInTheDocument();
     });
   });
 

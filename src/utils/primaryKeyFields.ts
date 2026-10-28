@@ -5,6 +5,7 @@
 
 // A table with a custom primary key (anything but Id alone) only accepts records whose key fields are all
 // filled in; the backend rejects others with PKY_1007. These helpers apply the same rule before saving.
+import { isAutoUuidColumn } from './uuid';
 
 const ID_COLUMN = 'id';
 
@@ -14,6 +15,9 @@ export interface KeyColumnRef {
   columnName?: string;
   key?: string;
   title?: string;
+  uidt?: string;
+  meta?: unknown;
+  config?: unknown;
 }
 
 // Same rule as the backend: null, undefined and blank text are empty
@@ -36,10 +40,12 @@ export const customKeyColumnIds = (keyColumnIds: string[] | undefined, columns: 
   return ids;
 };
 
-// Key column IDs a new record must fill in: the custom key without Id, which the database assigns
+// Key column IDs a new record must fill in: the custom key without Id, which the database assigns,
+// and without auto-generated UUID fields, which the backend fills in
 export const requiredKeyColumnIds = (keyColumnIds: string[] | undefined, columns: KeyColumnRef[]): string[] =>
   customKeyColumnIds(keyColumnIds, columns).filter(id => {
     const column = columns.find(c => String(c.id) === id);
+    if (isAutoUuidColumn(column)) return false;
     return (column?.column_name ?? column?.columnName ?? column?.key) !== ID_COLUMN;
   });
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { GroupPopover } from '../../../../components/shared/table/GroupPopover';
 import { SortPopover } from '../../../../components/shared/table/SortPopover';
@@ -18,7 +19,12 @@ import { Search } from '../../../../components/shared/table/Search';
 import DeleteConfirmModal from '../../../../components/modals/DeleteConfirmModal';
 import ReactDOM from 'react-dom';
 import { Plus, List, Lock, KeyRound } from 'lucide-react';
+import { isAutoUuidColumn, uuidCellProblem } from '../../../../utils/uuid';
 import EditRecordModal from '../../../../components/modals/EditRecordModal';
+import CreateRecordModal from '../../../../components/modals/CreateRecordModal';
+import { NewRowSplitButton } from './components/NewRowSplitButton';
+import { isSystemField, isAttachmentField, isLinksField } from '../../../../components/modals/RecordModalParts';
+import { isFormulaField, processFieldValue } from '../../../../utils/fieldUtils';
 import { buildInitialValuesForEdit } from '../../../../utils/initialValues';
 import { useToast } from '../../../../components/common/Toast';
 import { apiErrorMessage } from '../../../../utils/apiErrors';
@@ -76,6 +82,7 @@ interface TableProps {
 
 // Server code for a record that repeats the values of a unique key
 const UNIQUE_KEY_VIOLATION = 'TCN_1012';
+const UUID_INVALID_CODE = 'UID_1001';
 // Input types treated as text fields for "Enter on last row adds a row"
 // Cell types that keyboard navigation only focuses: clicking their trigger would change the value
 // (checkbox, rating) or open a modal that keyboard navigation could not close again.
@@ -242,6 +249,8 @@ export const Table: React.FC<TableProps> = ({
       .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
       .map((apiColumn: any): ColumnConfig => {
         const parsedMeta = parseApiColumnMeta(apiColumn.meta);
+        const columnName = String(apiColumn.column_name ?? '').toLowerCase();
+        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && !isLegacyTitleColumn(apiColumn);
         return {
           id: apiColumn.id ? String(apiColumn.id) : undefined,
           key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
@@ -252,8 +261,8 @@ export const Table: React.FC<TableProps> = ({
           width: 235,
           position: apiColumn.order_index ?? 0,
           order_index: apiColumn.order_index ?? 0,
-          isSystem: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
-          system: Boolean(apiColumn.system) && String(apiColumn.column_name ?? '').toLowerCase() !== 'title',
+          isSystem: isSystemColumn,
+          system: isSystemColumn,
           hidden: Boolean(apiColumn.hidden),
           is_hidden: Boolean(apiColumn.is_hidden),
           description: apiColumn.description || '', // Include description from API
@@ -263,12 +272,11 @@ export const Table: React.FC<TableProps> = ({
       });
   }, [tableData?.columns]);
 
-  // Get searchable columns (exclude system fields except Title)
+  // Get searchable columns (exclude system fields except the Title of an older table)
   const searchableColumns = useMemo(() => {
     return columns.filter(col => {
       const isSystemField = col.isSystem || col.system;
-      const isTitle = col.title.toLowerCase() === 'title' || col.column_name?.toLowerCase() === 'title';
-      return !isSystemField || isTitle;
+      return !isSystemField || isLegacyTitleColumn(col);
     });
   }, [columns]);
 
@@ -451,6 +459,10 @@ export const Table: React.FC<TableProps> = ({
 
   // Edit record modal state
   const [isEditRecordModalOpen, setIsEditRecordModalOpen] = useState(false);
+  // "New row - Form" modal state
+  const [isCreateRecordModalOpen, setIsCreateRecordModalOpen] = useState(false);
+  // Existing record shown in the "New row - Form" via Previous / Next; null shows the blank new-row form
+  const [formRecordId, setFormRecordId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
@@ -713,8 +725,10 @@ export const Table: React.FC<TableProps> = ({
   const saveErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const handleCellSaveError = useCallback(({ rowId, columnKey, error }: { rowId: string; columnKey: string; error: unknown }) => {
     const { message, code } = (error ?? {}) as { message?: string; code?: string };
-    // TCN_1012: the value repeats a unique key (Settings > Unique Key)
-    const title = code === UNIQUE_KEY_VIOLATION ? 'Duplicate value not allowed' : 'Not saved';
+    // TCN_1012: the value repeats a unique key (Settings > Unique Key); UID_1001: not a valid UUID
+    let title = 'Not saved';
+    if (code === UNIQUE_KEY_VIOLATION) title = 'Duplicate value not allowed';
+    else if (code === UUID_INVALID_CODE) title = 'Invalid UUID';
     toast.error(apiErrorMessage(error, message || 'The value could not be saved'), { title, duration: 5000 });
     const cellKey = `${rowId}-${columnKey}`;
     setCellResets(prev => ({ ...prev, [cellKey]: (prev[cellKey] ?? 0) + 1 }));
@@ -763,6 +777,12 @@ export const Table: React.FC<TableProps> = ({
   // Draft cells stay in the browser. On saved rows a primary key cell is checked before it is sent: an empty
   // value or one that repeats another row's key is not saved; the cell is boxed in red and shows the saved value.
   const handleGridCellChange = useCallback((rowId: string, columnKey: string, value: any) => {
+    // A manual UUID cell only takes a valid UUID; anything else is refused the same way, on drafts too
+    const uuidProblem = uuidCellProblem(columns.find(c => c.key === columnKey), value);
+    if (uuidProblem) {
+      handleCellSaveError({ rowId, columnKey, error: { message: uuidProblem, code: UUID_INVALID_CODE } });
+      return;
+    }
     if (isDraftRowId(rowId)) {
       updateDraft(rowId, columnKey, value);
       return;
@@ -773,7 +793,7 @@ export const Table: React.FC<TableProps> = ({
       return;
     }
     void handleCellChange(rowId, columnKey, value);
-  }, [updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
+  }, [columns, updateDraft, savedKeyProblem, handleCellSaveError, handleCellChange]);
 
   // Measure table body container height
   useEffect(() => {
@@ -1066,6 +1086,71 @@ export const Table: React.FC<TableProps> = ({
     return selectedRecordId || '';
   }, [resolveNumericRowId, selectedRecordId]);
 
+  // "New row - Form" navigation: the form opens blank (formRecordId null); Previous / Next step through the
+  // saved records in the grid's current filter and sort order, and Next past the last record returns to the blank form
+  const formRecordIds = useMemo(
+    () => filteredAndSortedData.map(row => String(row.id)).filter(id => !isDraftRowId(id)),
+    [filteredAndSortedData]
+  );
+  const formRecordIndex = formRecordId === null ? -1 : formRecordIds.indexOf(formRecordId);
+  const formRecordApiId = useMemo(() => {
+    const resolvedId = resolveNumericRowId(formRecordId);
+    if (resolvedId !== null) return String(resolvedId);
+    return formRecordId || '';
+  }, [resolveNumericRowId, formRecordId]);
+
+  const closeRecordForm = useCallback(() => {
+    setIsCreateRecordModalOpen(false);
+    setFormRecordId(null);
+  }, []);
+
+  // Duplicate record: add a copy of the record straight into the table, no form
+  const handleDuplicateRecord = useCallback(async (sourceRecordId: string | null) => {
+    if (!sourceRecordId) return;
+    const columns = tableData?.columns || [];
+    const source = buildInitialValuesForEdit({ recordId: sourceRecordId, columns, rawRecords: tableData?.records || [] });
+    const values: Record<string, any> = {};
+    columns.forEach((col: any) => {
+      if (isSystemField(col) || isAttachmentField(col) || isLinksField(col) || isFormulaField(col) || isAutoUuidColumn(col)) return;
+      const value = source[col.id];
+      if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return;
+      values[col.id] = processFieldValue(col, value);
+    });
+    closeEditRecordModal();
+    closeRecordForm();
+    try {
+      await upsertRowMutation.mutateAsync({ model_id: String(tableId), values });
+      toast.success('Record duplicated successfully', { title: 'Success', duration: 3000 });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to duplicate record', err);
+      toast.error(apiErrorMessage(err, 'Failed to duplicate record'), { title: 'Error', duration: 5000 });
+    }
+  }, [tableData, tableId, upsertRowMutation, closeEditRecordModal, closeRecordForm, toast, onRefresh]);
+
+  const showPreviousFormRecord = useCallback(() => {
+    if (formRecordIds.length === 0) return;
+    // From the blank form (or a record no longer in the grid) go to the last record
+    const nextIndex = formRecordIndex === -1 ? formRecordIds.length - 1 : formRecordIndex - 1;
+    if (nextIndex >= 0) setFormRecordId(formRecordIds[nextIndex]);
+  }, [formRecordIds, formRecordIndex]);
+
+  const showNextFormRecord = useCallback(() => {
+    const nextIndex = formRecordIndex + 1;
+    setFormRecordId(formRecordIndex !== -1 && nextIndex < formRecordIds.length ? formRecordIds[nextIndex] : null);
+  }, [formRecordIds, formRecordIndex]);
+
+  // "Edit record" navigation: Previous / Next step through the saved records in the grid's current filter and sort order
+  const selectedRecordIndex = selectedRecordId === null ? -1 : formRecordIds.indexOf(selectedRecordId);
+
+  const showPreviousEditRecord = useCallback(() => {
+    if (selectedRecordIndex > 0) setSelectedRecordId(formRecordIds[selectedRecordIndex - 1]);
+  }, [formRecordIds, selectedRecordIndex]);
+
+  const showNextEditRecord = useCallback(() => {
+    if (selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1) setSelectedRecordId(formRecordIds[selectedRecordIndex + 1]);
+  }, [formRecordIds, selectedRecordIndex]);
+
   // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
   const handleColumnDragStart = useCallback((index: number) => {
     if (!canReorderColumns) return;
@@ -1120,11 +1205,13 @@ export const Table: React.FC<TableProps> = ({
   const getColumnHeaderClassName = useCallback((column: ColumnConfig, index: number) => {
     const isEditing = editModalOpen && editColumnIndex === index;
     const isNew = (column as any).isNew !== undefined && (column as any).isNew;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
     const isDragging = dragColumnIndex === index;
     const isHovering = hoverColumnIndex === index;
     return [
       'relative flex-shrink-0 bg-gray-100 border-b group border-r',
       isEditing ? 'overflow-visible' : 'overflow-hidden',
+      isLocked ? '!bg-[var(--color-readonly-header)]' : '',
       isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : '',
       isDragging ? 'opacity-50' : '',
       isHovering ? 'bg-blue-50' : ''
@@ -1141,6 +1228,7 @@ export const Table: React.FC<TableProps> = ({
     const isPinned = pinnedColumnIds.includes(columnIdentity);
     const isLastPinned = isPinned && lastPinnedColumnId === columnIdentity;
     const isEditing = editModalOpen && editColumnIndex === index;
+    const isLocked = column.isSystem || isAutoUuidColumn(column);
 
     const handleColumnContextMenu = (e: React.MouseEvent) => {
       if (column.isSystem || column.system) {
@@ -1237,7 +1325,7 @@ export const Table: React.FC<TableProps> = ({
               style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             >
               {column.title}
-              {column.isSystem && (
+              {isLocked && (
                 <Lock className="w-3 h-3 ml-1 inline text-tertiary" />
               )}
             </span>
@@ -1508,14 +1596,10 @@ export const Table: React.FC<TableProps> = ({
       {/* Fixed Footer */}
       <div className="sticky bottom-0 z-30 bg-card border-t flex items-center px-4 h-12">
         {!isBaseReadOnly() && canCreateRecord() && (
-          <button
-            onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}
-            className="flex items-center gap-2 px-5 py-1.5 text-sm font-medium btn-primary !rounded-lg transition-colors duration-200"
-            title="Add new row"
-          >
-            <Plus className="w-5 h-5" />
-            Add Row
-          </button>
+          <NewRowSplitButton
+            onAddGridRow={() => { setActiveCell(null); addNewRowAndFocus(); }}
+            onAddFormRow={() => { setActiveCell(null); setFormRecordId(null); setIsCreateRecordModalOpen(true); }}
+          />
         )}
         <div className="ml-auto flex items-center gap-3 text-sm">
           {/* Virtualization is always enabled - indicator removed to reduce UI clutter */}
@@ -1688,8 +1772,55 @@ export const Table: React.FC<TableProps> = ({
             closeEditRecordModal();
           }
         }}
+        onDuplicate={() => handleDuplicateRecord(selectedRecordId)}
         title="Edit record"
         submitLabel="Update record"
+        onPrevious={showPreviousEditRecord}
+        onNext={showNextEditRecord}
+        hasPrevious={selectedRecordIndex > 0}
+        hasNext={selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1}
+      />
+
+      {/* New Row Form Modal */}
+      <CreateRecordModal
+        isOpen={isCreateRecordModalOpen && formRecordId === null}
+        onClose={closeRecordForm}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        title="New row"
+        submitLabel="Save Record"
+        layout="record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIds.length > 0}
+        hasNext={false}
+      />
+
+      {/* Existing record reached from the "New row - Form" via Previous / Next */}
+      <EditRecordModal
+        isOpen={isCreateRecordModalOpen && formRecordId !== null}
+        onClose={closeRecordForm}
+        onSuccess={() => { try { onRefresh?.(); } catch { } }}
+        recordId={formRecordApiId}
+        table={tableData?.model}
+        fields={tableData?.columns || []}
+        initialValues={buildInitialValuesForEdit({ recordId: formRecordId ?? undefined, columns: tableData?.columns || [], rawRecords: tableData?.records || [] })}
+        onDelete={async (id: string) => {
+          try {
+            await handleDelete(id);
+          } catch { }
+          finally {
+            closeRecordForm();
+          }
+        }}
+        onDuplicate={() => handleDuplicateRecord(formRecordId)}
+        title="Edit record"
+        submitLabel="Update record"
+        onPrevious={showPreviousFormRecord}
+        onNext={showNextFormRecord}
+        hasPrevious={formRecordIndex > 0}
+        hasNext={formRecordIndex !== -1}
       />
     </div>
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
 import { useTable, useAddRow, useDeleteRecord, useInsertRowData, useUpdateField, useUpdateView } from '../../../hooks/useApi';
 import type { TableData, Column, View } from '../../../types/api.types';
@@ -101,25 +102,21 @@ const extractViewConfig = (viewMeta: Record<string, unknown>): GanttViewConfig =
 };
 
 // Helper function to create column maps
-const createColumnMaps = (columns: Column[]): { columnMap: Map<string, Column>; columnNameMap: Map<string, Column> } => {
+const createColumnMaps = (columns: Column[]): { columnMap: Map<string, Column> } => {
   const columnMap = new Map<string, Column>();
-  const columnNameMap = new Map<string, Column>();
-  
+
   columns.forEach((col: Column) => {
     columnMap.set(String(col.id), col);
-    if (col.column_name) {
-      columnNameMap.set(col.column_name.toLowerCase(), col);
-    }
   });
-  
-  return { columnMap, columnNameMap };
+
+  return { columnMap };
 };
 
 // Helper function to find field columns
 const findFieldColumns = (
   viewConfig: GanttViewConfig,
   columnMap: Map<string, Column>,
-  columnNameMap: Map<string, Column>
+  columns: Column[]
 ) => {
   const getFieldById = (fieldId: string | undefined): Column | undefined => {
     return fieldId ? columnMap.get(String(fieldId)) : undefined;
@@ -128,7 +125,7 @@ const findFieldColumns = (
   return {
     startDateField: getFieldById(viewConfig.startDateFieldId),
     endDateField: getFieldById(viewConfig.endDateFieldId),
-    titleField: getFieldById(viewConfig.titleFieldId) || columnNameMap.get('title'),
+    titleField: getFieldById(viewConfig.titleFieldId) || getRecordTitleColumn(columns as any[]) as Column | undefined,
     progressField: getFieldById(viewConfig.progressFieldId),
     groupByField: getFieldById(viewConfig.groupByFieldId)
   };
@@ -188,11 +185,11 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
     const viewConfig = extractViewConfig(viewMeta);
 
     // Create column maps for O(1) lookups
-    const { columnMap, columnNameMap } = createColumnMaps(filteredColumns);
+    const { columnMap } = createColumnMaps(filteredColumns);
 
     // Find field columns using Map for O(1) lookups
     const { startDateField, endDateField, titleField, progressField, groupByField } = 
-      findFieldColumns(viewConfig, columnMap, columnNameMap);
+      findFieldColumns(viewConfig, columnMap, filteredColumns);
 
 
     // Helper functions to reduce cognitive complexity
@@ -267,7 +264,7 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       
       const startDateValue = startDateFieldName ? record[startDateFieldName] : undefined;
       const endDateValue = endDateFieldName ? record[endDateFieldName] : undefined;
-      const titleValue = titleFieldName ? record[titleFieldName] : record.title;
+      const titleValue = titleFieldName ? record[titleFieldName] : undefined;
       const progressValue = progressFieldName ? record[progressFieldName] : 0;
 
       // Parse dates with proper type checking

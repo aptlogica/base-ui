@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Plus, Search, Check } from 'lucide-react';
@@ -77,10 +78,11 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ columns, value, onChange })
   }, [open, place]);
 
   const query = search.trim().toLowerCase();
-  // System columns (Id, created and modified time and by) are hidden; Title is a normal field to users.
+  // System columns (Id, created and modified time and by) are hidden; Title is a normal field to users
+  // (the system Title of a table created before Title became an ordinary column is shown too).
   // Usable columns first, then the ones a key can't use.
   const listed = columns
-    .filter(c => !c.system || c.column_name === 'title')
+    .filter(c => !c.system || isLegacyTitleColumn(c))
     .filter(c => !query || c.title.toLowerCase().includes(query))
     .sort((a, b) => Number(!!columnBlockReason(a)) - Number(!!columnBlockReason(b)));
 

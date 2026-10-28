@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { SortableFormField, DropPosition } from './SortableFormField';
 import { buildFieldRows, moveFieldOnDrop } from './fieldRows';
@@ -30,7 +31,7 @@ interface FormPreviewProps {
 
 // Extract field filtering logic
 const shouldIncludeField = (field: FormField): boolean => {
-  if (field.title?.toLowerCase().includes('title') || field.column_name === 'title') {
+  if (isLegacyTitleColumn(field)) {
     return !field.is_hidden;
   }
 
@@ -883,8 +884,9 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
   }, [config.description]);
 
   const canEdit = !!onConfigChange;
-  // Only overlap the banner when a banner image is actually shown, otherwise the logo is clipped by the card edge
-  const logoOnBanner = !appearance.hideBanner && !!appearance.bannerUrl && appearance.logoPosition !== 'below';
+  // Overlap only when the banner area (image or upload placeholder) is rendered, otherwise the logo is clipped by the card edge
+  const isBannerShown = !appearance.hideBanner && (!!appearance.bannerUrl || (canEdit && !isReadOnly));
+  const logoOnBanner = isBannerShown && appearance.logoPosition !== 'below';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: appearance.backgroundColor || undefined }}>

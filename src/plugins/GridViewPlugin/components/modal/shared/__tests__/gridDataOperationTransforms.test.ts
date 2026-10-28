@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { GridColumn } from '../../../../types/grid.types';
 import type {
@@ -9,6 +9,7 @@ import type {
 import {
   applyGridDataOperationToRecords,
   buildGridDataOperationPreview,
+  buildGridDataOperationPreviewAsync,
   mergeColumnValues,
   normalizeCaseValue,
   normalizeCustomFormattingPattern,
@@ -79,6 +80,7 @@ const createState = (overrides: Partial<GridDataOperationState> = {}): GridDataO
   extractEndBefore: '',
   extractKeepOriginalColumn: false,
   extractPlacement: 'next_to_original',
+  fuzzySensitivity: 'medium',
   ...overrides,
 });
 
@@ -1323,9 +1325,238 @@ describe('applyGridDataOperationToRecords', () => {
   });
 });
 
+describe('fuzzy_deduplication preview', () => {
+  it('correctly deduplicates three identical rows with keep_first', () => {
+    const context = createContext({
+      actionId: 'fuzzy_deduplication',
+      columns: [nameColumn],
+      state: createState({
+        selectedColumnIds: ['name'],
+        duplicateAction: 'remove_row',
+        duplicateKeepRule: 'keep_first',
+        fuzzySensitivity: 'medium',
+      }),
+      tableData: createTableData([
+        { id: 'rec-1', name: 'Apple' },
+        { id: 'rec-2', name: 'Apple' },
+        { id: 'rec-3', name: 'Apple' },
+      ]),
+    });
+
+    const preview = buildGridDataOperationPreview(context);
+    expect(preview.affectedRows).toBe(2);
+    expect(preview.previewRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'rec-1', rowState: 'kept' }),
+      expect.objectContaining({ id: 'rec-2', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-3', rowState: 'removed' }),
+    ]));
+  });
+
+  it('correctly deduplicates three identical rows with keep_last', () => {
+    const context = createContext({
+      actionId: 'fuzzy_deduplication',
+      columns: [nameColumn],
+      state: createState({
+        selectedColumnIds: ['name'],
+        duplicateAction: 'remove_row',
+        duplicateKeepRule: 'keep_last',
+        fuzzySensitivity: 'medium',
+      }),
+      tableData: createTableData([
+        { id: 'rec-1', name: 'Apple' },
+        { id: 'rec-2', name: 'Apple' },
+        { id: 'rec-3', name: 'Apple' },
+      ]),
+    });
+
+    const preview = buildGridDataOperationPreview(context);
+    expect(preview.affectedRows).toBe(2);
+    expect(preview.previewRows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'rec-1', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-2', rowState: 'removed' }),
+      expect.objectContaining({ id: 'rec-3', rowState: 'kept' }),
+    ]));
+  });
+
+  describe('refactored helpers', () => {
+    const fuzzyPreview = (
+      records: Array<Record<string, unknown>>,
+      stateOverrides: Partial<GridDataOperationState> = {},
+      columns: GridColumn[] = [nameColumn],
+    ) =>
+      buildGridDataOperationPreview(
+        createContext({
+          actionId: 'fuzzy_deduplication',
+          columns,
+          state: createState({ selectedColumnIds: columns.map((c) => c.id as string), ...stateOverrides }),
+          tableData: createTableData(records),
+        }),
+      );
+
+    const states = (preview: GridDataOperationPreviewResult) =>
+      Object.fromEntries(preview.previewRows.map((r) => [r.id, r.rowState]));
+
+    it('clears duplicate values when duplicateAction is remove_duplicates', () => {
+      const preview = fuzzyPreview(
+        [{ id: 'a', name: 'Apple' }, { id: 'b', name: 'Apple' }],
+        { duplicateAction: 'remove_duplicates' },
+      );
+      const dup = preview.previewRows.find((r) => r.id === 'b')!;
+      expect(dup.rowState).toBe('changed');
+      expect(dup.values.name).toBe('');
+      expect(dup.changedColumns).toEqual(['name']);
+      expect(preview.affectedCells).toBe(1);
+      expect(preview.duplicateAction).toBe('remove_duplicates');
+    });
+
+    it('keeps the most recently updated row with keep_latest_updated, falling back to index order', () => {
+      const preview = fuzzyPreview(
+        [
+          { id: '1', name: 'Pear', updated_at: '2024-01-01' },
+          { id: '2', name: 'Pear', updated_at: '2025-06-01' },
+          { id: '3', name: 'Pear', updated_at: '2025-06-01' },
+        ],
+        { duplicateKeepRule: 'keep_latest_updated' },
+      );
+      expect(states(preview)).toEqual({ '1': 'removed', '2': 'kept', '3': 'removed' });
+    });
+
+    it('orders numeric ids numerically and falls back to index for equal or non-numeric ids', () => {
+      const first = fuzzyPreview([{ id: '10', name: 'Fig' }, { id: '9', name: 'Fig' }], { duplicateKeepRule: 'keep_first' });
+      expect(states(first)).toEqual({ '10': 'removed', '9': 'kept' });
+
+      const last = fuzzyPreview([{ id: '10', name: 'Fig' }, { id: '9', name: 'Fig' }], { duplicateKeepRule: 'keep_last' });
+      expect(states(last)).toEqual({ '10': 'kept', '9': 'removed' });
+
+      const text = fuzzyPreview([{ id: 'x', name: 'Fig' }, { id: 'y', name: 'Fig' }], { duplicateKeepRule: 'keep_last' });
+      expect(states(text)).toEqual({ x: 'removed', y: 'kept' });
+    });
+
+    it('ignores rows with empty values and does not group them', () => {
+      const preview = fuzzyPreview([
+        { id: 'a', name: 'Plum' },
+        { id: 'b', name: '' },
+        { id: 'c', name: null },
+        { id: 'd', name: 'Plum' },
+      ]);
+      expect(preview.changedRowIds).toEqual(['d']);
+      expect(preview.previewRows.map((r) => r.id)).toEqual(['a', 'd']);
+    });
+
+    it('requires every selected column to match', () => {
+      const preview = fuzzyPreview(
+        [
+          { id: 'a', name: 'Kiwi', email: 'k@x.com' },
+          { id: 'b', name: 'Kiwi', email: '' },
+          { id: 'c', name: 'Kiwi', email: 'k@x.com' },
+        ],
+        {},
+        [nameColumn, emailColumn],
+      );
+      expect(preview.changedRowIds).toEqual(['c']);
+    });
+
+    it('applies manual row action overrides only in manual mode', () => {
+      const records = [
+        { id: 'a', name: 'Lime' },
+        { id: 'b', name: 'Lime' },
+        { id: 'c', name: 'Lime' },
+        { id: 'd', name: 'Lime' },
+      ];
+      const rowActions = { a: 'delete', b: 'clear', c: 'keep', d: 'none' } as const;
+
+      const manual = fuzzyPreview(records, { deduplicationMode: 'manual', rowActions: { ...rowActions } });
+      expect(states(manual)).toEqual({ a: 'removed', b: 'changed', c: 'kept', d: 'unchanged' });
+      expect(manual.previewRows.find((r) => r.id === 'b')!.values.name).toBe('');
+      expect(manual.affectedRows).toBe(2);
+      expect(manual.deduplicationMode).toBe('manual');
+
+      const automatic = fuzzyPreview(records, { deduplicationMode: 'automatic', rowActions: { ...rowActions } });
+      expect(states(automatic)).toEqual({ a: 'kept', b: 'removed', c: 'removed', d: 'removed' });
+    });
+
+    it('returns unchanged rows when selected columns do not match any column', () => {
+      const preview = fuzzyPreview([{ id: 'a', name: 'x' }], { selectedColumnIds: ['nope'] });
+      expect(preview.affectedRows).toBe(0);
+      expect(states(preview)).toEqual({ a: 'unchanged' });
+    });
+
+    it('reuses cached groups on a repeated call with the same inputs', () => {
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const records = [{ id: 'cache-a', name: 'Mango' }, { id: 'cache-b', name: 'Mango' }];
+      fuzzyPreview(records);
+      log.mockClear();
+      const again = fuzzyPreview(records);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('Active similarity groups: 1'));
+      expect(again.changedRowIds).toEqual(['cache-b']);
+      log.mockRestore();
+    });
+
+    it('applies sensitivity thresholds to near-miss values', () => {
+      const records = [{ id: 'a', name: 'Jonathan Smith' }, { id: 'b', name: 'Jonathon Smyth' }];
+      expect(fuzzyPreview(records, { fuzzySensitivity: 'high' }).changedRowIds).toEqual(['b']);
+      expect(fuzzyPreview(records, { fuzzySensitivity: 'low' }).changedRowIds).toEqual([]);
+    });
+  });
+});
 
 
 
 
 
 
+
+
+describe('buildGridDataOperationPreviewAsync', () => {
+  const fuzzyContext = (records: Array<Record<string, unknown>>, overrides: Partial<GridDataOperationContext> = {}) =>
+    createContext({
+      actionId: 'fuzzy_deduplication',
+      tableData: createTableData(records),
+      state: createState({ selectedColumnIds: ['name'], fuzzySensitivity: 'medium' }),
+      ...overrides,
+    });
+
+  it('falls back to the sync preview for non-fuzzy actions or no selected columns', async () => {
+    const nonFuzzy = await buildGridDataOperationPreviewAsync(createContext());
+    expect(nonFuzzy.actionId).toBe('case_normalization');
+
+    const noSelection = await buildGridDataOperationPreviewAsync(
+      fuzzyContext([{ id: '1', name: 'a' }], { state: createState({ selectedColumnIds: [] }) }),
+    );
+    expect(noSelection.actionId).toBe('fuzzy_deduplication');
+  });
+
+  it('falls back when selected columns do not match any column', async () => {
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext([{ id: '1', name: 'a' }], { state: createState({ selectedColumnIds: ['missing'] }) }),
+    );
+    expect(result.actionId).toBe('fuzzy_deduplication');
+  });
+
+  it.each(['low', 'medium', 'high'] as const)('scans, reports progress and finds duplicates (%s)', async (sensitivity) => {
+    const onProgress = vi.fn();
+    const records = Array.from({ length: 20 }, (_, i) => ({ id: `r${i}`, name: i < 2 ? 'Jonathan Smith' : `Unique value ${'x'.repeat(i)}` }));
+    records.push({ id: 'e1', name: '' }, { id: 'e2', name: '' });
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext(records, {
+        onProgress,
+        state: createState({ selectedColumnIds: ['name'], fuzzySensitivity: sensitivity, duplicateKeepRule: 'keep_last' }),
+      } as Partial<GridDataOperationContext>),
+    );
+
+    expect(result.changedRowIds).toContain('r0');
+    expect(onProgress).toHaveBeenCalled();
+    expect(onProgress.mock.calls.at(-1)![0]).toMatchObject({ scannedRows: 22, totalRows: 22 });
+  });
+
+  it('serves repeated calls from the cache', async () => {
+    const records = [{ id: 'c1', name: 'cache me' }, { id: 'c2', name: 'cache me' }];
+    await buildGridDataOperationPreviewAsync(fuzzyContext(records));
+    const onProgress = vi.fn();
+    const result = await buildGridDataOperationPreviewAsync(
+      fuzzyContext(records, { onProgress } as Partial<GridDataOperationContext>),
+    );
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(result.changedRowIds).toEqual(['c2']);
+  });
+});

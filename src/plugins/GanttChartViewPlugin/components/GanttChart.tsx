@@ -944,7 +944,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           table={{ id: tableData?.model?.id, title: tableData?.model?.title || 'Gantt Chart' } as any}
           fields={processedData.columns}
           title="New record"
-          submitLabel="Save record"
+          submitLabel="Save Record"
           initialValues={getCreateInitialValues()}
           onSuccess={handleCreateSuccess}
         />

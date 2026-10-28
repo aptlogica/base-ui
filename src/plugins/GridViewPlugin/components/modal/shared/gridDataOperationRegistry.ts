@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import {
   buildGridDataOperationPreview,
+  buildGridDataOperationPreviewAsync,
   applyGridDataOperationToRecords,
   normalizeCustomFormattingPattern,
 } from './gridDataOperationTransforms';
@@ -16,7 +17,7 @@ import type {
   GridTrimWhitespaceMode,
 } from './gridDataOperation.types';
 import type { GridActionId } from '../../toolbar/gridActionCatalog';
-import { getGridColumnIdentity, getGridColumnValueKey } from './gridColumnIdentity';
+import { getGridColumnIdentity, getGridColumnValueKey, isFuzzyDeduplicationSupportedColumn } from './gridColumnIdentity';
 
 const matchesSelectedColumn = (
   column: { id?: string; key?: string; column_name?: string; title?: string },
@@ -176,6 +177,79 @@ const buildRemoveDuplicatesPlan = (
       rowIdsToDelete,
       duplicateAction,
       keepRule: context.state.duplicateKeepRule ?? 'keep_first',
+    },
+    optimisticRecords,
+  };
+};
+
+const buildFuzzyDeduplicationPlan = (
+  context: GridDataOperationContext,
+  preview: GridDataOperationPreviewResult,
+): GridDataOperationApplyPlan | null => {
+  const selectedColumns = context.columns
+    .filter(isFuzzyDeduplicationSupportedColumn)
+    .filter((column) => context.state.selectedColumnIds.includes(getGridColumnIdentity(column)))
+    .map((column) => getGridColumnIdentity(column))
+    .filter(Boolean);
+
+  if (!selectedColumns.length) return null;
+
+  const duplicateAction = context.state.duplicateAction === 'remove_duplicates' ? 'remove_duplicates' : 'remove_row';
+
+  let keepRule: 'keep_first' | 'keep_last' | 'keep_latest_updated' = 'keep_first';
+  if (context.state.duplicateKeepRule === 'keep_last') {
+    keepRule = 'keep_last';
+  } else if (context.state.duplicateKeepRule === 'keep_latest_updated') {
+    keepRule = 'keep_latest_updated';
+  }
+
+  const threshold = context.state.fuzzySensitivity || 'medium';
+
+  const optimisticRecords = applyGridDataOperationToRecords(
+    Array.isArray(context.tableData?.records) ? context.tableData.records : [],
+    preview
+  );
+
+  return {
+    supported: true,
+    kind: 'fuzzy_deduplication',
+    columnUpdates: [],
+    fuzzyDeduplication: {
+      modelId: String(context.tableData?.model?.id ?? ''),
+      columns: selectedColumns,
+      threshold,
+      duplicateAction,
+      keepRule,
+      deduplicationMode: context.state.deduplicationMode || 'automatic',
+      rowActions: (() => {
+        if (context.state.deduplicationMode !== 'manual') {
+          return undefined;
+        }
+        // Build the actionable map: start from preview row defaults then apply user overrides.
+        // Only 'delete' and 'clear' are sent to the backend; 'keep'/'none' means skip the row.
+        const actions: Record<string, 'delete' | 'clear'> = {};
+        for (const row of preview.previewRows) {
+          if (row.rowState === 'removed') {
+            actions[row.id] = 'delete';
+          } else if (row.rowState === 'changed') {
+            actions[row.id] = 'clear';
+          }
+        }
+        // Apply user overrides from state.rowActions
+        if (context.state.rowActions) {
+          for (const [rowId, action] of Object.entries(context.state.rowActions)) {
+            if (action === 'delete') {
+              actions[rowId] = 'delete';
+            } else if (action === 'clear') {
+              actions[rowId] = 'clear';
+            } else {
+              // 'keep' or 'none' — remove from the actionable map
+              delete actions[rowId];
+            }
+          }
+        }
+        return actions;
+      })(),
     },
     optimisticRecords,
   };
@@ -490,7 +564,14 @@ const ACTION_ADAPTERS: Partial<Record<GridActionId, GridDataOperationAdapter>> =
       return buildRemoveDuplicatesPlan(context, preview);
     },
   },
-  fuzzy_deduplication: createNoopAdapter(),
+  fuzzy_deduplication: {
+    buildPreview: buildGridDataOperationPreview,
+    buildPreviewAsync: buildGridDataOperationPreviewAsync,
+    buildApplyPlan: (context, preview) => {
+      if (!preview.supported) return null;
+      return buildFuzzyDeduplicationPlan(context, preview);
+    },
+  },
   remove_special_characters: {
     buildPreview: buildGridDataOperationPreview,
     buildApplyPlan: (context, preview) => {

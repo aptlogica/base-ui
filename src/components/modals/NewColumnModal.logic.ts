@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { IdGeneration, UUID_DEFAULT_VERSION } from '../../types/uuid.types';
+
 export interface FormulaFormatting {
   type: 'number' | 'currency' | 'percent' | 'duration' | 'date' | 'text';
   precision: number;
@@ -58,6 +60,8 @@ export interface BuildFieldMetaParams {
   relationType: 'one-to-one' | 'has-many' | 'many-to-many';
   // Title of the column created on the other table (not used for a self-link, which has one column)
   inverseTitle?: string;
+  // Column of the linked table this link shows for each linked record ('' = the first text column)
+  displayColumnId?: string;
   currentTableId?: string;
   selectedRelationId: string;
   selectedLookupColumnId: string;
@@ -68,6 +72,8 @@ export interface BuildFieldMetaParams {
   formulaText: string;
   formulaFormatting: FormulaFormatting;
   getBrowserTimeZone: () => string;
+  // UUID fields: Auto-generated (with a version) or Manual
+  idGeneration?: IdGeneration;
 }
 
 export interface BuildFieldMetaResult {
@@ -82,6 +88,8 @@ export interface BuildColumnPayloadParams {
   fields: any[];
   initialValues?: any;
   meta: any;
+  // UUID fields turned to auto-generated: fill the records that have no value yet
+  backfill?: boolean;
 }
 
 export const isDuplicateFieldName = (params: {
@@ -277,9 +285,12 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       type: params.relationType
     };
     const inverseTitle = params.inverseTitle?.trim();
-    if (inverseTitle && params.selectedTableId !== params.currentTableId) {
+    const isSelf = params.selectedTableId === params.currentTableId;
+    if (inverseTitle && !isSelf) {
       config.relation.inverse_title = inverseTitle;
     }
+    // '' lets the server pick the first text column (or clears the choice when a link is edited)
+    config.display_column_id = params.displayColumnId ?? '';
   };
 
   const handleLookup = (): BuildFieldMetaResult | void => {
@@ -398,6 +409,13 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       config.openInNewTab = params.openButtonInNewTab;
     },
     json: applyTextDefault,
+    // A UUID field never has a default value: auto fields are generated, manual fields are typed in
+    uuid: () => {
+      delete config.defaultValue;
+      config.idGeneration = params.idGeneration?.mode === 'auto'
+        ? { mode: 'auto', version: params.idGeneration.version ?? UUID_DEFAULT_VERSION }
+        : { mode: 'manual' };
+    },
     formula: () => {
       config.formula = params.formulaText;
       config.formatting = {
@@ -426,7 +444,11 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
 
   let finalMeta = params.meta;
   if (params.selectedTypeKey === 'links' && params.initialValues) {
-    finalMeta = params.initialValues.meta || params.initialValues.config || {};
+    // The relation of an existing link can't change; only its display column can
+    finalMeta = {
+      ...(params.initialValues.meta || params.initialValues.config),
+      display_column_id: params.meta?.display_column_id ?? '',
+    };
   }
 
   return {
@@ -436,6 +458,7 @@ export const buildColumnPayload = (params: BuildColumnPayloadParams) => {
     type: params.selectedTypeKey,
     description: params.description,
     meta: finalMeta,
+    ...(params.backfill === undefined ? {} : { backfill: params.backfill }),
   };
 };
 

@@ -351,7 +351,6 @@ describe('clientService', () => {
       order_index: 0,
       file: new File(['a'], 'a.csv'),
       config: {},
-      primary_column: 'title',
     });
 
     await getTenantUsersService();

@@ -39,7 +39,7 @@ describe('linkValues', () => {
 
   it('labels and identifies unresolved keys', () => {
     expect(linkItemLabel({ code: 'IN', dept: 'HR' })).toBe('IN / HR');
-    expect(linkItemLabel({ title: 'India HR', id: 1 })).toBe('India HR');
+    expect(linkItemLabel({ title: 'India HR', id: 1 })).toBe('India HR / 1');
     expect(linkItemLabel(4)).toBe('4');
     expect(linkItemIdentity({ code: 'IN', dept: 'HR' }, records)).toBe('1');
     expect(linkItemIdentity({ code: 'UK', dept: 'HR' }, records)).toBe('key:{"code":"UK","dept":"HR"}');

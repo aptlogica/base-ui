@@ -167,14 +167,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   // Calendar views display events in their natural order
   const sortedEvents = filteredEvents;
 
+  // "Edit Record" navigation: Previous / Next step through the filtered events in date order
+  const navEvents = useMemo(
+    () => [...filteredEvents].sort((a, b) => (a.dateTime?.getTime?.() ?? 0) - (b.dateTime?.getTime?.() ?? 0)),
+    [filteredEvents]
+  );
+  const selectedEventIndex = modalState.edit.selectedEvent
+    ? navEvents.findIndex(event => String(event.id) === String(modalState.edit.selectedEvent?.id))
+    : -1;
+
+  const showPreviousEvent = useCallback(() => {
+    if (selectedEventIndex > 0) handleOpenEditModal(navEvents[selectedEventIndex - 1]);
+  }, [navEvents, selectedEventIndex, handleOpenEditModal]);
+
+  const showNextEvent = useCallback(() => {
+    if (selectedEventIndex !== -1 && selectedEventIndex < navEvents.length - 1) handleOpenEditModal(navEvents[selectedEventIndex + 1]);
+  }, [navEvents, selectedEventIndex, handleOpenEditModal]);
+
   // Wrapper for handleDeleteRecordFromModal to pass required params
   const handleDeleteFromModal = useCallback(async (recordId: string) => {
     await handleDeleteRecordFromModal(recordId, deleteEvent, tableData, onRefresh);
   }, [handleDeleteRecordFromModal, deleteEvent, tableData, onRefresh]);
-
-  const onDuplicateCard = useCallback(() => {
-    // Duplicate functionality - can be implemented later
-  }, []);
 
   const getEditInitialValues = useCallback((): Record<string, any> => {
     if (!modalState.edit.selectedEvent) return {};
@@ -383,8 +396,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           submitLabel="Update record"
           onSuccess={() => handleEditSuccess(onRefresh)}
           onDelete={onDeleteHandler}
-          onDuplicate={isReadOnly ? undefined : onDuplicateCard}
           initialValues={getEditInitialValues()}
+          onPrevious={showPreviousEvent}
+          onNext={showNextEvent}
+          hasPrevious={selectedEventIndex > 0}
+          hasNext={selectedEventIndex !== -1 && selectedEventIndex < navEvents.length - 1}
         />
       )}
 

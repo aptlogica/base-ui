@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
 import { parseFieldConfig } from '../../../utils/pluginUtils';
@@ -63,6 +64,8 @@ export function useTableViewConfig({
 
   // Local field configuration state
   const [localFieldConfig, setLocalFieldConfig] = useState<any[]>([]);
+  const localFieldConfigRef = useRef<any[]>(localFieldConfig);
+  localFieldConfigRef.current = localFieldConfig;
 
   // Helper to parse/normalize viewConfig/meta
   const getConfigObj = useCallback((config: any) => {
@@ -82,8 +85,13 @@ export function useTableViewConfig({
     setRealTimeFilter(null);
   }, [baseMeta, getConfigObj, effectiveViewId]);
 
+  // Guards against server echoes of older saves overwriting newer local toggles
+  const hasPendingToggleRef = useRef(false);
+  const toggleVersionRef = useRef(0);
+
   // Initialize local field config from view meta or generate from columns
   useEffect(() => {
+    if (hasPendingToggleRef.current) return;
     const existingFieldConfig = Array.isArray(baseMeta?.fieldConfig)
       ? baseMeta.fieldConfig
       : [];
@@ -96,8 +104,8 @@ export function useTableViewConfig({
         .map((c, idx) => ({
           id: c.id,
           position: idx,
-          // Hide system fields by default, except Title field
-          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title' ? true : !!(c.hidden || c.isHidden)
+          // Hide system fields by default, except the Title of an older table
+          isHidden: c.isSystem && !isLegacyTitleColumn(c) ? true : !!(c.hidden || c.isHidden)
         }));
 
     setLocalFieldConfig(prev => (JSON.stringify(prev) === JSON.stringify(currentFieldConfig) ? prev : currentFieldConfig));
@@ -163,17 +171,24 @@ export function useTableViewConfig({
   }, [effectiveViewId, baseMeta]);
 
   // Debounced API call for field config updates
-  const debouncedUpdateFieldConfig = useDebounce(async (fieldConfig: any[]) => {
-    if (effectiveViewIdRef.current && updateViewMutation) {
-      await updateViewMutation.mutateAsync({
-        viewId: effectiveViewIdRef.current,
-        view: {
-          meta: {
-            ...baseMetaRef.current,
-            fieldConfig
+  const debouncedUpdateFieldConfig = useDebounce(async (fieldConfig: any[], version: number) => {
+    try {
+      if (effectiveViewIdRef.current && updateViewMutation) {
+        await updateViewMutation.mutateAsync({
+          viewId: effectiveViewIdRef.current,
+          view: {
+            meta: {
+              ...baseMetaRef.current,
+              fieldConfig
+            }
           }
-        }
-      });
+        });
+      }
+    } finally {
+      // Only the latest toggle may release the guard; older saves are stale
+      if (version === toggleVersionRef.current) {
+        hasPendingToggleRef.current = false;
+      }
     }
   }, 500);
 
@@ -273,8 +288,8 @@ export function useTableViewConfig({
         ...missingColumns.map((c, idx) => ({
           id: c.id,
           position: maxPosition + 1 + idx,
-          // Hide system fields by default, except Title field
-          isHidden: c.isSystem && c.key?.toLowerCase() !== 'title'
+          // Hide system fields by default, except the Title of an older table
+          isHidden: c.isSystem && !isLegacyTitleColumn(c)
         }))
       ];
 
@@ -296,21 +311,18 @@ export function useTableViewConfig({
   }, [baseMeta, effectiveViewId, columns, updateViewMutation]);
 
   // Toggle field visibility in this view and persist to view meta
-  const handleFieldToggle = useCallback(async (fieldId: string) => {
-    // Use functional update to avoid dependency on localFieldConfig
-    setLocalFieldConfig(prevConfig => {
-      const updatedFieldConfig = prevConfig.map((fc: any) => {
-        if (String(fc.id) === String(fieldId)) {
-          return { ...fc, isHidden: !fc.isHidden };
-        }
-        return fc;
-      });
+  const handleFieldToggle = useCallback((fieldId: string) => {
+    hasPendingToggleRef.current = true;
+    const version = ++toggleVersionRef.current;
+    // Keep the latest config in a ref so the update is computed once (not inside a state updater)
+    const updatedFieldConfig = localFieldConfigRef.current.map((fc: any) =>
+      String(fc.id) === String(fieldId) ? { ...fc, isHidden: !fc.isHidden } : fc
+    );
+    localFieldConfigRef.current = updatedFieldConfig;
+    setLocalFieldConfig(updatedFieldConfig);
 
-      // Debounced API call - will only execute after 500ms of no more toggles
-      debouncedUpdateFieldConfig(updatedFieldConfig);
-
-      return updatedFieldConfig;
-    });
+    // Debounced API call - will only execute after 500ms of no more toggles
+    void debouncedUpdateFieldConfig(updatedFieldConfig, version);
   }, [debouncedUpdateFieldConfig]);
 
   // Reorder fields (visibility+position) from FieldsPopover and persist

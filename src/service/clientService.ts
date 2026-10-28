@@ -4,9 +4,12 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { SereniBaseClient } from 'serenibase-sdk';
 import type {
+  CheckTableConstraint,
+  ConstraintCheckResult,
   CreateAutomation,
   CreateTableConstraint,
   StandardResponse,
+  TableConstraint,
   TableConstraintType,
   UpdateTableConstraint,
   UpsertRow,
@@ -821,6 +824,15 @@ export async function deleteFieldService(id: string) {
   return await makeAuthenticatedCall(() => client.tableService.deleteColumn(id));
 }
 
+// How many records have this field empty / filled; GET /column/:id/empty-count.
+// The SDK has no method for this endpoint yet, so it goes through the column service's HTTP client.
+export async function getFieldEmptyCountService(id: string) {
+  const http = (client.columnService as unknown as {
+    http: { get: <T>(url: string) => Promise<{ data?: T }> };
+  }).http;
+  return await makeAuthenticatedCall(() => http.get<{ empty: number; filled: number }>(`/column/${id}/empty-count`));
+}
+
 export async function resetFieldService(params: any) {
   return await makeAuthenticatedCall(() => client.columnService.reset(params));
 }
@@ -874,6 +886,18 @@ export async function removeDuplicatesService(params: {
   keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
 }) {
   return await makeAuthenticatedCall(() => client.columnService.removeDuplicates(params));
+}
+
+export async function fuzzyDuplicatesService(params: {
+  model_id: string;
+  columns: string[];
+  threshold: 'low' | 'medium' | 'high';
+  duplicate: 'remove_row' | 'remove_duplicates';
+  keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+  deduplication_mode?: 'automatic' | 'manual';
+  row_actions?: Record<string, 'keep' | 'delete' | 'clear' | 'none'>;
+}) {
+    return await makeAuthenticatedCall(() => client.columnService.fuzzyDuplicates(params));
 }
 
 export async function removeSpecialCharactersService(params: {
@@ -1017,7 +1041,6 @@ export async function importService(
     order_index: number;
     file: File;
     config: any;
-    primary_column: string;
   },
   onProgress?: (progressEvent: ProgressEvent) => void
 ) {
@@ -1187,28 +1210,26 @@ export async function updatePrimaryKeyService({ tableId, columnIds }: { tableId:
 }
 
 // =========================
-// Table constraints (unique keys; later primary key and check)
+// Table constraints (unique keys and check constraints)
 // =========================
 
-export type { TableConstraint, TableConstraintType, ConstraintCheckResult } from 'serenibase-sdk';
-export type TableConstraintInput = UpdateTableConstraint;
-export type { ConstraintColumn } from 'serenibase-sdk';
+export type { TableConstraint, TableConstraintType, ConstraintCheckResult, ConstraintColumn } from 'serenibase-sdk';
 
 export async function getTableConstraintsService(tableId: string, type: TableConstraintType) {
-  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type));
+  return await makeAuthenticatedCall(() => client.constraintService.list(tableId, type)) as StandardResponse<TableConstraint[]>;
 }
 
-// Checks existing records against the columns without changing anything
-export async function checkTableConstraintService(params: { model_id: string; column_ids: string[] }) {
-  return await makeAuthenticatedCall(() => client.constraintService.check(params));
+// Checks existing records against the columns, or the check condition, without changing anything
+export async function checkTableConstraintService(params: CheckTableConstraint) {
+  return await makeAuthenticatedCall(() => client.constraintService.check(params)) as StandardResponse<ConstraintCheckResult>;
 }
 
 export async function createTableConstraintService(params: CreateTableConstraint) {
-  return await makeAuthenticatedCall(() => client.constraintService.create(params));
+  return await makeAuthenticatedCall(() => client.constraintService.create(params)) as StandardResponse<TableConstraint>;
 }
 
 export async function updateTableConstraintService({ id, ...params }: UpdateTableConstraint & { id: string }) {
-  return await makeAuthenticatedCall(() => client.constraintService.update(id, params));
+  return await makeAuthenticatedCall(() => client.constraintService.update(id, params)) as StandardResponse<TableConstraint>;
 }
 
 export async function deleteTableConstraintService(id: string) {

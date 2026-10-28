@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebounce } from '../../../utils/helpers';
 import { SortItem, compareValues } from '../../../utils/sortUtils';
@@ -79,10 +80,10 @@ export function useGanttViewConfig({
           columns,
           4,
           (col) => {
-            // Exclude attachment fields, formula fields, and system fields (except Title)
+            // Exclude attachment fields, formula fields, and system fields (except the Title of an older table)
             const isAttachmentField = col.type === 'attachment' || col.uidt === 'attachment';
             const isFormulaFieldType = isFormulaField(col);
-            const isSystemField = col.system && col.column_name?.toLowerCase() !== 'title';
+            const isSystemField = col.system && !isLegacyTitleColumn(col);
             return isAttachmentField || isFormulaFieldType || isSystemField;
           }
         );

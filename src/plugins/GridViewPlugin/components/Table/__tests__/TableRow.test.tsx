@@ -123,7 +123,7 @@ describe('TableRow', () => {
       const row = screen.getByRole('row');
       expect(row).toHaveClass('row-highlighted');
       screen.getAllByRole('gridcell').forEach((cell) => {
-        expect(cell).toHaveClass('bg-[var(--color-blue-50)]');
+        expect(cell).toHaveClass('bg-[var(--color-row-highlight-bg)]');
         expect(cell).not.toHaveClass('border-[var(--color-brand-600)]');
       });
     });
@@ -250,9 +250,9 @@ describe('TableRow', () => {
 
       const active = screen.getByTestId('cell-title').closest('[role="gridcell"]');
       expect(active).toHaveClass('border', 'border-[var(--color-brand-600)]');
-      expect(active).not.toHaveClass('bg-[var(--color-blue-50)]');
+      expect(active).not.toHaveClass('bg-[var(--color-row-highlight-bg)]');
       screen.getAllByRole('gridcell').filter((cell) => cell !== active).forEach((cell) => {
-        expect(cell).toHaveClass('bg-[var(--color-blue-50)]');
+        expect(cell).toHaveClass('bg-[var(--color-row-highlight-bg)]');
       });
     });
 

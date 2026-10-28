@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { isLegacyTitleColumn } from '../../../../utils/recordLabel';
 import React, { useState } from 'react';
 import { FormField } from '../../../../types/form';
 import { SortableFieldItem } from './SortableFieldItem';
@@ -17,9 +18,9 @@ interface FieldsListProps {
   setVisibleAllFields?: (newState: boolean) => void;
 }
 
-// Title is always shown on the form (even when flagged as system), so it must be listed too
-const isTitleField = (field: FormField): boolean =>
-  field.column_name === 'title' || Boolean(field.title?.toLowerCase().includes('title'));
+// The Title of a table created before Title became an ordinary column is always shown on the form (even
+// though it is flagged as system), so it must be listed too
+const isTitleField = (field: FormField): boolean => isLegacyTitleColumn(field);
 
 const isListable = (field: FormField): boolean =>
   (!field.system && !field.isSystem) || isTitleField(field);

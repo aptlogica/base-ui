@@ -37,6 +37,7 @@ import {
   caseNormalizeService,
   findReplaceService,
   removeDuplicatesService,
+  fuzzyDuplicatesService,
   removeSpecialCharactersService,
   extractSubstringService,
   removeFormattingService,
@@ -90,6 +91,7 @@ import {
   deleteAutomationService,
   getPrimaryKeyService,
   updatePrimaryKeyService,
+  getFieldEmptyCountService,
   upsertRowService,
   getTableConstraintsService,
   checkTableConstraintService,
@@ -97,8 +99,8 @@ import {
   updateTableConstraintService,
   deleteTableConstraintService,
   type TableConstraintType,
-  type TableConstraintInput,
 } from '../service/clientService';
+import type { UpdateTableConstraint } from 'serenibase-sdk';
 import { WorkspaceBaseInput } from '../types/interfaces/workspace.interface';
 
 // Query Keys
@@ -659,7 +661,6 @@ export const useImportData = () => {
       order_index,
       file,
       config,
-      primary_column,
       onProgress,
     }: {
       base_id?: string; // Optional: required from sidebar, optional from home page
@@ -669,7 +670,6 @@ export const useImportData = () => {
       order_index: number;
       file: File;
       config: any; // ImportPayload with mapped field types and settings
-      primary_column?: string;
       onProgress?: (progressEvent: ProgressEvent) => void;
     }) => {
       return importService(
@@ -679,7 +679,6 @@ export const useImportData = () => {
           order_index,
           file,
           config,
-          primary_column: primary_column || '',
         },
         onProgress
       );
@@ -1469,6 +1468,41 @@ export const useRemoveDuplicates = () => {
   });
 };
 
+export const useFuzzyDeduplication = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      model_id,
+      columns,
+      threshold,
+      duplicate,
+      keep_rule,
+      deduplication_mode,
+      row_actions,
+    }: {
+      model_id: string;
+      columns: string[];
+      threshold: 'low' | 'medium' | 'high';
+      duplicate: 'remove_row' | 'remove_duplicates';
+      keep_rule: 'keep_first' | 'keep_last' | 'keep_latest_updated';
+      deduplication_mode?: 'automatic' | 'manual';
+      row_actions?: Record<string, 'keep' | 'delete' | 'clear' | 'none'>;
+    }) =>
+      fuzzyDuplicatesService({ model_id, columns, threshold, duplicate, keep_rule, deduplication_mode, row_actions }),
+    onSuccess: (_, { model_id }) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.records(model_id),
+        refetchType: 'active',
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['tables', String(model_id)],
+        refetchType: 'active',
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+    },
+  });
+};
+
 // Insert Relation Data
 export const useInsertRelationData = () => {
   const queryClient = useQueryClient();
@@ -2084,7 +2118,7 @@ export const useUpdateTableConstraint = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableId: _tableId, ...params }: TableConstraintInput & { id: string; tableId: string }) => updateTableConstraintService(params),
+    mutationFn: ({ tableId: _tableId, ...params }: UpdateTableConstraint & { id: string; tableId: string }) => updateTableConstraintService(params),
     onSuccess: (_, { tableId }) => {
       void queryClient.invalidateQueries({ queryKey: ['tables', tableId, 'constraints'] });
     },
@@ -2108,6 +2142,17 @@ export const usePrimaryKey = (tableId: string) => {
     queryFn: () => getPrimaryKeyService(tableId),
     enabled: !!tableId,
     select: (res) => res?.data,
+  });
+};
+
+// Empty / filled record counts of one field (used before turning a UUID field to auto-generated)
+export const useFieldEmptyCount = (fieldId: string, enabled = true) => {
+  return useQuery({
+    queryKey: ['fields', fieldId, 'empty-count'],
+    queryFn: () => getFieldEmptyCountService(fieldId),
+    enabled: !!fieldId && enabled,
+    select: (res) => res?.data,
+    staleTime: 0,
   });
 };
 

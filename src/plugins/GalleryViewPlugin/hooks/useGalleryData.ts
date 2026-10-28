@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
+import { getRecordLabel, getRecordTitleColumn, isLegacyTitleColumn } from '../../../utils/recordLabel';
 import { useMemo } from 'react';
 import { useTable, useUpdateView, useDeleteRecord } from '../../../hooks/useApi';
 import { TableData } from '../../../types/api.types';
@@ -71,7 +72,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
 
     // Find current view
     const currentView = viewId ? views.find((v: any) => String(v?.id) === String(viewId)) : null;
-    const viewMeta = currentView?.meta || {};
+    const viewMeta = currentView?.meta ?? {};
 
     // Process columns with GridView compatibility
     const uiColumns: BaseColumn[] = columns.map((col: any, index: number) => ({
@@ -96,7 +97,7 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     );
 
     // Get selected attachment field from view config
-    const selectedAttachmentFieldId = viewMeta?.attachment_field_id;
+    const selectedAttachmentFieldId = viewMeta.attachment_field_id;
     const attachmentField = selectedAttachmentFieldId 
       ? attachmentFields.find(f => f.id === selectedAttachmentFieldId)
       : attachmentFields[0]; // Default to first attachment field
@@ -104,22 +105,20 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
     // Process records into gallery items - create a card for each image
     const galleryItems: GalleryItem[] = [];
     
+    const titleField = getRecordTitleColumn(uiColumns);
+
     records.forEach((record: any) => {
       const rowData = record?.data || record;
       
-      // Get title from record (prefer title field, fallback to first text field)
-      const titleField = uiColumns.find(col => 
-        col.key?.toLowerCase() === 'title' || 
-        (col.type === 'text' && !col.system)
-      );
-      const title = titleField ? (rowData?.[titleField.key || ''] || record?.[titleField.key || '']) : `Record ${record?.id || ''}`;
+      // The card is named by the first text column of the table
+      const title = getRecordLabel({ id: record?.id, ...rowData }, titleField);
 
       // Get images from selected attachment field
       let allImages: any[] = [];
       
       if (attachmentField) {
         const attachmentData = rowData?.[attachmentField.key || ''] || record?.[attachmentField.key || ''];
-        if (attachmentData && Array.isArray(attachmentData) && attachmentData.length > 0) {
+        if (attachmentData?.length && Array.isArray(attachmentData)) {
           // Filter out empty objects, null values, and objects without valid URLs
           allImages = attachmentData.filter(att => 
             att && 
@@ -134,12 +133,12 @@ export function useGalleryData({ tableId, viewId }: UseGalleryDataOptions): UseG
       // Build metadata from all fields (include Title, attachment fields, JSON fields if visible, exclude system fields)
       const metadata: Record<string, any> = {};
       uiColumns.forEach(col => {
-        const isTitleField = col.key?.toLowerCase() === 'title' || col.title?.toLowerCase() === 'title';
+        const isTitleField = col.key === titleField?.key;
         const isJsonField = col.type === 'json' || col.uidt === 'json';
         const isLinksField = col.type === 'links' || col.uidt === 'links';
         const isLookupField = col.type === 'lookup' || col.uidt === 'lookup';
         
-        if (!col.system || isTitleField) {
+        if (!col.system || isTitleField || isLegacyTitleColumn(col)) {
           const value = rowData?.[col.key || ''] || record?.[col.key || ''];
           if (isTitleField || isJsonField || isLinksField || isLookupField || 
               (value !== null && value !== undefined && value !== '')) {
