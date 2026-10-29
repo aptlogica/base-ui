@@ -49,7 +49,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
   helperText,
   config = {}
 }) => {
-  const { defaultValue = '', options: configOptions = options, allowCustom: configAllowCustom = allowCustom } = config;
+  const { options: configOptions = options, allowCustom: configAllowCustom = allowCustom } = config;
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -66,7 +66,8 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
     excludeRefs: [buttonRef, clearButtonRef, selectRef, dropdownRef]
   });
 
-  const displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+  // Defaults are applied by the database to new records; a cell shows only what is stored
+  const displayValue = value ?? '';
 
   const normalizedOptions = useMemo(
     () => normalizeSelectOptions<SelectOption>(configOptions || []),

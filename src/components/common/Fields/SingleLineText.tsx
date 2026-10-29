@@ -64,12 +64,11 @@ export const SingleLineText: React.FC<SingleLineTextProps> = ({
   config = {},
 }) => {
   const {
-    defaultValue = "",
     maxLength: configMaxLength = maxLength,
     placeholder: configPlaceholder = placeholder,
   } = config;
 
-  const [localValue, setLocalValue] = useState<string>(value ?? defaultValue ?? "");
+  const [localValue, setLocalValue] = useState<string>(value ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 

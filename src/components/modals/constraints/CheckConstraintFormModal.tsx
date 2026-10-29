@@ -489,18 +489,20 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         </div>
 
         {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto">{body}</div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-t flex-shrink-0">
-          <div className="min-w-0 flex-1">
-            {error && (
-              <div className="text-sm flex items-center gap-1.5 text-red-600" role="alert">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {body}
+          {error && (
+            <div className="px-5 pb-5">
+              <div className="text-sm flex items-center gap-1 text-red-600" role="alert">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="break-words">{error}</span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t flex-shrink-0">
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
               type="button"

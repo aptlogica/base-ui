@@ -34,6 +34,9 @@ export const columnBlockReason = (column: Column): string | null => {
 export const UNIQUE_DEFAULT_CONFLICT_MESSAGE =
   'This column has a UNIQUE constraint. Its default value may be duplicated when inserting multiple rows. Remove the default value or the UNIQUE constraint to avoid duplicate-value errors.';
 
+export const CHECK_DEFAULT_CONFLICT_MESSAGE =
+  'This column has a CHECK constraint. Its default value may fail the check rule. Remove the default value or the CHECK constraint to avoid check-violation errors.';
+
 // Whether a column meta carries a default value (same rule as the server)
 export const hasDefaultValue = (meta?: Record<string, any> | null): boolean => {
   const value = meta?.defaultValue;

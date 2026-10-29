@@ -17,7 +17,8 @@ import { useToast } from '../../components/common/Toast';
 import { checkFieldUsageInViews, checkCriticalFieldUsageInViews } from '../../utils/fieldUsageUtils';
 import { renderNewColumnConfigStep } from './NewColumnModalConfigStep';
 import { buildColumnPayload, buildFieldMeta, getUniqueColumnNameByUidt, isDuplicateFieldName, getBaseFormatDefaults } from './NewColumnModal.logic';
-import { UNIQUE_DEFAULT_CONFLICT_MESSAGE, hasDefaultValue, keyHasDefaultConflict } from './constraints/constraintUtils';
+import { CHECK_DEFAULT_CONFLICT_MESSAGE, UNIQUE_DEFAULT_CONFLICT_MESSAGE, hasDefaultValue, keyHasDefaultConflict } from './constraints/constraintUtils';
+import { apiErrorMessage } from '../../utils/apiErrors';
 import { validateFormula } from '../../utils/formulaHelper';
 
 interface FieldType {
@@ -28,7 +29,7 @@ interface FieldType {
 interface NewColumnModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (col: any) => void;
+  onSave: (col: any) => void | Promise<unknown>;
   initialValues?: any;
   fields?: any[];
   isAddNewColumn?: boolean;
@@ -123,6 +124,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   // Hook for resetting field data (used when formula is cleared)
   const resetField = useResetField();
   const { data: uniqueKeys = [] } = useTableConstraints(currentTableId || '', 'unique');
+  const { data: checkConstraints = [] } = useTableConstraints(currentTableId || '', 'check');
   // Get all views for field usage validation (fallback)
   const { data: allViews = [] } = useAllViews();
 
@@ -601,6 +603,8 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
   });
 
   const [nameError, setNameError] = useState<string | null>(null);
+  // Why the last save was refused (e.g. a default that conflicts with a unique key or check constraint), shown above the buttons
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [formulaError, setFormulaError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -839,6 +843,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     setShowPercentDefault(false);
     setShowJsonDefault(false);
     setIsSaving(false);
+    setSaveError(null);
   };
 
   const initializeCreateState = () => {
@@ -1097,12 +1102,17 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
     // A default on a column of a unique key that has a default on every column repeats in each new record
     if (initialValues?.id && hasDefaultValue(meta)) {
       const columnsWithNewMeta = (fields || []).map((f: any) => (f.id === initialValues.id ? { ...f, meta } : f));
-      const conflict = uniqueKeys.some(
+      const conflictsWith = (constraints: typeof uniqueKeys) => constraints.some(
         key => key.columns.some(c => c.id === initialValues.id) &&
           keyHasDefaultConflict(key.columns.map(c => c.id), columnsWithNewMeta)
       );
-      if (conflict) {
-        toast.error(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+      if (conflictsWith(uniqueKeys)) {
+        setSaveError(UNIQUE_DEFAULT_CONFLICT_MESSAGE);
+        return;
+      }
+      // The same goes for a check constraint: the default may break its rule
+      if (conflictsWith(checkConstraints)) {
+        setSaveError(CHECK_DEFAULT_CONFLICT_MESSAGE);
         return;
       }
     }
@@ -1118,6 +1128,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       backfill: isTurningUuidToAuto ? (uuidBackfill || isPrimaryKeyField) : undefined
     });
 
+    setSaveError(null);
     setIsSaving(true);
     
     // Check if we're editing a formula field and the formula has been cleared
@@ -1142,7 +1153,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         }
       );
     } else {
-      onSave(colConfig);
+      // A save the server rejects (e.g. a default that conflicts with a unique key or check constraint) shows its message and frees the button
+      Promise.resolve(onSave(colConfig)).catch((err: unknown) => {
+        setSaveError(apiErrorMessage(err, 'The field could not be saved'));
+        setIsSaving(false);
+      });
     }
     // Don't reset state here - let the parent component close the modal
     // State will be reset when the modal closes via useEffect
@@ -1448,6 +1463,10 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
           {renderTypeSelectionStep()}
           {renderFieldConfigStep()}
         </div>
+
+        {saveError && (
+          <p role="alert" className="mt-2 px-2 text-sm text-red-500">{saveError}</p>
+        )}
 
         {/* Buttons at the bottom */}
         <div className="mt-auto pt-3 flex gap-2">

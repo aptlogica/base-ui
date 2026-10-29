@@ -540,7 +540,7 @@ describe('DateField Component', () => {
       ).toBeInTheDocument();
     });
 
-    it('should use defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       render(
         <DateField
           value=""
@@ -549,8 +549,8 @@ describe('DateField Component', () => {
         />
       );
       expect(
-        screen.getByRole('button', { name: /2024-01-01/ })
-      ).toBeInTheDocument();
+        screen.queryByRole('button', { name: /2024-01-01/ })
+      ).not.toBeInTheDocument();
     });
   });
 

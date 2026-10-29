@@ -611,7 +611,7 @@ describe('URL Component', () => {
       expect(screen.getByText('new.com')).toBeInTheDocument();
     });
 
-    it('should use defaultValue when value is empty', () => {
+    it('should not show defaultValue when value is empty', () => {
       render(
         <URL
           value=""
@@ -620,7 +620,7 @@ describe('URL Component', () => {
         />
       );
 
-      expect(screen.getByText('default.com')).toBeInTheDocument();
+      expect(screen.queryByText('default.com')).not.toBeInTheDocument();
     });
 
     it('should prioritize value over defaultValue', () => {
@@ -636,7 +636,7 @@ describe('URL Component', () => {
       expect(screen.queryByText('default.com')).not.toBeInTheDocument();
     });
 
-    it('should update when defaultValue changes', () => {
+    it('should not show defaultValue even when it changes', () => {
       const { rerender } = render(
         <URL
           value=""
@@ -645,7 +645,7 @@ describe('URL Component', () => {
         />
       );
 
-      expect(screen.getByText('first.com')).toBeInTheDocument();
+      expect(screen.queryByText('first.com')).not.toBeInTheDocument();
 
       rerender(
         <URL
@@ -655,7 +655,7 @@ describe('URL Component', () => {
         />
       );
 
-      expect(screen.getByText('second.com')).toBeInTheDocument();
+      expect(screen.queryByText('second.com')).not.toBeInTheDocument();
     });
   });
 

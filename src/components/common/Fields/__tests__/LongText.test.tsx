@@ -339,12 +339,12 @@ describe('LongText Component', () => {
       expect(getEditor().innerHTML).toBe('Line 1<br>Line 2 a &lt; b &amp; c');
     });
 
-    it('should show the default value when the value is empty', () => {
+    it('should not show the default value when the value is empty', () => {
       render(
         <LongText value="" onChange={mockOnChange} inline config={{ richText: true, defaultValue: '<b>Default</b>' }} />
       );
 
-      expect(getEditor().innerHTML).toBe('<b>Default</b>');
+      expect(getEditor().innerHTML).toBe('');
     });
 
     it('should emit sanitized changes as the user types', () => {
@@ -413,10 +413,10 @@ describe('LongText Component', () => {
       expect(mockOnChange).toHaveBeenCalledWith('<b>Hi</b>');
     });
 
-    it('should show the default value when the value is empty', () => {
+    it('should not show the default value when the value is empty', () => {
       const { container } = render(<LongText value="" onChange={mockOnChange} inline config={{ defaultValue: 'Default' }} />);
 
-      expect(container.querySelector('textarea')).toHaveValue('Default');
+      expect(container.querySelector('textarea')).toHaveValue('');
     });
 
     it('should show the required error on blur when empty', () => {
@@ -674,7 +674,7 @@ describe('LongText Component', () => {
   });
 
   describe('Configuration Props', () => {
-    it('should use defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       render(
         <LongText
           value=""
@@ -683,8 +683,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = screen.getByDisplayValue('Default content');
-      expect(input).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Default content')).not.toBeInTheDocument();
     });
 
     it('should ignore config maxLength and keep textarea unrestricted', async () => {
@@ -1966,7 +1965,7 @@ describe('LongText Component', () => {
       expect(input).toBeInTheDocument();
     });
 
-    it('should handle defaultValue when value is empty', () => {
+    it('should not show defaultValue when value is empty', () => {
       render(
         <LongText
           value=""
@@ -1975,8 +1974,7 @@ describe('LongText Component', () => {
         />
       );
 
-      const input = screen.getByDisplayValue('Default');
-      expect(input).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Default')).not.toBeInTheDocument();
     });
   });
 });

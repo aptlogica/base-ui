@@ -172,13 +172,10 @@ export const Duration: React.FC<DurationProps> = ({
   readOnly = false,
   helperText,
 }) => {
-  const { durationFormat = "h:mm", defaultValue } = config;
+  const { durationFormat = "h:mm" } = config;
 
   const getInitialValue = () => {
-    // If value is explicitly null/undefined, check for default
-    if (value === null || value === undefined) {
-      return defaultValue ? parseDuration(defaultValue, durationFormat) : null;
-    }
+    if (value === null || value === undefined) return null;
     // If value is a number, use it directly
     if (typeof value === 'number') return value;
     return null;

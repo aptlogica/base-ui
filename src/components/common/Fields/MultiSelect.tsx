@@ -49,7 +49,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   helperText,
   config = {}
 }) => {
-  const { defaultValue = [], options: configOptions = options, maxSelections: configMaxSelections = maxSelections } = config;
+  const { options: configOptions = options, maxSelections: configMaxSelections = maxSelections } = config;
   const normalizedOptions = useMemo(
     () => normalizeSelectOptions<SelectOption>(configOptions || []),
     [configOptions]
@@ -63,13 +63,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
   // Note: We allow dropdown to open in read-only mode, but prevent selections
 
-  // Use default value if value is empty/undefined/null and default value is provided
-  let resolvedValue: string[] = [];
-  if (value !== null && value !== undefined && Array.isArray(value) && value.length > 0) {
-    resolvedValue = value;
-  } else if (Array.isArray(defaultValue) && defaultValue.length > 0) {
-    resolvedValue = defaultValue;
-  }
+  // Defaults are applied by the database to new records; a cell shows only what is stored
+  const resolvedValue: string[] = Array.isArray(value) ? value : [];
   const [localValue, setLocalValue] = useState<string[]>(resolvedValue);
   const [isDirty, setIsDirty] = useState(false);
   const pendingCommitRef = useRef<string[] | null>(null);
@@ -101,7 +96,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     if (!isDirty && !pendingCommit && !areValuesEqual(localValue, resolvedValue)) {
       setLocalValue(resolvedValue);
     }
-  }, [value, defaultValue, isDirty, localValue, resolvedValue]);
+  }, [value, isDirty, localValue, resolvedValue]);
 
   useClickOutside({
     isOpen,

@@ -257,8 +257,8 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
 };
 
 // Helper functions outside component to reduce complexity
-const getDisplayValue = (val: any, defaultVal: any): any => {
-  return (val !== null && val !== undefined && val !== '') ? val : (defaultVal || '');
+const getDisplayValue = (val: any): any => {
+  return (val !== null && val !== undefined && val !== '') ? val : '';
 };
 
 const formatJsonString = (displayVal: any, usePrettyPrint: boolean): string => {
@@ -287,7 +287,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
 }) => {
   // Always use pretty print (no longer configurable)
   const prettyPrint = true;
-  const { defaultValue = null, hideMaximizeButton = false } = config;
+  const { hideMaximizeButton = false } = config;
 
   const [localValue, setLocalValue] = useState('');
   const [modalValue, setModalValue] = useState('');
@@ -300,7 +300,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   // Parse JSON value into object for tree view
   const parseJsonValue = useCallback((val: any) => {
     if (val === null || val === undefined || val === '') {
-      return defaultValue || null;
+      return null;
     }
     if (typeof val === 'object') {
       return val;
@@ -313,13 +313,13 @@ export const JSONField: React.FC<JSONFieldProps> = ({
       }
     }
     return null;
-  }, [defaultValue]);
+  }, []);
 
   useEffect(() => {
-    const displayValue = getDisplayValue(value, defaultValue);
+    const displayValue = getDisplayValue(value);
     const jsonString = formatJsonString(displayValue, prettyPrint);
     setLocalValue(jsonString);
-  }, [value, defaultValue, prettyPrint]);
+  }, [value, prettyPrint]);
 
   const initializeExpandedPaths = (parsed: any): void => {
     if (parsed && (typeof parsed === 'object' || Array.isArray(parsed))) {
@@ -330,7 +330,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
   useEffect(() => {
     if (!isModalOpen) return;
 
-    const displayValue = getDisplayValue(value, defaultValue);
+    const displayValue = getDisplayValue(value);
     const parsed = parseJsonValue(displayValue);
     
     setJsonData(parsed);
@@ -340,7 +340,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
     setModalValue(jsonString);
     setError(null);
     setViewMode('tree'); // Always start with tree view
-  }, [isModalOpen, value, defaultValue, prettyPrint, parseJsonValue, readOnly]);
+  }, [isModalOpen, value, prettyPrint, parseJsonValue, readOnly]);
 
   const handleModalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;

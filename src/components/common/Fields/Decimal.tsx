@@ -44,7 +44,6 @@ export const Decimal: React.FC<DecimalProps> = ({
   config = {},
 }) => {
   const {
-    defaultValue = null,
     precision = decimals,
     showThousands: configShowThousands = showThousands,
   } = config;
@@ -102,18 +101,9 @@ export const Decimal: React.FC<DecimalProps> = ({
     }
     
     if (!isEditing) {
-      // Handle value display: use value if it exists, otherwise use defaultValue
-      let displayValue: number | null = value;
-      // Only use defaultValue if value is explicitly null/undefined (not 0)
-      if ((value === null || value === undefined) && defaultValue != null) {
-        displayValue =
-          typeof defaultValue === "string"
-            ? Number.parseFloat(defaultValue) || null
-            : Number(defaultValue);
-      }
-      setLocalValue(formatValue(displayValue));
+      setLocalValue(formatValue(value));
     }
-  }, [value, defaultValue, formatValue, isEditing]);
+  }, [value, formatValue, isEditing]);
 
   // Exit edit mode if readOnly becomes true
   useEffect(() => {

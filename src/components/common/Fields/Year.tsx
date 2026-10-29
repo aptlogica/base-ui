@@ -38,16 +38,6 @@ const getInitialYear = (defaultValue: number | string | null | undefined, curren
   return currentYear;
 };
 
-const getDefaultYearValue = (defaultValue: number | string | null | undefined): number | string => {
-  if (typeof defaultValue === "number") {
-    return defaultValue;
-  }
-  if (typeof defaultValue === "string") {
-    return Number.parseInt(defaultValue) || "";
-  }
-  return "";
-};
-
 export const Year: React.FC<YearProps> = ({
   label,
   value,
@@ -190,9 +180,7 @@ export const Year: React.FC<YearProps> = ({
     (y) => y >= 1000 && y <= 9999
   );
 
-  const defaultYearValue = getDefaultYearValue(defaultValue);
-
-  const displayValue = value ?? defaultYearValue;
+  const displayValue = value ?? "";
 
   return (
     <div className={`w-full relative rounded ${isBorder ? "field-component-border" : ""} ${className}`} ref={containerRef}>

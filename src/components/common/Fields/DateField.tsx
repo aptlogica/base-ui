@@ -231,7 +231,7 @@ export const DateField: React.FC<DateProps> = ({
   helperText,
   config = {}
 }) => {
-  const { defaultValue = '', dateFormat = format, min: configMin = min, max: configMax = max, hideTodayButton = false } = config;
+  const { dateFormat = format, min: configMin = min, max: configMax = max, hideTodayButton = false } = config;
   const [date, setDate] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -267,8 +267,8 @@ export const DateField: React.FC<DateProps> = ({
     dateRef.current = date;
   }, [date]);
 
-  const getDisplayValue = (val: string | null | undefined, defaultVal: string): string => {
-    return (val !== null && val !== undefined && val !== '') ? val : (defaultVal || '');
+  const getDisplayValue = (val: string | null | undefined): string => {
+    return (val !== null && val !== undefined && val !== '') ? val : '';
   };
 
   const handleNonEmptyValue = (
@@ -318,14 +318,14 @@ export const DateField: React.FC<DateProps> = ({
     prevValueRef.current = value;
     prevDateFormatRef.current = dateFormat;
 
-    const displayValue = getDisplayValue(value, defaultValue);
+    const displayValue = getDisplayValue(value);
 
     if (displayValue?.trim()) {
       handleNonEmptyValue(displayValue, value, dateFormat, setDate, setCalendarMonth, onChange);
     } else {
       handleEmptyValue(displayValue, value, setDate, onChange);
     }
-  }, [value, dateFormat, format, onChange, defaultValue]);
+  }, [value, dateFormat, format, onChange]);
 
   // Update position when dropdown opens
   useEffect(() => {
