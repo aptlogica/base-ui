@@ -1143,7 +1143,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         { column_id: initialValues.id, model_id: currentTableId },
         {
           onSuccess: () => {
-            onSave(colConfig);
+            void onSave(colConfig);
           },
           onError: (err: any) => {
             console.error('Failed to reset formula field:', err);
