@@ -744,7 +744,7 @@ describe('JSONField Component', () => {
       expect(chevrons.length).toBeGreaterThan(0);
     });
 
-    it('should handle defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       const defaultVal = { default: 'value' };
       render(
         <JSONField
@@ -754,7 +754,7 @@ describe('JSONField Component', () => {
         />
       );
       
-      expect(screen.getByText(/default/)).toBeInTheDocument();
+      expect(screen.queryByText(/default/)).not.toBeInTheDocument();
     });
 
     it('should display preview with truncation for long JSON', () => {

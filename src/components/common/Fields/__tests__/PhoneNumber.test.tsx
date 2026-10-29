@@ -180,9 +180,9 @@ describe('PhoneNumber Component', () => {
   });
 
   describe('Config Props', () => {
-    it('uses defaultValue from config', () => {
+    it('does not show defaultValue from config for an empty cell', () => {
       renderPhone({ config: { defaultValue: '1112223333' } });
-      expect(screen.getByText('(111) 222-3333')).toBeInTheDocument();
+      expect(screen.queryByText('(111) 222-3333')).not.toBeInTheDocument();
     });
 
     it('uses placeholder from config', () => {

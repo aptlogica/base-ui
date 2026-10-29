@@ -27,9 +27,8 @@ interface CurrencyProps {
   helperText?: string;
 }
 
-const getInitialValue = (value: number | null, defaultValue: string): string => {
+const getInitialValue = (value: number | null): string => {
   if (value !== null && value !== undefined) return value.toString();
-  if (defaultValue && String(defaultValue).trim()) return String(defaultValue);
   return "";
 };
 
@@ -42,12 +41,11 @@ const validateValue = (val: string, required: boolean): string | null => {
 
 const useCurrencyState = (
   value: number | null,
-  defaultValue: string,
   onChange: (value: number | null) => void,
   required: boolean,
   readOnly: boolean
 ) => {
-  const initialValue = getInitialValue(value, defaultValue);
+  const initialValue = getInitialValue(value);
   const [localValue, setLocalValue] = useState(initialValue);
   const [committedValue, setCommittedValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
@@ -55,10 +53,10 @@ const useCurrencyState = (
   useEffect(() => {
     const displayValue = value !== null && value !== undefined
       ? value.toString()
-      : defaultValue || "";
+      : "";
     setLocalValue(displayValue);
     setCommittedValue(displayValue);
-  }, [value, defaultValue]);
+  }, [value]);
 
   useEffect(() => {
     if (readOnly && isEditing) {
@@ -188,7 +186,7 @@ export const Currency: React.FC<CurrencyProps> = ({
   readOnly = false,
   helperText,
 }) => {
-  const { currencyType = "USD", currencyLocale = "en-US", precision = 2, defaultValue = "" } = config;
+  const { currencyType = "USD", currencyLocale = "en-US", precision = 2 } = config;
 
   const {
     localValue,
@@ -197,7 +195,7 @@ export const Currency: React.FC<CurrencyProps> = ({
     setIsEditing,
     handleBlur,
     cancelEdit,
-  } = useCurrencyState(value, defaultValue, onChange, required, readOnly);
+  } = useCurrencyState(value, onChange, required, readOnly);
 
   const canEdit = !readOnly && !disabled;
   const handleSingleClick = () => canEdit && allowEdit && setIsEditing(true);

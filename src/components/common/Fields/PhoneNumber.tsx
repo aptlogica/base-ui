@@ -46,13 +46,12 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
 }) => {
   const {
     phoneValid = true,
-    defaultValue = "",
     formatDisplay = true,
     placeholder: configPlaceholder = placeholder,
   } = config;
 
   const toast = useOptionalToast();
-  const [localValue, setLocalValue] = useState<string>(value ?? defaultValue ?? "");
+  const [localValue, setLocalValue] = useState<string>(value ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 

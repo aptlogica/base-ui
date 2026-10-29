@@ -125,19 +125,19 @@ export const URL: React.FC<URLProps> = ({
   helperText,
   config = {}
 }) => {
-  const { urlValid = false, defaultValue = '', openInNewTab = true } = config;
+  const { urlValid = false, openInNewTab = true } = config;
 
-  const [localValue, setLocalValue] = useState(value || defaultValue || '');
+  const [localValue, setLocalValue] = useState(value || '');
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   // store previous value to prevent duplicate onChange
-  const prevValueRef = useRef<string>(value || defaultValue || '');
+  const prevValueRef = useRef<string>(value || '');
 
   useEffect(() => {
-    const displayValue = value || defaultValue || '';
+    const displayValue = value || '';
     setLocalValue(displayValue);
-  }, [value, defaultValue]);
+  }, [value]);
 
   // Exit edit mode if readOnly becomes true
   useEffect(() => {

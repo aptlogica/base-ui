@@ -239,8 +239,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
     timeFormat = 'HH:mm',
     hourFormat = '24',
     displayTimeZone = false,
-    sameTimezone = false,
-    defaultValue = ''
+    sameTimezone = false
   } = config;
 
   // Split value into date and time
@@ -277,13 +276,13 @@ export const DateTime: React.FC<DateTimeProps> = ({
   // to ensure they match the timezone-converted values. This useEffect is kept
   // for initial setup but the main sync happens in the display effect.
   useEffect(() => {
-    const currentValue = value || defaultValue;
+    const currentValue = value;
     if (!currentValue) {
       setDate('');
       setTime('');
     }
     // Don't set date/time here - let the display effect handle it with timezone conversion
-  }, [value, defaultValue]);
+  }, [value]);
 
   // Calculate date dropdown position for portal rendering
   const calculateDateDropdownPosition = useCallback(() => {

@@ -162,7 +162,7 @@ describe('Decimal Component', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       const { container } = render(
         <Decimal
           value={null}
@@ -170,7 +170,7 @@ describe('Decimal Component', () => {
           config={{ defaultValue: 2.5 }}
         />
       );
-      expect(container.textContent).toContain('2.50');
+      expect(container.textContent).not.toContain('2.50');
     });
 
     it('should support thousands formatting', () => {
