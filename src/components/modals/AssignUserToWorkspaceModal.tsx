@@ -133,9 +133,9 @@ const BaseRoleManagement: React.FC<{
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-y-3">
       <h3 className="text-sm font-semibold text-gray-700">Bases</h3>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-y-2">
         {userBases.map((base: any) => {
           const baseId = base.base_id;
           const baseName = base.base_name || 'Unnamed Base';
@@ -143,7 +143,7 @@ const BaseRoleManagement: React.FC<{
           return (
             <div key={baseId} className="flex items-center gap-4 justify-between p-3 bg-gray-50 rounded-lg">
               {/* Base Info */}
-              <div className="flex items-center gap-3 flex-shrink-0 flex-1 min-w-0">
+              <div className="flex items-center gap-3 shrink-0 flex-1 min-w-0">
                 <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center text-white font-semibold text-xs">
                   {baseName.charAt(0).toUpperCase()}
                 </div>
@@ -171,7 +171,7 @@ const BaseRoleManagement: React.FC<{
                   type="button"
                   onClick={onRemoveAccess(baseId, baseName)}
                   disabled={isPending}
-                  className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   title="Remove base access"
                 >
                   {isPending ? (
@@ -205,7 +205,7 @@ const WorkspaceRoleManagement: React.FC<{
   return (
     <div className="flex items-center gap-4 justify-between">
       {/* Workspace Info with Icon */}
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         <div className="w-10 h-10 bg-purple-400 rounded-lg flex items-center justify-center text-white font-semibold">
           {workspaceInitials}
         </div>
@@ -234,7 +234,7 @@ const WorkspaceRoleManagement: React.FC<{
           type="button"
           onClick={onRemoveAccess}
           disabled={isPending}
-          className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           title="Remove workspace access"
         >
           {isPending ? (
@@ -317,7 +317,7 @@ const EditModeUI: React.FC<{
   );
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-y-4">
       {roleManagement}
     </div>
   );
@@ -830,7 +830,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           {base.title || base.name || 'Untitled Base'}
         </span>
         {selectedBases.includes(base.id) && (
-          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
         )}
       </label>
     ));
@@ -908,7 +908,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       {showBasesList && (
         <div>
           <div className="block text-sm font-medium text-gray-700 mb-2">Bases</div>
-          <div className="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
+          <div className="flex flex-col gap-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
             {renderBasesListContent()}
           </div>
         </div>
@@ -929,7 +929,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
     }
 
     return (
-      <div className="space-y-6">
+      <div className="flex flex-col gap-y-6">
         {editMode ? renderEditModeSection() : renderAddModeSections()}
       </div>
     );
@@ -952,7 +952,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-6 flex-shrink-0">
+          <div className="flex items-center justify-between mb-6 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center">
                 <UserPlus className="w-4 h-4" />
@@ -971,7 +971,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
               className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
               aria-label="Close"
             >
-              <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+              <X className="text-(--text-color-tertiary) h-5 w-5" />
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center">
@@ -992,14 +992,14 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
       onKeyDown={handleKeyDown}
     >
       <div //NOSONAR
-        className="bg-modal !max-w-5xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
+        className="bg-modal max-w-5xl! p-0! flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleModalKeyDown}
       >
         {/* Fixed Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
               {mainHeaderIcon}
             </div>
             <div>
@@ -1028,7 +1028,7 @@ export const AssignUserToWorkspaceModal: React.FC<AssignUserToWorkspaceModalProp
         </div>
 
         {/* Fixed Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

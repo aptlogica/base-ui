@@ -79,7 +79,7 @@ const MonthView: React.FC<MonthViewProps> = ({
   return (
     <div className="flex flex-col h-full overflow-hidden bg-card">
       {/* Week day headers */}
-      <div className="grid grid-cols-7 border-b border-gray-200 flex-shrink-0">
+      <div className="grid grid-cols-7 border-b border-gray-200 shrink-0">
         {weekDays.map((day, index) => {
           const isWeekendHeader = index >= 5; // Saturday (index 5) and Sunday (index 6)
           return (
@@ -117,7 +117,7 @@ const MonthView: React.FC<MonthViewProps> = ({
 
           if (isCurrentMonthDay) {
             dateTextClass = isTodayDate
-              ? 'p-1 h-8 w-8 rounded-full bg-[var(--color-bg-brand-primary)] text-black'
+              ? 'p-1 h-8 w-8 rounded-full bg-(--color-bg-brand-primary) text-black'
               : 'text-gray-900';
           }
 
@@ -164,7 +164,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                     {/* Show "+n more" dropdown on the right if there are additional events */}
                     {dayEvents.length > 1 && (
                       <div //NOSONAR
-                        className="flex-shrink-0" onClick={(e) => e.stopPropagation()}
+                        className="shrink-0" onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();   // prevent page scroll on Space

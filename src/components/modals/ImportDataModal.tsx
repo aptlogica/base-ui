@@ -112,13 +112,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
             onClick={onClose}
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
         {/* Options List */}
-        <div className="space-y-1 border rounded-xl">
-          {IMPORT_OPTIONS.map((option) => {
+        <div className="flex flex-col gap-y-1 border rounded-xl">
+          {/* Built-in formats first, then optional integrations */}
+          {[...IMPORT_OPTIONS, ...OPTIONAL_IMPORT_OPTIONS].map((option) => {
             const isDisabled = isOptionDisabled(option.id);
             return (
               <button
@@ -126,14 +127,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                 onClick={() => handleOptionClick(option.id)}
                 disabled={isDisabled}
                 className={`w-full flex items-center gap-3 p-3 border-b last:border-b-0 transition-colors text-left group ${
-                  isDisabled 
-                    ? 'opacity-50 cursor-not-allowed' 
+                  isDisabled
+                    ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-gray-50 cursor-pointer'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-xl ${option.bgColor} border flex items-center justify-center p-2`}>
-                  <img 
-                    src={option.iconPath} 
+                  <img
+                    src={option.iconPath}
                     alt={option.label}
                     className="w-full h-full object-contain"
                   />
@@ -149,53 +150,11 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                   )}
                 </div>
                 {!isDisabled && (
-                  <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
+                  <ChevronRight className="h-5 w-5 text-(--text-color-tertiary) group-hover:text-primary" />
                 )}
               </button>
             );
           })}
-
-          {/* Optional Integrations */}
-          {OPTIONAL_IMPORT_OPTIONS.length > 0 && (
-            <>
-              {OPTIONAL_IMPORT_OPTIONS.map((option) => {
-                const isDisabled = isOptionDisabled(option.id);
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => handleOptionClick(option.id)}
-                    disabled={isDisabled}
-                    className={`w-full border-b last:border-b-0 flex items-center gap-3 p-3 transition-colors text-left group ${
-                      isDisabled 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : 'hover:bg-gray-50 cursor-pointer'
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-xl ${option.bgColor} border flex items-center justify-center p-2`}>
-                      <img 
-                        src={option.iconPath} 
-                        alt={option.label}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-primary">{option.label}</div>
-                      {isDisabled ? (
-                        <div className="text-sm text-secondary">Coming soon</div>
-                      ) : (
-                        option.description && (
-                          <div className="text-sm text-secondary">{option.description}</div>
-                        )
-                      )}
-                    </div>
-                    {!isDisabled && (
-                      <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
-                    )}
-                  </button>
-                );
-              })}
-            </>
-          )}
         </div>
       </div>
     </div>

@@ -51,9 +51,9 @@ const AdministratorSettingsButton: React.FC = () => {
     <>
       <button
         onClick={handleClick}
-        className={`relative p-2 rounded-xl transition-colors focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-2 ${isActive
+        className={`relative p-2 rounded-xl transition-colors focus:outline-none focus:ring-1 focus:ring-(--ring-color-primary) focus:ring-offset-2 ${isActive
           ? 'bg-green-200 text-black'
-          : 'bg-card icons-bg hover:bg-[var(--color-gray-100)] hover:text-black'
+          : 'bg-card icons-bg hover:bg-(--color-gray-100) hover:text-black'
           }`}
         title="Owner Settings"
         aria-label="Owner Settings"

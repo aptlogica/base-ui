@@ -78,7 +78,7 @@ describe('ContextMenu', () => {
     it('should position menu at specified coordinates', () => {
       render(<ContextMenu {...defaultProps} />);
       
-      const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+      const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
       expect(menu).toHaveStyle({
         position: 'fixed',
         top: '150px',
@@ -96,7 +96,7 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...propsNearRightEdge} />);
 
       await waitFor(() => {
-        const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+        const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
         expect(menu).toBeInTheDocument();
       });
     });
@@ -111,7 +111,7 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...propsNearBottomEdge} />);
 
       await waitFor(() => {
-        const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+        const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
         expect(menu).toBeInTheDocument();
       });
     });
@@ -126,7 +126,7 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...propsAtEdges} />);
 
       await waitFor(() => {
-        const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+        const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
         expect(menu).toBeInTheDocument();
       });
     });
@@ -141,7 +141,7 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...propsWithSpaceAbove} />);
 
       await waitFor(() => {
-        const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+        const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
         expect(menu).toBeInTheDocument();
       });
     });
@@ -183,7 +183,7 @@ describe('ContextMenu', () => {
     it('should not close menu on inside click', () => {
       render(<ContextMenu {...defaultProps} />);
 
-      const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+      const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
       fireEvent.mouseDown(menu!);
 
       expect(mockOnClose).not.toHaveBeenCalled();
@@ -247,7 +247,7 @@ describe('ContextMenu', () => {
     it('should have correct base styling', () => {
       render(<ContextMenu {...defaultProps} />);
 
-      const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+      const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
       expect(menu).toHaveStyle({
         position: 'fixed',
         'min-width': '180px',
@@ -321,7 +321,7 @@ describe('ContextMenu', () => {
       render(<ContextMenu {...defaultProps} />);
 
       await waitFor(() => {
-        const menu = document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in');
+        const menu = document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in');
         expect(menu).toBeInTheDocument();
       });
 
@@ -346,7 +346,7 @@ describe('ContextMenu', () => {
       rerender(<ContextMenu {...defaultProps} x={400} y={450} />);
 
       await waitFor(() => {
-        expect(document.querySelector('.select-none.border.p-2.space-y-1.animate-fade-in')).toBeInTheDocument();
+        expect(document.querySelector('.select-none.border.p-2.gap-y-1.animate-fade-in')).toBeInTheDocument();
       });
     });
 

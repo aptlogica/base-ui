@@ -120,7 +120,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       role="dialog"
       aria-modal="true"
       tabIndex={-1}
@@ -132,13 +132,13 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
         onClick={onClose}
       />
       <div // NOSONAR
-        className="bg-modal !max-w-3xl !p-0 flex flex-col relative overflow-hidden"
+        className="bg-modal max-w-3xl! p-0! flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 icon-primary rounded-xl flex items-center justify-center shrink-0">
               <Table2 size={20} className="icon-primary" />
             </div>
             <div className="min-w-0">
@@ -148,16 +148,16 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
         {/* Scrollable Content Area */}
         <form id="create-table-form" onSubmit={(e) => { void handleSubmit(e); }} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-4 space-y-4">
-            <div className="space-y-1">
+          <div className="flex flex-col p-4 gap-y-4">
+            <div className="flex flex-col gap-y-1">
               <label htmlFor="tableName" className="block text-sm font-medium text-primary mb-1">
                 Table Name <span className="field-component-required">*</span>
               </label>
@@ -185,7 +185,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                       } cursor-help`} />
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                       <h4 className="mb-2 text-primary">Table name requirements:</h4>
-                      <ul className="space-y-1">
+                      <ul className="flex flex-col gap-y-1">
                         <li className={`flex items-center ${name.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                           • Minimum 3 characters
                         </li>
@@ -216,7 +216,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
         </form>
 
         {/* Footer - Fixed at Bottom */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

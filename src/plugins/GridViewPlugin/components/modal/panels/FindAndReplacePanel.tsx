@@ -55,7 +55,7 @@ export const FindAndReplacePanel: React.FC<FindAndReplacePanelProps> = ({
   onMatchingCaseChange,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+    <div className="flex flex-col flex-1 overflow-y-auto px-5 py-4 gap-y-6">
       <ColumnSelectionSection
         columns={columns}
         selectedColumnIds={selectedColumnIds}
@@ -65,7 +65,7 @@ export const FindAndReplacePanel: React.FC<FindAndReplacePanelProps> = ({
         description="Choose the columns to normalize."
       />
 
-      <section className="space-y-7">
+      <section className="flex flex-col gap-y-7">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Find value</h3>
           <p className="mb-2 text-sm text-secondary">
@@ -103,7 +103,7 @@ export const FindAndReplacePanel: React.FC<FindAndReplacePanelProps> = ({
           </p>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-card">
+        <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
           {MATCHING_CASES.map((option, index) => (
             <label
               aria-label={option.label}

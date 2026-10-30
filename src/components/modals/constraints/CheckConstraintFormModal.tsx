@@ -32,9 +32,9 @@ interface CheckConstraintFormModalProps {
 const MAX_NAME_LENGTH = 50;
 const FIELD_LABELS = ['Field', 'Field 2'];
 const CATEGORY_ICONS: Record<string, React.ElementType> = { field: ListFilter, compare: ArrowLeftRight, custom: Code2 };
-const labelClass = 'field-component-label !text-primary';
+const labelClass = 'field-component-label text-primary!';
 // Same look as the query box of the trigger popup (MultiLineText)
-const textareaClass = 'w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] font-mono !text-xs leading-relaxed resize-none overflow-y-auto whitespace-pre-wrap break-words transition-all duration-200 outline-none field-component-border field-component-focus border';
+const textareaClass = 'w-full text-(--color-text-primary) p-3 rounded-lg font-mono text-xs! leading-relaxed resize-none overflow-y-auto whitespace-pre-wrap wrap-break-word transition-all duration-200 outline-none field-component-border field-component-focus border';
 
 
 // Popup to add or edit a check constraint: name and category, then one filter-like row: the field(s),
@@ -149,8 +149,8 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   const applyLabel = item ? 'Apply changes' : 'Apply';
   const actionWord = item ? 'Edit' : 'Add';
   const copyLabel = copied ? 'Copied' : 'Copy';
-  const nameLabelClass = nameError ? '!text-red-600' : '!text-primary';
-  const nameInputClass = nameError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border';
+  const nameLabelClass = nameError ? 'text-red-600!' : 'text-primary!';
+  const nameInputClass = nameError ? 'border-red-500! focus:border-red-500! bg-red-50' : 'field-component-border';
   const canApply = (isCustom ? statement.trim() !== '' : built.complete) && !isBusy;
 
   // The name follows the first field and the condition, until it is typed in
@@ -272,7 +272,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   );
 
   const fieldDropdowns = FIELD_LABELS.slice(0, selected.fields).map((label, index) => (
-    <div key={label} className="space-y-1 min-w-0">
+    <div key={label} className="flex flex-col gap-y-1 min-w-0">
       <p className={labelClass}>{label}</p>
       <AdvancedDropdown
         id={`check-field-${index}`}
@@ -289,7 +289,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
 
   // Common conditions in a dropdown; the value inputs next to it are the ones the chosen one needs
   const exampleDropdown = (
-    <div className="space-y-1 min-w-0">
+    <div className="flex flex-col gap-y-1 min-w-0">
       <p className={labelClass}>Common conditions</p>
       <AdvancedDropdown
         id="check-example"
@@ -316,7 +316,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         placeholder={spec.placeholder}
         aria-invalid={invalid}
         onChange={e => changeValue(index, e.target.value)}
-        className={`field-component field-component-border field-component-focus border min-w-0 ${invalid ? '!border-red-500' : ''}`}
+        className={`field-component field-component-border field-component-focus border min-w-0 ${invalid ? 'border-red-500!' : ''}`}
       />
     );
   };
@@ -324,7 +324,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   // Third cell of the row, always there so the row keeps one structure: the value(s) of the chosen
   // condition, or the second field when comparing two fields
   const thirdCell = selected.fields === 2 ? fieldDropdowns[1] : (
-    <div className="space-y-1 min-w-0">
+    <div className="flex flex-col gap-y-1 min-w-0">
       <p className={labelClass}>Value</p>
       {specs.length === 0 && (
         <input
@@ -346,10 +346,10 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
   );
 
   const body = (
-    <div className="p-5 space-y-5">
+    <div className="flex flex-col p-5 gap-y-5">
       {/* Name and category side by side */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1 min-w-0">
+        <div className="flex flex-col gap-y-1 min-w-0">
           <label htmlFor="check-name" className={`field-component-label ${nameLabelClass}`}>
             Name <span className="field-component-required">*</span>
           </label>
@@ -374,7 +374,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
           <p className="text-xs text-gray-500">{name.length}/{MAX_NAME_LENGTH} characters</p>
         </div>
 
-        <div className="space-y-1 min-w-0">
+        <div className="flex flex-col gap-y-1 min-w-0">
           <p className={labelClass}>Category</p>
           {categoryDropdown}
           <p className="text-xs text-gray-500">{selected.description}</p>
@@ -382,7 +382,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
       </div>
 
       {isCustom ? (
-        <div className="space-y-1">
+        <div className="flex flex-col gap-y-1">
           <div className="flex items-end justify-between gap-3">
             <label htmlFor="check-statement" className={labelClass}>
               SQL <span className="field-component-required">*</span>
@@ -431,7 +431,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
           {selected.note && <p className="text-xs text-amber-700 -mt-3">{selected.note}</p>}
           <p className="text-xs text-gray-500">A record is rejected only when the condition is false; empty (NULL) values pass.</p>
 
-          <div className="space-y-1">
+          <div className="flex flex-col gap-y-1">
             <div className="flex items-center justify-between">
               <p className={labelClass}>SQL preview</p>
               <button type="button" onClick={copySql} className="h-6 px-2 rounded-lg hover:bg-gray-100 flex items-center gap-1 text-xs text-gray-600">
@@ -439,7 +439,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
                 {copyLabel}
               </button>
             </div>
-            <pre aria-label="SQL preview" className="p-3 rounded-[var(--radius-lg)] bg-gray-50 border text-xs leading-relaxed font-mono text-gray-800 whitespace-pre-wrap break-all">{shownSql}</pre>
+            <pre aria-label="SQL preview" className="p-3 rounded-lg bg-gray-50 border text-xs leading-relaxed font-mono text-gray-800 whitespace-pre-wrap break-all">{shownSql}</pre>
             <p className="text-xs text-gray-500">Field titles are shown here. The real column names are used when you apply, and Copy copies them.</p>
           </div>
         </>
@@ -449,7 +449,7 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       // Escape closes this popup without closing the settings popup
       onKeyDown={e => {
         if (e.key === 'Escape') {
@@ -463,12 +463,12 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
         open
         aria-modal="true"
         aria-labelledby="check-constraint-form-title"
-        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-3xl h-[720px] !max-h-[90vh] text-inherit"
+        className="bg-modal p-0! flex flex-col relative overflow-hidden max-w-3xl! h-[720px] max-h-[90vh]! text-inherit"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
               <ShieldCheck className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -481,10 +481,10 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
@@ -494,16 +494,16 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
           {error && (
             <div className="px-5 pb-5">
               <div className="text-sm flex items-center gap-1 text-red-600" role="alert">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="break-words">{error}</span>
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="wrap-break-word">{error}</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t flex-shrink-0">
-          <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}

@@ -137,7 +137,7 @@ export const GanttFieldConfiguration: React.FC<GanttFieldConfigurationProps> = (
       title="Configure Gantt Fields"
       className={className}
     >
-      <div className="space-y-4">
+      <div className="flex flex-col gap-y-4">
             {/* Start Date Field */}
             <div>
               <AdvancedDropdown

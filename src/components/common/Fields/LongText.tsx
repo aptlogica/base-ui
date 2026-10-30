@@ -840,7 +840,7 @@ export const LongText: React.FC<LongTextProps> = ({
     return {
       'aria-pressed': isActive,
       className: `p-1.5 rounded transition-colors ${isActive
-        ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-700)] hover:bg-[var(--color-brand-200)]'
+        ? 'bg-brand-100 text-(--color-brand-700) hover:bg-brand-200'
         : 'text-primary hover:bg-gray-200'}`,
     };
   };
@@ -1034,17 +1034,17 @@ export const LongText: React.FC<LongTextProps> = ({
           readOnly={readOnly}
           disabled={disabled}
           rows={3}
-          className={`w-full field-component-border bg-[--color-alpha-white] px-3 py-2 text-xs leading-5 [overflow-wrap:anywhere] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-colors resize-y ${readOnly ? 'cursor-default' : 'cursor-text'} ${error ? 'border-red-500' : ''} ${className}`}
+          className={`w-full field-component-border bg-(--color-alpha-white) px-3 py-2 text-xs leading-5 wrap-anywhere text-(--color-text-primary) focus:outline-none focus:border-brand-600 transition-colors resize-y ${readOnly ? 'cursor-default' : 'cursor-text'} ${error ? 'border-red-500' : ''} ${className}`}
         />
       ) : inline ? (
-        <div className={`w-full min-w-0 field-component-border bg-[--color-alpha-white] overflow-hidden transition-colors focus-within:border-[var(--color-brand-600)] ${error ? 'border-red-500' : ''} ${className}`}>
+        <div className={`w-full min-w-0 field-component-border bg-(--color-alpha-white) overflow-hidden transition-colors focus-within:border-brand-600 ${error ? 'border-red-500' : ''} ${className}`}>
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-0.5 px-1.5 py-1 border-b">
               {toolbarButtons}
             </div>
           )}
           {/* 3 rows of text: 3 x 1.25rem line height + 1rem vertical padding */}
-          {renderRichTextEditor(`w-full h-[4.75rem] min-h-[4.75rem] px-3 py-2 text-xs leading-5 [overflow-wrap:anywhere] text-[var(--color-text-primary)] overflow-y-auto resize-y ${readOnly ? 'cursor-default' : 'cursor-text'}`)}
+          {renderRichTextEditor(`w-full h-19 min-h-19 px-3 py-2 text-xs leading-5 wrap-anywhere text-(--color-text-primary) overflow-y-auto resize-y ${readOnly ? 'cursor-default' : 'cursor-text'}`)}
           {richTextStyles}
         </div>
       ) : (
@@ -1103,12 +1103,12 @@ export const LongText: React.FC<LongTextProps> = ({
 
       {/* Custom Modal */}
       {isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onContextMenu={(e) => e.preventDefault()}> {/* NOSONAR */}
+        <div className="fixed inset-0 z-9999 flex items-center justify-center p-4" onContextMenu={(e) => e.preventDefault()}> {/* NOSONAR */}
           {/* Backdrop */}
           <div className="absolute inset-0 backdrop-blur-sm bg-opacity-40" onClick={closeModal} /> {/* NOSONAR */}
           {/* Modal Content */}
-          <div ref={modalRef} className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10 overflow-hidden">
-            <div className="flex items-center mb-4 flex-shrink-0">
+          <div ref={modalRef} className="relative bg-(--color-card) border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10 overflow-hidden">
+            <div className="flex items-center mb-4 shrink-0">
               <AlignLeft className="w-8 h-8 rounded icon-primary p-1 mr-2" />
               <span className="text-lg font-medium text-secondary">Long Text</span>
               {richText && !readOnly && (
@@ -1127,7 +1127,7 @@ export const LongText: React.FC<LongTextProps> = ({
             </div>
             {richText ? (
               <div className="w-full flex-1 flex flex-col min-h-0">
-                {renderRichTextEditor("w-full flex-1 min-h-0 [overflow-wrap:anywhere] bg-[var(--background)] border rounded-xl p-3 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-600)] transition-all overflow-y-auto")}
+                {renderRichTextEditor("w-full flex-1 min-h-0 wrap-anywhere bg-(--background) border rounded-xl p-3 text-sm text-(--color-text-primary) focus:outline-none focus:border-brand-600 transition-all overflow-y-auto")}
                 {richTextStyles}
               </div>
             ) : (
@@ -1135,12 +1135,12 @@ export const LongText: React.FC<LongTextProps> = ({
                 value={modalValue}
                 onChange={handleModalChange}
                 onKeyDown={(e) => e.stopPropagation()}
-                className="w-full flex-1 min-h-0 bg-[var(--background)] border rounded-xl p-3 text-sm text-secondary focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-vertical"
+                className="w-full flex-1 min-h-0 bg-(--background) border rounded-xl p-3 text-sm text-secondary focus:outline-none focus:border-brand-600 transition-all resize-vertical"
                 placeholder={placeholder}
                 disabled={disabled || readOnly}
               />
             )}
-            <div className="flex justify-end gap-2 mt-4 flex-shrink-0">
+            <div className="flex justify-end gap-2 mt-4 shrink-0">
               <button
                 type='button'
                 onClick={closeModal}
@@ -1168,14 +1168,14 @@ export const LongText: React.FC<LongTextProps> = ({
         <>
           {/* Backdrop to close on outside click */}
           <div //NOSONAR
-            className="fixed inset-0 z-[9999]"
+            className="fixed inset-0 z-9999"
             onClick={handleLinkCancel}
             style={{ background: 'transparent' }}
           />
           {/* Popup */}
           <div //NOSONAR
             ref={linkPopupRef}
-            className="fixed z-[10000] bg-card border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
+            className="fixed z-10000 bg-card border rounded-xl shadow-xl p-3 min-w-[280px] max-w-[400px]"
             style={{
               top: `${linkPopupPosition.top}px`,
               left: `${linkPopupPosition.left}px`
@@ -1184,13 +1184,13 @@ export const LongText: React.FC<LongTextProps> = ({
           >
             {linkEditData.isEditing || !linkEditData.link ? (
               // Edit mode or creating new link
-              <div className="space-y-3">
+              <div className="flex flex-col gap-y-3">
                 <div>
                   <input
                     type="text"
                     value={linkEditData.text}
                     onChange={(e) => setLinkEditData({ ...linkEditData, text: e.target.value })}
-                    className="w-full bg-[--color-alpha-white] text-[var(--color-text-primary)] px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="w-full bg-(--color-alpha-white) text-(--color-text-primary) px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-brand-600"
                     placeholder="Link text"
                     autoFocus
                     onKeyDown={(e) => {
@@ -1208,7 +1208,7 @@ export const LongText: React.FC<LongTextProps> = ({
                     type="text"
                     value={linkEditData.url}
                     onChange={(e) => setLinkEditData({ ...linkEditData, url: e.target.value.trim() })}
-                    className="flex-1 bg-[--color-alpha-white] text-[var(--color-text-primary)] px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-[var(--color-brand-600)]"
+                    className="flex-1 bg-(--color-alpha-white) text-(--color-text-primary) px-2 py-1.5 border rounded-xl text-sm focus:outline-none focus:border-brand-600"
                     placeholder="https://example.com"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -1230,7 +1230,7 @@ export const LongText: React.FC<LongTextProps> = ({
               </div>
             ) : (
               // View mode for existing link
-              <div className="space-y-2">
+              <div className="flex flex-col gap-y-2">
                 <div className="flex items-center gap-2 text-sm text-gray-700 break-all">
                   <span className="truncate" title={linkEditData.link?.getAttribute('href') || ''}>
                     {linkEditData.link?.getAttribute('href') || linkEditData.url}

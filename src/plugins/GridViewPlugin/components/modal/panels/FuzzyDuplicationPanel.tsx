@@ -106,7 +106,7 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
         : duplicateKeepRule;
 
     return (
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+        <div className="flex flex-col flex-1 overflow-y-auto px-5 py-4 gap-y-6">
             <div className="flex items-center justify-between border-b pb-4 mb-2">
                 <div>
                     <h3 className="text-sm font-semibold text-primary">Deduplication Mode</h3>
@@ -145,8 +145,8 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                 description="Select one or more columns to identify duplicates."
             />
 
-            <section className="space-y-4">
-                <div className="space-y-2">
+            <section className="flex flex-col gap-y-4">
+                <div className="flex flex-col gap-y-2">
                     <div>
                         <h3 className="text-sm font-semibold text-primary">Matching Method</h3>
                         <p className="text-sm text-secondary">
@@ -158,14 +158,14 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                         <span className="block text-sm text-secondary">Match similar spellings</span>
                     </div>
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-y-2">
                     <div>
                         <h3 className="text-sm font-semibold text-primary">Matching Sensitivity</h3>
                         <p className="text-sm text-secondary">
                             Choose how strictly records should be matched.
                         </p>
                     </div>
-                    <div className="space-y-2 rounded-xl border bg-card">
+                    <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
                         {MATCH_SENSITIVITY_OPTIONS.map((option, index) => (
                             <label
                                 aria-label={option.label}
@@ -188,14 +188,14 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-y-2">
                     <div>
                         <h3 className="text-sm font-semibold text-primary">Duplicate Action</h3>
                         <p className="text-sm text-secondary">
                             Choose whether duplicates should be removed or just cleared from the selected columns.
                         </p>
                     </div>
-                    <div className="space-y-2 rounded-xl border bg-card">
+                    <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
                         {DUPLICATE_ACTION_OPTIONS.map((option, index) => (
                             <label
                                 aria-label={option.label}
@@ -218,7 +218,7 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-y-2">
                     <div>
                         <h3 className="text-sm font-semibold text-foreground">Keep rule</h3>
                         <p className="text-sm text-secondary">
@@ -233,7 +233,7 @@ export const FuzzyDuplicationPanel: React.FC<FuzzyDuplicationPanelProps> = ({
                 </div>
             </section>
 
-            <div className="space-y-2 border-t"></div>
+            <div className="flex flex-col gap-y-2 border-t"></div>
         </div>
     );
 };

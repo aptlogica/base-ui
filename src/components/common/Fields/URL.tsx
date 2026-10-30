@@ -253,7 +253,7 @@ export const URL: React.FC<URLProps> = ({
   const getDisplayClasses = (hasValue: boolean, hasError: boolean) => {
     const baseClasses = "field-component overflow-hidden";
     const cursorClass = hasValue && !hasError ? "cursor-pointer" : "cursor-default";
-    const colorClass = hasValue ? "!text-blue-600 underline hover:!text-blue-800" : "text-gray-400";
+    const colorClass = hasValue ? "text-blue-600! underline hover:text-blue-800!" : "text-gray-400";
     const disabledClass = disabled || readOnly ? "text-gray-400 cursor-not-allowed" : "";
     
     return `${baseClasses} ${cursorClass} ${colorClass} ${disabledClass}`;

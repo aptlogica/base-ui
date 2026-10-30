@@ -155,7 +155,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-sm"
+                className="w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) text-sm"
                 autoFocus
               />
             </div>
@@ -181,7 +181,7 @@ export const AccessRoleSelector: React.FC<AccessRoleSelectorProps> = ({
                     className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-green-50' : ''
                       }`}
                   >
-                    <Icon className={`w-5 h-5 ${iconColorClass} mt-0.5 flex-shrink-0`} />
+                    <Icon className={`w-5 h-5 ${iconColorClass} mt-0.5 shrink-0`} />
                     <div className="flex-1 text-left min-w-0">
                       <div
                         className={`font-medium ${isSelected ? 'text-green-900' : 'text-gray-900'

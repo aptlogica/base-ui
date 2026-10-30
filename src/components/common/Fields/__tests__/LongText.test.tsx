@@ -328,7 +328,7 @@ describe('LongText Component', () => {
       expect(container.querySelector('input[type="text"]')).not.toBeInTheDocument();
       expect(screen.queryByTitle('View full content')).not.toBeInTheDocument();
       expect(screen.getByTitle(/Bold/i)).toBeInTheDocument();
-      expect(getEditor()).toHaveClass('h-[4.75rem]');
+      expect(getEditor()).toHaveClass('h-19');
     });
 
     it('should load the value into the editor, keeping plain text line breaks', () => {
@@ -451,8 +451,8 @@ describe('LongText Component', () => {
       expect(isPressed(/Bold/)).toBe(true);
       expect(isPressed(/Italic/)).toBe(true);
       expect(isPressed(/Underline/)).toBe(false);
-      expect(screen.getByTitle(/Bold/)).toHaveClass('bg-[var(--color-brand-100)]');
-      expect(screen.getByTitle(/Underline/)).not.toHaveClass('bg-[var(--color-brand-100)]');
+      expect(screen.getByTitle(/Bold/)).toHaveClass('bg-brand-100');
+      expect(screen.getByTitle(/Underline/)).not.toHaveClass('bg-brand-100');
     });
 
     it('should clear the highlight when the caret moves to unformatted text', () => {

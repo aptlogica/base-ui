@@ -29,7 +29,7 @@ export function SegmentedControl<T extends string>({
   return (
     <fieldset
       aria-label={ariaLabel}
-      className={`flex gap-1 p-[3px] m-0 min-w-0 border-0 rounded-xl bg-[var(--color-gray-100)] ${className}`}
+      className={`flex gap-1 p-[3px] m-0 min-w-0 border-0 rounded-xl bg-(--color-gray-100) ${className}`}
     >
       {options.map(option => {
         const selected = option.value === value;
@@ -41,8 +41,8 @@ export function SegmentedControl<T extends string>({
             disabled={option.disabled}
             onClick={() => !selected && onChange(option.value)}
             className={`flex-1 py-1.5 rounded-[10px] text-[13px] font-medium transition-colors ${selected
-              ? 'bg-[var(--color-alpha-white)] text-[var(--text-color-primary)] shadow-sm'
-              : 'bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--text-color-primary)]'
+              ? 'bg-(--color-alpha-white) text-(--text-color-primary) shadow-sm'
+              : 'bg-transparent text-(--text-color-secondary) hover:text-(--text-color-primary)'
               } ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {option.label}

@@ -62,11 +62,11 @@ export function renderDateTimeConfigStep(props: any) {
     case 'date':
       return (
         <>
-          <div className="mb-3 space-y-2">
+          <div className="flex flex-col mb-3 gap-y-2">
             <DateFormatSelect label="Date format" value={dateFormat} onChange={setDateFormat} />
             <div>
               <button
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-2 space-y-2"
+                className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-2 gap-y-2"
                 onClick={() => setShowDateDefault((v: boolean) => !v)}
               >
                 <Plus className="w-5 h-5" />
@@ -88,7 +88,7 @@ export function renderDateTimeConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -96,7 +96,7 @@ export function renderDateTimeConfigStep(props: any) {
     case 'year':
       return (
         <>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowYearDefault((v: boolean) => !v)}>
+          <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2" onClick={() => setShowYearDefault((v: boolean) => !v)}>
             <Plus className="w-5 h-5" />
             Set default value
           </button>
@@ -112,7 +112,7 @@ export function renderDateTimeConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -122,18 +122,18 @@ export function renderDateTimeConfigStep(props: any) {
         <>
           <div className="">
             <div>
-              <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Time Display</div>
+              <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Time Display</div>
               <div className="grid grid-cols-2 gap-4 mb-2">
-                <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '12' ?
-                  'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) cursor-pointer transition-colors ${hourFormat === '12' ?
+                  'border-(--color-focus-ring) bg-(--color-gray-100) text-(--color-gray-100)' : 'border-gray-300 hover:border-gray-400'}`}>
                   <input
                     type="radio"
                     className="hidden"
                     checked={hourFormat === '12'}
                     onChange={() => setHourFormat('12')}
                   />12 Hrs</label>
-                <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${hourFormat === '24' ?
-                  'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]' : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`}>
+                <label className={`flex items-center px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) cursor-pointer transition-colors ${hourFormat === '24' ?
+                  'border-(--color-focus-ring) bg-(--color-gray-100) text-(--color-gray-100)' : 'border-gray-300 hover:border-gray-400'}`}>
                   <input
                     type="radio"
                     className="hidden"
@@ -145,7 +145,7 @@ export function renderDateTimeConfigStep(props: any) {
 
             <div>
               <button
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2"
+                className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2"
                 onClick={() => setShowTimeDefault((v: boolean) => !v)}
               >
                 <Plus className="w-5 h-5" />
@@ -171,7 +171,7 @@ export function renderDateTimeConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
             clearButtonClassName: 'absolute right-2 top-0 text-gray-400 hover:text-red-500 text-sm',
           })}

@@ -52,7 +52,7 @@ const PasswordRequirementsTooltip: React.FC<PasswordRequirementsTooltipProps> = 
       <HelpCircle className={`w-4 h-4 ${hasError ? "text-red-400" : "text-gray-400"} cursor-help`} />
       <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-4 text-sm z-50">
         <h4 className="font-medium mb-2 text-primary">Password Requirements:</h4>
-        <ul className="space-y-1">
+        <ul className="flex flex-col gap-y-1">
           <li className={`flex items-center ${validation.hasLength ? 'text-green-600' : 'text-red-500'}`}>
             • Minimum 8 characters
           </li>
@@ -111,30 +111,30 @@ const LoginSessions: React.FC<LoginSessionsProps> = ({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="flex flex-col gap-y-0">
       <div className="relative">
         {currentSession && (
           <div className="relative flex items-center pb-4">
-            <div className="flex flex-col items-center mr-4 flex-shrink-0">
+            <div className="flex flex-col items-center mr-4 shrink-0">
               {pastSessions.length > 0 && (
                 <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
               )}
             </div>
             <div className="flex-1 flex items-center gap-2 flex-wrap">
-              <div className={`w-4 h-4 border-2 rounded-sm ${'border-[var(--color-brand-600)]'}`}>
-                <div className={`w-full h-1 border-b-2 ${'border-[var(--color-brand-600)]'} mt-0.5`}></div>
+              <div className={`w-4 h-4 border-2 rounded-sm ${'border-brand-600'}`}>
+                <div className={`w-full h-1 border-b-2 ${'border-brand-600'} mt-0.5`}></div>
               </div>
-              <span className="text-sm font-medium text-[var(--color-brand-600)]">
+              <span className="text-sm font-medium text-brand-600">
                 {currentSession.browser}{currentSession.browser_version ? ` ${currentSession.browser_version}` : ''} on {currentSession.os}
               </span>
-              <Monitor className="w-4 h-4 text-[var(--color-brand-600)]" />
-              <span className="text-sm text-[var(--color-brand-600)]">Desktop</span>
-              <Clock className="w-4 h-4 text-[var(--color-brand-600)]" />
-              <span className="text-sm text-[var(--color-brand-600)]">{formatDate(currentSession.login_at)}</span>
+              <Monitor className="w-4 h-4 text-brand-600" />
+              <span className="text-sm text-brand-600">Desktop</span>
+              <Clock className="w-4 h-4 text-brand-600" />
+              <span className="text-sm text-brand-600">{formatDate(currentSession.login_at)}</span>
               {currentSession.timezone && (
                 <>
-                  <Earth className="w-4 h-4 text-[var(--color-brand-600)]" />
-                  <span className="text-sm text-[var(--color-brand-600)]">{currentSession.timezone}</span>
+                  <Earth className="w-4 h-4 text-brand-600" />
+                  <span className="text-sm text-brand-600">{currentSession.timezone}</span>
                 </>
               )}
             </div>
@@ -142,7 +142,7 @@ const LoginSessions: React.FC<LoginSessionsProps> = ({
         )}
         {pastSessions.map((session, index) => (
           <div key={`${session.login_at}-${index}`} className="relative flex items-center pb-4">
-            <div className="flex flex-col items-center mr-4 flex-shrink-0">
+            <div className="flex flex-col items-center mr-4 shrink-0">
               <div className="w-3 h-3 bg-gray-300 rounded-full z-10"></div>
               {index < pastSessions.length - 1 && (
                 <div className="w-0.5 h-full bg-gray-300 mt-2" style={{ borderStyle: 'dotted' }}></div>
@@ -450,12 +450,12 @@ export const SecuritySection: React.FC = () => {
   if (error) return <ErrorState />;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-y-4">
       {/* Change Password Section */}
       <div className="border-b pb-6">
         <h3 className="text-xl font-semibold text-primary mb-6">Change Password</h3>
 
-        <div className="space-y-6">
+        <div className="flex flex-col gap-y-6">
           {/* Current Password */}
           <div>
             <label
@@ -477,7 +477,7 @@ export const SecuritySection: React.FC = () => {
                     setCurrentPasswordError('Current password is required');
                   }
                 }}
-                className={`w-full px-4 py-3 pr-20 border rounded-xl text-primary focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                className={`w-full px-4 py-3 pr-20 border rounded-xl text-primary focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors bg-card ${currentPasswordError ? "border-red-500 bg-red-50" : ""}`}
                 placeholder="Enter your current password"
                 autoComplete="off"
                 data-form-type="other"
@@ -528,7 +528,7 @@ export const SecuritySection: React.FC = () => {
                       setNewPasswordError('New password is required');
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-20 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-20 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors bg-card ${newPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Enter new password"
                   autoComplete="new-password"
                 />
@@ -576,7 +576,7 @@ export const SecuritySection: React.FC = () => {
                       setConfirmPasswordError('Passwords do not match');
                     }
                   }}
-                  className={`w-full px-4 py-3 pr-12 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors bg-card ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
+                  className={`w-full px-4 py-3 pr-12 border text-primary rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors bg-card ${confirmPasswordError ? "border-red-500 bg-red-50" : ""}`}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
                 />

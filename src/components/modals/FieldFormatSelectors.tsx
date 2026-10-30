@@ -11,7 +11,7 @@ import {
   timeZoneOptions,
 } from '../../types/constants';
 
-const labelClassName = 'block text-sm font-medium text-[var(--color-text-tertiary)] mb-1';
+const labelClassName = 'block text-sm font-medium text-(--color-text-tertiary) mb-1';
 
 // Prevent duplicate React keys in dropdown options when constants contain repeated values.
 export const getUniqueDropdownOptions = (options: Array<{ label?: string; value?: string }>) => {
@@ -88,9 +88,9 @@ export function TimeFormatSelect({
 export type HourFormat = '12' | '24';
 
 const hourOptionClassName = (selected: boolean) =>
-  `flex items-center px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] cursor-pointer transition-colors ${selected
-    ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-    : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'}`;
+  `flex items-center px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) cursor-pointer transition-colors ${selected
+    ? 'border-(--color-focus-ring) bg-(--color-gray-100) text-(--color-gray-100)'
+    : 'border-gray-300 hover:border-gray-400'}`;
 
 export function HourFormatSelect({
   value,
@@ -126,7 +126,7 @@ export function ToggleSwitch({
   label,
   role,
   className = 'flex items-center gap-2 cursor-pointer',
-  labelClassName = 'text-sm text-[var(--color-text-tertiary)]',
+  labelClassName = 'text-sm text-(--color-text-tertiary)',
 }: Readonly<{
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -145,7 +145,7 @@ export function ToggleSwitch({
           onChange={e => onChange(e.target.checked)}
           className="sr-only peer"
         />
-        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-(--color-focus-ring) rounded-full peer peer-checked:bg-primary transition-colors" />
         <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
       </div>
       <span className={labelClassName}>{label}</span>
@@ -172,7 +172,7 @@ export function TimeZoneSettings({
 }>) {
   return (
     <div className="mb-3">
-      <div className="space-y-2">
+      <div className="flex flex-col gap-y-2">
         <ToggleSwitch checked={displayTimeZone} onChange={onDisplayTimeZoneChange} label="Display time zone" />
         <ToggleSwitch checked={sameTimezone} onChange={onSameTimezoneChange} label="Use same timezone for all members" />
         {sameTimezone && (
@@ -206,7 +206,7 @@ export function CurrencySelect({
     <>
       <div className='flex gap-2 mb-2'>
         <div className='flex-1'>
-          <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Locale</div>
+          <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Currency Locale</div>
           <AdvancedDropdown
             options={uniqueCurrencyLocaleOptions}
             value={currencyLocale}
@@ -216,7 +216,7 @@ export function CurrencySelect({
           />
         </div>
         <div className='flex-1'>
-          <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Currency Code</div>
+          <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Currency Code</div>
           <AdvancedDropdown
             options={uniqueCurrencyOptions}
             value={currencyType}

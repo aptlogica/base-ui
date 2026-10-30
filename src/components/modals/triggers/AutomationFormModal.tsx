@@ -60,7 +60,7 @@ const FormMessage: React.FC<{ message: { ok: boolean; text: string } | null }> =
   if (!message) return null;
   return (
     <div className={`text-sm flex items-center gap-1 ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
-      {message.ok ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+      {message.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
       <span>{message.text}</span>
     </div>
   );
@@ -208,7 +208,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       onKeyDown={e => {
         if (e.key === 'Escape') {
           e.stopPropagation();
@@ -217,11 +217,11 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
       }}
     >
       <button type="button" aria-label="Close modal" className="absolute inset-0" onClick={onClose} />
-      <div className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-2xl !max-h-[90vh]">
+      <div className="bg-modal p-0! flex flex-col relative overflow-hidden max-w-2xl! max-h-[90vh]!">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
               <Icon className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -236,18 +236,18 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-4 space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="automationTitle" className={`field-component-label ${titleError ? '!text-red-600' : '!text-primary'}`}>
+          <div className="flex flex-col p-4 gap-y-4">
+            <div className="flex flex-col gap-y-1">
+              <label htmlFor="automationTitle" className={`field-component-label ${titleError ? 'text-red-600!' : 'text-primary!'}`}>
                 Title <span className="field-component-required">*</span>
               </label>
               <input
@@ -262,32 +262,32 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
                 placeholder={config.titlePlaceholder}
                 maxLength={50}
                 ref={titleInputRef}
-                className={`field-component field-component-focus border ${titleError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border'}`}
+                className={`field-component field-component-focus border ${titleError ? 'border-red-500! focus:border-red-500! bg-red-50' : 'field-component-border'}`}
               />
               {titleError && <p className="text-xs text-red-600">{titleError}</p>}
               <p className="text-xs text-gray-500">{title.length}/50 characters</p>
             </div>
 
             {isTrigger && (
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <p className="field-component-label !text-primary">Trigger timing <span className="field-component-required">*</span></p>
-                  <fieldset className="flex items-center border border-[var(--color-border-primary)] rounded-xl p-0.5 w-fit" aria-label="Trigger timing">
+              <div className="flex flex-col gap-y-4">
+                <div className="flex flex-col gap-y-1">
+                  <p className="field-component-label text-primary!">Trigger timing <span className="field-component-required">*</span></p>
+                  <fieldset className="flex items-center border border-(--color-border-primary) rounded-xl p-0.5 w-fit" aria-label="Trigger timing">
                     {TRIGGER_TIMINGS.map(value => (
                       <button
                         key={value}
                         type="button"
                         onClick={() => changeEvent(value, operations)}
                         aria-pressed={timing === value}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${timing === value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-primary)]'}`}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${timing === value ? 'bg-(--color-bg-brand-primary) text-black' : 'text-(--color-text-secondary) hover:bg-(--color-hover-bg) hover:text-(--color-text-primary)'}`}
                       >
                         {value}
                       </button>
                     ))}
                   </fieldset>
                 </div>
-                <div className="space-y-1">
-                  <p className="field-component-label !text-primary">Trigger events <span className="field-component-required">*</span></p>
+                <div className="flex flex-col gap-y-1">
+                  <p className="field-component-label text-primary!">Trigger events <span className="field-component-required">*</span></p>
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                     {TRIGGER_OPERATIONS.map(op => (
                       <label key={op} className="flex items-center gap-2 text-sm text-primary cursor-pointer">
@@ -295,7 +295,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
                           type="checkbox"
                           checked={operations.includes(op)}
                           onChange={() => toggleOperation(op)}
-                          className="w-4 h-4 accent-[var(--color-bg-brand-primary)]"
+                          className="w-4 h-4 accent-(--color-bg-brand-primary)"
                         />
                         {op}
                       </label>
@@ -319,7 +319,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
               maxLength={5000}
               isBorder={true}
               required
-              className="font-mono !text-xs"
+              className="font-mono text-xs!"
               helperText={config.helperText}
             />
 
@@ -328,7 +328,7 @@ const AutomationFormModal: React.FC<AutomationFormModalProps> = ({ type, table, 
         </div>
 
         {/* Footer: Validate checks the query as typed; Save stores the changes; Run applies the saved query in Postgres */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

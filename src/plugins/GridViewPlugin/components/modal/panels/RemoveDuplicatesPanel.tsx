@@ -70,7 +70,7 @@ export const RemoveDuplicatesPanel: React.FC<RemoveDuplicatesPanelProps> = ({
   onDuplicateKeepRuleChange,
 }) => {
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
+    <div className="flex flex-col flex-1 gap-y-6 overflow-y-auto px-5 py-4">
       <ColumnSelectionSection
         columns={columns}
         selectedColumnIds={selectedColumnIds}
@@ -80,7 +80,7 @@ export const RemoveDuplicatesPanel: React.FC<RemoveDuplicatesPanelProps> = ({
         description="Select one or more columns to compare."
       />
 
-      <section className="space-y-2">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Duplicate action</h3>
           <p className="text-sm text-secondary">
@@ -88,7 +88,7 @@ export const RemoveDuplicatesPanel: React.FC<RemoveDuplicatesPanelProps> = ({
           </p>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-card">
+        <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
           {DUPLICATE_ACTION_OPTIONS.map((option, index) => (
             <label
               key={option.value}
@@ -112,7 +112,7 @@ export const RemoveDuplicatesPanel: React.FC<RemoveDuplicatesPanelProps> = ({
         </div>
       </section>
 
-      <section className="space-y-2">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Keep rule</h3>
           <p className="text-sm text-secondary">

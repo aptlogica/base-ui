@@ -8,6 +8,7 @@ import { Table2 } from 'lucide-react';
 import { getFieldTypeIconWithMargin, getRelationTypeFromField } from '../../types/fieldTypes';
 import { getStandardFieldType, getFieldDisplayName } from '../../utils/standardFieldUtils';
 import { isEmptyKeyValue } from '../../utils/primaryKeyFields';
+import UnsavedChangesDialog from './UnsavedChangesDialog';
 
 const AUDIT_FIELD_TYPES = ['createdTime', 'lastModifiedTime', 'createdBy', 'lastModifiedBy'];
 
@@ -169,7 +170,7 @@ export const RecordMenuPanel: React.FC<{ children: React.ReactNode }> = ({ child
             padding: 5,
             overflow: 'hidden'
         }}
-        className="select-none border p-2 space-y-1 animate-fade-in"
+        className="flex flex-col select-none border p-2 gap-y-1 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
     >
@@ -196,10 +197,136 @@ export const RecordMenuButton: React.FC<{ onToggle: () => void; icon: React.Reac
 // Table chip + title shown at the left of the record popup header
 export const RecordTitle: React.FC<{ tableTitle?: string; title: string }> = ({ tableTitle, title }) => (
     <div className="flex items-center gap-3 min-w-0">
-        <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
-            <Table2 className="w-4 h-4 flex-shrink-0" />
+        <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] shrink-0">
+            <Table2 className="w-4 h-4 shrink-0" />
             <span className="truncate">{tableTitle}</span>
         </span>
         <h2 className="text-2xl font-semibold truncate">{title}</h2>
+    </div>
+);
+
+// Save button in the record popup header
+export const RecordHeaderSaveButton: React.FC<{ disabled: boolean; onClick: () => void; label: string }> = ({ disabled, onClick, label }) => (
+    <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={`px-3 py-1.5 text-sm rounded-lg btn-primary ${disabled ? 'btn-disabled' : ''}`}
+    >
+        {label}
+    </button>
+);
+
+// Save / discard prompt shown when closing a record popup with unsaved edits
+export const RecordUnsavedDialog: React.FC<{
+    isOpen: boolean;
+    setOpen: (open: boolean) => void;
+    onDiscard: () => void;
+    onSave: () => void;
+}> = ({ isOpen, setOpen, onDiscard, onSave }) => (
+    <UnsavedChangesDialog
+        isOpen={isOpen}
+        onCancel={() => setOpen(false)}
+        onDiscard={() => {
+            setOpen(false);
+            onDiscard();
+        }}
+        onSave={() => {
+            setOpen(false);
+            onSave();
+        }}
+    />
+);
+
+type RecordFieldsBodyProps = {
+    visibleFields: any[];
+    hiddenFields: any[];
+    showHidden: boolean;
+    onToggleHidden: () => void;
+    renderFieldRow: (field: any) => React.ReactNode;
+    formError: string | null;
+    contentClassName?: string;
+};
+
+// Visible fields, the hidden-fields toggle, the hidden fields and the form error
+export const RecordFieldsBody: React.FC<RecordFieldsBodyProps> = ({
+    visibleFields,
+    hiddenFields,
+    showHidden,
+    onToggleHidden,
+    renderFieldRow,
+    formError,
+    contentClassName = 'px-6 py-6 mx-auto w-full max-w-[820px]',
+}) => (
+    <div className={contentClassName}>
+        <div className="flex flex-col gap-y-4">{visibleFields.map(renderFieldRow)}</div>
+
+        <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={onToggleHidden} />
+
+        {showHidden && hiddenFields.length > 0 && (
+            <div className="flex flex-col gap-y-4">{hiddenFields.map(renderFieldRow)}</div>
+        )}
+
+        {formError && <div className="mt-4 text-red-600 text-sm">{formError}</div>}
+    </div>
+);
+
+type RecordModalShellProps = {
+    tableTitle?: string;
+    title: string;
+    // Buttons shown in the header before Cancel
+    headerActions: React.ReactNode;
+    onRequestClose: () => void;
+    onInput: React.FormEventHandler<HTMLDivElement>;
+    children: React.ReactNode;
+    // Rendered inside the backdrop, after the modal
+    footer?: React.ReactNode;
+};
+
+// The Edit record popup layout: backdrop, header with actions and Cancel, scrollable body
+export const RecordModalShell: React.FC<RecordModalShellProps> = ({
+    tableTitle,
+    title,
+    headerActions,
+    onRequestClose,
+    onInput,
+    children,
+    footer,
+}) => (
+    <div //NOSONAR
+        className="bg-modal-backdrop"
+        onClick={(e) => e.target === e.currentTarget && onRequestClose()}
+        onKeyDown={(e) => e.stopPropagation()}
+    >
+        <button
+            type="button"
+            aria-label="Close modal"
+            className="absolute inset-0"
+            onClick={onRequestClose}
+        />
+        <div //NOSONAR
+            className="bg-modal w-full h-full relative p-0! max-w-[99rem]! max-h-180! flex flex-col overflow-hidden rounded-3xl!"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+        >
+            <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b shrink-0">
+                <RecordTitle tableTitle={tableTitle} title={title} />
+                <div className="flex items-center gap-2 relative shrink-0">
+                    {headerActions}
+                    <button
+                        type="button"
+                        className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 shrink-0"
+                        onClick={onRequestClose}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={onInput}>
+                {children}
+            </div>
+        </div>
+        {footer}
     </div>
 );

@@ -318,11 +318,11 @@ export const User: React.FC<UserProps> = ({
           <div className="flex items-center gap-1 min-w-0">
             <div className="flex items-center gap-1 overflow-hidden">
               {selectedUsers.slice(0, 3).map(user => (
-                <span key={user.id} className="inline-flex items-center gap-1 bg-gray-100 text-[var(--color-text-primary)] px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 border">
+                <span key={user.id} className="inline-flex items-center gap-1 bg-gray-100 text-(--color-text-primary) px-2 py-1 rounded-full text-xs whitespace-nowrap shrink-0 border">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                    <img src={user.avatarUrl} alt={user.name} className="w-4 h-4 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold shrink-0">
                       {getUserInitials(user.name)}
                     </div>
                   )}
@@ -344,7 +344,7 @@ export const User: React.FC<UserProps> = ({
                           e.stopPropagation();
                         }
                       }}
-                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5 flex-shrink-0 border-0 bg-transparent cursor-pointer"
+                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5 shrink-0 border-0 bg-transparent cursor-pointer"
                       aria-label={`Remove ${user.name}`}
                     >
                       <X className="w-3 h-3" />
@@ -353,13 +353,13 @@ export const User: React.FC<UserProps> = ({
                 </span>
               ))}
               {selectedUsers.length > 3 && (
-                <span className="inline-flex items-center bg-[var(--color-bg-brand-primary)] text-black px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 border">
+                <span className="inline-flex items-center bg-(--color-bg-brand-primary) text-black px-2 py-1 rounded-full text-xs whitespace-nowrap shrink-0 border">
                   +{selectedUsers.length - 3}
                 </span>
               )}
             </div>
             {allowMultiple && selectedUsers?.length > 1 && (
-              <span className="text-gray-500 text-xs flex-shrink-0 ml-1">
+              <span className="text-gray-500 text-xs shrink-0 ml-1">
                 ({selectedUsers.length})
               </span>
             )}
@@ -380,7 +380,7 @@ export const User: React.FC<UserProps> = ({
       {!readOnly && isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] border bg-card rounded-xl shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
+          className="fixed z-9999 border bg-card rounded-xl shadow-xl max-h-64 w-80 overflow-hidden flex flex-col"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -389,7 +389,7 @@ export const User: React.FC<UserProps> = ({
           }}
         >
           {/* Header with Search */}
-          <div className="p-2 border-b bg-gray-50 flex-shrink-0">
+          <div className="p-2 border-b bg-gray-50 shrink-0">
             {/* Clear Selection Button (when users are selected) */}
             {selectedUsers.length > 0 && (
               <div className="mb-2 flex items-center justify-between">
@@ -433,7 +433,7 @@ export const User: React.FC<UserProps> = ({
                   }
                 }}
                 aria-label="Search users"
-                className="w-full pl-8 pr-8 py-1.5 text-sm text-[var(--color-text-primary)] border rounded-xl focus:border outline-none focus:border-[--color-brand-600] bg-background"
+                className="w-full pl-8 pr-8 py-1.5 text-sm text-(--color-text-primary) border rounded-xl focus:border outline-none focus:border-brand-600 bg-background"
               />
               {searchTerm && (
                 <button
@@ -495,7 +495,7 @@ export const User: React.FC<UserProps> = ({
                       type="button"
                       disabled={readOnly}
                       className={`w-full text-left px-3 py-2 border-b border-0 bg-transparent ${readOnly ? 'cursor-default' : 'hover:bg-gray-50 cursor-pointer'} bg-card transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-l-green-500' : ''
-                        } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
+                        } ${isFocused ? 'bg-(--color-bg-brand-secondary) text-black' : ''
                         }`}
                       onClick={() => {
                         if (readOnly) return;
@@ -518,10 +518,10 @@ export const User: React.FC<UserProps> = ({
                           <img
                             src={user.avatarUrl}
                             alt={user.name}
-                            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                            className="w-6 h-6 rounded-full object-cover shrink-0"
                           />
                         ) : (
-                          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-semibold shrink-0">
                             {getUserInitials(user.name)}
                           </div>
                         )}
@@ -536,7 +536,7 @@ export const User: React.FC<UserProps> = ({
                           )}
                         </div>
                         {isSelected && (
-                          <div className="flex-shrink-0 w-1.5 h-1.5 bg-[var(--color-bg-brand-primary)] rounded-full"></div>
+                          <div className="shrink-0 w-1.5 h-1.5 bg-(--color-bg-brand-primary) rounded-full"></div>
                         )}
                       </div>
                     </button>

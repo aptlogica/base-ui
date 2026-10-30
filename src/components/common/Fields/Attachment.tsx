@@ -286,7 +286,7 @@ export const Attachment: React.FC<AttachmentProps> = ({
             const isImage = mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext);
             return (
               <div
-                className="w-8 h-8 rounded-lg bg-card border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0"
+                className="w-8 h-8 rounded-lg bg-card border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-brand-600 focus:outline-none shrink-0"
                 key={`${file.url}-${file.title}-${idx}`}
                 title={file.title || file.name}
                 aria-label={`Preview ${file.title || file.name}`}

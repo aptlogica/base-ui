@@ -15,12 +15,13 @@ import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
 import { isAutoUuidColumn } from '../../utils/uuid';
 import RecordNavButtons from './RecordNavButtons';
-import UnsavedChangesDialog from './UnsavedChangesDialog';
 import {
     FieldRow,
-    HiddenFieldsToggle,
     KeyAwareField,
-    RecordTitle,
+    RecordFieldsBody,
+    RecordHeaderSaveButton,
+    RecordModalShell,
+    RecordUnsavedDialog,
     getAttachmentProps,
     getLinksProps,
     getMissingRequiredFields,
@@ -178,17 +179,11 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     };
 
     const unsavedChangesDialog = (
-        <UnsavedChangesDialog
+        <RecordUnsavedDialog
             isOpen={showUnsavedPrompt}
-            onCancel={() => setShowUnsavedPrompt(false)}
-            onDiscard={() => {
-                setShowUnsavedPrompt(false);
-                onClose();
-            }}
-            onSave={() => {
-                setShowUnsavedPrompt(false);
-                void handleSave();
-            }}
+            setOpen={setShowUnsavedPrompt}
+            onDiscard={onClose}
+            onSave={() => void handleSave()}
         />
     );
 
@@ -413,119 +408,72 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
     if (layout === 'record') {
         return (
-            <div //NOSONAR
-                className="bg-modal-backdrop relative"
-                onClick={(e) => e.target === e.currentTarget && requestClose()}
-                onKeyDown={(e) => e.stopPropagation()}
+            <RecordModalShell
+                tableTitle={table?.title}
+                title={title}
+                onRequestClose={requestClose}
+                onInput={handleInput}
+                headerActions={(
+                    <>
+                        <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canCreateRecord()} />
+                        {canCreateRecord() && (
+                            <RecordHeaderSaveButton disabled={isSaveDisabled} onClick={() => handleSave()} label={submitLabel} />
+                        )}
+                    </>
+                )}
+                footer={unsavedChangesDialog}
             >
-                <button
-                    type="button"
-                    aria-label="Close modal"
-                    className="absolute inset-0"
-                    onClick={requestClose}
+                <RecordFieldsBody
+                    visibleFields={visibleFields}
+                    hiddenFields={hiddenFields}
+                    showHidden={showHidden}
+                    onToggleHidden={() => setShowHidden(v => !v)}
+                    renderFieldRow={renderRecordLayoutField}
+                    formError={formError}
                 />
-                <div //NOSONAR
-                    className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                >
-                    {/* Header */}
-                    <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
-                        <RecordTitle tableTitle={table?.title} title={title} />
-                        <div className="flex items-center gap-2 relative flex-shrink-0">
-                            <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canCreateRecord()} />
-                            {canCreateRecord() && (
-                                <button
-                                    type="button"
-                                    disabled={isSaveDisabled}
-                                    onClick={() => handleSave()}
-                                    className={`px-3 py-1.5 text-sm rounded-lg btn-primary ${isSaveDisabled ? 'btn-disabled' : ''}`}
-                                >
-                                    {submitLabel}
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
-                                onClick={requestClose}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
-                        <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
-                            <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
-
-                            <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
-
-                            {showHidden && hiddenFields.length > 0 && (
-                                <div className="space-y-4">{hiddenFields.map(renderRecordLayoutField)}</div>
-                            )}
-
-                            {formError && (
-                                <div className="mt-4 text-red-600 text-sm">{formError}</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                {unsavedChangesDialog}
-            </div>
+            </RecordModalShell>
         );
     }
 
     return (
-        <div className="bg-modal-backdrop relative">
+        <div className="bg-modal-backdrop">
             <button
                 type="button"
                 aria-label="Close modal"
                 className="absolute inset-0"
                 onClick={requestClose}
             />
-            <div className="bg-modal w-full relative max-w-4xl !p-0 flex flex-col overflow-hidden">
+            <div className="bg-modal w-full relative max-w-4xl p-0! flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+                <div className="flex items-center justify-between p-4 border-b shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
-                        <CirclePlus className="w-5 h-5 icons-primary flex-shrink-0" />
+                        <CirclePlus className="w-5 h-5 icons-primary shrink-0" />
                         <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] flex-shrink-0">{table?.title}</span>
+                            <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] shrink-0">{table?.title}</span>
                             <h2 className="text-2xl font-semibold truncate">{title}</h2>
                         </div>
                     </div>
-                    <button type="button" className="p-2 flex-shrink-0" onClick={requestClose} aria-label="Close">
+                    <button type="button" className="p-2 shrink-0" onClick={requestClose} aria-label="Close">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Scrollable Content Area */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
-                    <div className="p-6">
-                        {/* Visible fields */}
-                        <div className="space-y-4">
-                            {visibleFields.map(renderDefaultLayoutField)}
-                        </div>
-
-                        {/* Hidden fields toggle */}
-                        <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
-
-                        {/* Hidden fields */}
-                        {showHidden && hiddenFields.length > 0 && (
-                            <div className="space-y-4">
-                                {hiddenFields.map(renderDefaultLayoutField)}
-                            </div>
-                        )}
-
-                        {formError && (
-                            <div className="mt-4 text-red-600 text-sm">{formError}</div>
-                        )}
-                    </div>
+                    <RecordFieldsBody
+                        visibleFields={visibleFields}
+                        hiddenFields={hiddenFields}
+                        showHidden={showHidden}
+                        onToggleHidden={() => setShowHidden(v => !v)}
+                        renderFieldRow={renderDefaultLayoutField}
+                        formError={formError}
+                        contentClassName="p-6"
+                    />
                 </div>
 
                 {/* Footer - Fixed at Bottom */}
                 {canCreateRecord() && (
-                    <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+                    <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
                         <button
                             type="button"
                             onClick={requestClose}

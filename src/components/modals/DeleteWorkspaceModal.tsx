@@ -71,18 +71,18 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative" onKeyDown={handleKeyDown}>
+      className="bg-modal-backdrop" onKeyDown={handleKeyDown}>
       <button
         type="button"
         aria-label="Close modal"
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div className="bg-modal !max-w-2xl !p-0 flex flex-col h-[70vh] max-h-[70vh] relative overflow-hidden">
+      <div className="bg-modal max-w-2xl! p-0! flex flex-col h-[70vh] max-h-[70vh] relative overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div className="min-w-0">
@@ -92,7 +92,7 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
             <X className="text-gray-400 h-5 w-5" />
@@ -101,8 +101,8 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-4 space-y-4">
-            <div className="bg-[var(--color-error-50)] border border-red-200 rounded-xl p-3">
+          <div className="flex flex-col p-4 gap-y-4">
+            <div className="bg-(--color-error-50) border border-red-200 rounded-xl p-3">
               <p className="text-red-800 text-sm">
                 <strong>Warning:</strong> All associated bases, tables, views and data will be permanently deleted.
               </p>
@@ -132,7 +132,7 @@ export const DeleteWorkspaceModal: React.FC<DeleteWorkspaceModalProps> = ({
         </div>
 
         {/* Footer - Fixed at Bottom */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

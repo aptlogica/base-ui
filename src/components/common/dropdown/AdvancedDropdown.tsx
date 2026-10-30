@@ -365,7 +365,7 @@ export function AdvancedDropdown<T extends string | number>({
       {/* Options List */}
       <ul // NOSONAR
         ref={optionsRef}
-        className="p-2 space-y-1.5 max-h-48 overflow-auto"
+        className="flex flex-col p-2 gap-y-1.5 max-h-48 overflow-auto"
         style={{ maxHeight: `${maxHeight}px` }}
         aria-multiselectable={multiple}
       >

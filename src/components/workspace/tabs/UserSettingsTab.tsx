@@ -85,7 +85,7 @@ export const UserSettingsTab: React.FC<UserSettingsTabProps> = () => {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="flex flex-col gap-y-0">
       {/* User Table */}
       <UserTable
         users={nonOwnerUsers as TenantUser[]}

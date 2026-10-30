@@ -52,48 +52,48 @@ export function renderUuidConfigStep(props: any) {
 
   return (
     <>
-      <div className="mb-4 space-y-1.5">
-        <div className="text-sm font-medium text-[var(--text-color-secondary)]">Value</div>
+      <div className="flex flex-col mb-4 gap-y-1.5">
+        <div className="text-sm font-medium text-(--text-color-secondary)">Value</div>
         <SegmentedControl
           ariaLabel="How the value is set"
           options={MODE_OPTIONS}
           value={settings.mode}
           onChange={setMode}
         />
-        <div className="text-xs text-[var(--text-color-tertiary)]">{UUID_MODE_HINTS[settings.mode]}</div>
+        <div className="text-xs text-(--text-color-tertiary)">{UUID_MODE_HINTS[settings.mode]}</div>
       </div>
 
       {isAuto && (
-        <div className="mb-4 space-y-1.5">
-          <div className="text-xs font-medium text-[var(--text-color-secondary)]">UUID version</div>
+        <div className="flex flex-col mb-4 gap-y-1.5">
+          <div className="text-xs font-medium text-(--text-color-secondary)">UUID version</div>
           <AdvancedDropdown
             options={UUID_VERSION_OPTIONS}
             value={version}
             onChange={(val) => setIdGeneration({ mode: 'auto', version: val as UuidVersion })}
             searchable={false}
           />
-          <div className="text-xs text-[var(--text-color-tertiary)]">{UUID_VERSION_HINTS[version]}</div>
+          <div className="text-xs text-(--text-color-tertiary)">{UUID_VERSION_HINTS[version]}</div>
         </div>
       )}
 
       {/* Only an auto field has a value to preview; a manual field is typed in */}
       {isAuto && (
-        <div className="mb-4 space-y-1.5">
-          <div className="text-xs font-medium text-[var(--text-color-secondary)]">Preview</div>
-          <div className="flex items-center gap-2 h-9 px-2.5 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-gray-50)]">
-            <Lock className="w-3.5 h-3.5 shrink-0 text-[var(--color-gray-500)]" aria-hidden="true" />
-            <span className="font-mono text-xs truncate text-[var(--text-color-secondary)]">{sampleUuid(version)}</span>
+        <div className="flex flex-col mb-4 gap-y-1.5">
+          <div className="text-xs font-medium text-(--text-color-secondary)">Preview</div>
+          <div className="flex items-center gap-2 h-9 px-2.5 rounded-lg border border-(--color-border-primary) bg-(--color-gray-50)">
+            <Lock className="w-3.5 h-3.5 shrink-0 text-(--color-gray-500)" aria-hidden="true" />
+            <span className="font-mono text-xs truncate text-(--text-color-secondary)">{sampleUuid(version)}</span>
           </div>
         </div>
       )}
 
       {isTurningUuidToAuto && (
-        <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 space-y-2">
+        <div className="flex flex-col mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 gap-y-2">
           <div className="flex items-center gap-2 text-[13px] font-semibold text-amber-800">
             <Info className="w-4 h-4" aria-hidden="true" />
             What changes when you save
           </div>
-          <ul className="pl-6 space-y-1 text-xs text-[var(--text-color-secondary)]">
+          <ul className="flex flex-col pl-6 gap-y-1 text-xs text-(--text-color-secondary)">
             <li>New records get a {version} UUID automatically.</li>
             <li>The field becomes read-only in the grid, forms and API.</li>
             <li>
@@ -111,7 +111,7 @@ export function renderUuidConfigStep(props: any) {
               disabled={isPrimaryKeyField}
               onChange={e => setUuidBackfill(e.target.checked)}
             />
-            <label htmlFor="uuidBackfill" className="text-xs font-medium text-[var(--text-color-primary)]">
+            <label htmlFor="uuidBackfill" className="text-xs font-medium text-(--text-color-primary)">
               {emptyCount === undefined
                 ? 'Fill the empty records with new UUIDs'
                 : `Fill the ${emptyCount.toLocaleString()} empty records with new UUIDs`}
@@ -130,7 +130,7 @@ export function renderUuidConfigStep(props: any) {
         setShowDescription,
         description,
         setDescription,
-        buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+        buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
         wrapperClassName: 'relative',
       })}
     </>

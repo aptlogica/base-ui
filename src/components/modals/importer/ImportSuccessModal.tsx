@@ -41,7 +41,7 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/[0.169] backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-110 flex items-center justify-center bg-black/[0.169] backdrop-blur-sm p-4">
       <button
         type="button"
         aria-label="Close import summary"
@@ -53,7 +53,7 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-success-title"
-        className="bg-[var(--color-card)] border rounded-xl shadow-2xl w-full max-w-[720px] max-h-[90vh] p-6 relative"
+        className="bg-(--color-card) border rounded-xl shadow-2xl w-full max-w-[720px] max-h-[90vh] p-6 relative"
       >
         <button
           type="button"
@@ -94,14 +94,14 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
                   <button
                     type="button"
                     onClick={handleDownloadImportLog}
-                    className="text-[var(--color-blue-700)] hover:underline"
+                    className="text-blue-700 hover:underline"
                   >
                     View data import log
                     <ArrowRight className="inline-block h-5 w-5 ml-2" />
                   </button>
                 )}
               </div>
-              <ul className="space-y-2 text-sm text-primary">
+              <ul className="flex flex-col gap-y-2 text-sm text-primary">
                 <li>{summary.errorRows.toLocaleString()} rows with errors</li>
                 <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
                 <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>

@@ -220,12 +220,12 @@ const LogIn: React.FC = () => {
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-2 h-[100dvh] min-h-[100dvh] overflow-hidden bg-white bg-cover bg-center bg-no-repeat"
+      className="grid grid-cols-1 md:grid-cols-2 h-dvh min-h-dvh overflow-hidden bg-white bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: 'url(/assets/login-bg.svg)' }}
     >
       {/* Left Panel */}
       <div className="text-gray-100 flex items-center justify-center p-8 md:p-12">
-        <div className="w-full max-w-md space-y-6">
+        <div className="flex flex-col w-full max-w-md gap-y-6">
           {/* Logo and Brand Name */}
           <div className="flex h-16 w-fit -ml-3 mb-8 items-center justify-center">
             <img
@@ -233,7 +233,7 @@ const LogIn: React.FC = () => {
               alt="Sereni Base Logo"
               className="w-full h-full scale-150 object-contain object-left"
             />
-            <span className="font-semibold text-2xl leading-none text-[var(--color-text-gray)]">Sereni<br />base</span>
+            <span className="font-semibold text-2xl leading-none text-(--color-text-gray)">Sereni<br />base</span>
           </div>
 
           <h2 className="text-3xl font-bold text-gray-100 text-left">Welcome back</h2>
@@ -243,9 +243,9 @@ const LogIn: React.FC = () => {
               Another tab is already signed in. Signing in here will sign out the other tab.
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-y-4">
             <div className="relative">
-              <label htmlFor="email" className="field-component-label !text-gray-200">
+              <label htmlFor="email" className="field-component-label text-gray-200!">
                 Email<span className="field-component-required">*</span>
               </label>
               <input
@@ -269,14 +269,14 @@ const LogIn: React.FC = () => {
                   }
                 }}
                 placeholder="Email"
-                className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-[var(--color-text-placeholder)] border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-[--color-brand-600]
+                className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-(--color-text-placeholder) border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-brand-600
                   ${emailError ? "border-destructive bg-red-50" : ""}`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
               {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}
             </div>
             <div className="relative">
-              <label htmlFor="password" className="field-component-label !text-gray-200">
+              <label htmlFor="password" className="field-component-label text-gray-200!">
                 Password<span className="field-component-required">*</span>
               </label>
               <div className="relative">
@@ -297,7 +297,7 @@ const LogIn: React.FC = () => {
                     }
                   }}
                   placeholder="Password"
-                  className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-[var(--color-text-placeholder)] border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-[--color-brand-600]
+                  className={`w-full text-xs px-3 h-11 flex items-center rounded-lg text-black placeholder:text-(--color-text-placeholder) border border-gray-700 outline-none cursor-pointer transition-all duration-200 focus:border focus:border-brand-600
                     ${passwordError ? "border-destructive bg-red-50" : ""}`}
                   style={{ boxShadow: "var(--shadow-xs)" }}
                 />

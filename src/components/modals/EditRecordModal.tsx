@@ -21,14 +21,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../../components/common/Toast';
 import RecordNavButtons from './RecordNavButtons';
-import UnsavedChangesDialog from './UnsavedChangesDialog';
 import {
   FieldRow,
-  HiddenFieldsToggle,
   KeyAwareField,
+  RecordFieldsBody,
+  RecordHeaderSaveButton,
   RecordMenuButton,
+  RecordModalShell,
   RecordMenuPanel,
-  RecordTitle,
+  RecordUnsavedDialog,
   getAttachmentProps,
   getLinksProps,
   getMissingRequiredFields,
@@ -422,122 +423,74 @@ const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   return (
-    <div //NOSONAR
-      className="bg-modal-backdrop relative"
-      onClick={(e) => e.target === e.currentTarget && requestClose()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
-      <button
-        type="button"
-        aria-label="Close modal"
-        className="absolute inset-0"
-        onClick={requestClose}
-      />
-      <div //NOSONAR 
-        className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
-          <RecordTitle tableTitle={table?.title} title={title} />
-          <div className="flex items-center gap-2 relative flex-shrink-0">
-            <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canUpdateRecord()} />
-            {canUpdateRecord() && (
-              <button
-                type="button"
-                disabled={isSaveDisabled}
-                onClick={() => void handleSave()}
-                className={`px-3 py-1.5 text-sm rounded-lg btn-primary ${isSaveDisabled ? 'btn-disabled' : ''}`}
-              >
-                {submitLabel}
-              </button>
-            )}
-            {(onDuplicate || (canDeleteRecord() && onDelete)) && (
-              <div className="relative" ref={menuRef}>
-                <RecordMenuButton onToggle={() => setMenuOpen(v => !v)} icon={<MoreVertical className="w-5 h-5 text-gray-500" />} />
-                {menuOpen && (
-                  <RecordMenuPanel>
-                    {onDuplicate && canUpdateRecord() && (
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (recordId) onDuplicate(recordId);
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <Copy className="w-4 h-4" /> Duplicate record
-                      </button>
-                    )}
-                    {canDeleteRecord() && onDelete && (
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (recordId) onDelete(recordId);
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" /> Delete record
-                      </button>
-                    )}
-                  </RecordMenuPanel>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
-              onClick={requestClose}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={() => setHasTyped(true)}>
-          <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
-            {/* Visible fields */}
-            <div className="space-y-4">
-              {visibleFields.map(renderFieldRow)}
+    <RecordModalShell
+      tableTitle={table?.title}
+      title={title}
+      onRequestClose={requestClose}
+      onInput={() => setHasTyped(true)}
+      headerActions={(
+        <>
+          <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canUpdateRecord()} />
+          {canUpdateRecord() && (
+            <RecordHeaderSaveButton disabled={isSaveDisabled} onClick={() => void handleSave()} label={submitLabel} />
+          )}
+          {(onDuplicate || (canDeleteRecord() && onDelete)) && (
+            <div className="relative" ref={menuRef}>
+              <RecordMenuButton onToggle={() => setMenuOpen(v => !v)} icon={<MoreVertical className="w-5 h-5 text-gray-500" />} />
+              {menuOpen && (
+                <RecordMenuPanel>
+                  {onDuplicate && canUpdateRecord() && (
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (recordId) onDuplicate(recordId);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <Copy className="w-4 h-4" /> Duplicate record
+                    </button>
+                  )}
+                  {canDeleteRecord() && onDelete && (
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (recordId) onDelete(recordId);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete record
+                    </button>
+                  )}
+                </RecordMenuPanel>
+              )}
             </div>
-
-            {/* Hidden fields toggle */}
-            <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
-
-            {/* Hidden fields */}
-            {showHidden && hiddenFields.length > 0 && (
-              <div className="space-y-4">
-                {hiddenFields.map(renderFieldRow)}
-              </div>
-            )}
-
-            {formError && (
-              <div className="mt-4 text-red-600 text-sm">{formError}</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <UnsavedChangesDialog
-        isOpen={showUnsavedPrompt}
-        onCancel={() => setShowUnsavedPrompt(false)}
-        onDiscard={() => {
-          setShowUnsavedPrompt(false);
-          onClose();
-        }}
-        onSave={() => {
-          setShowUnsavedPrompt(false);
-          void handleSave();
-        }}
+          )}
+        </>
+      )}
+      footer={(
+        <RecordUnsavedDialog
+          isOpen={showUnsavedPrompt}
+          setOpen={setShowUnsavedPrompt}
+          onDiscard={onClose}
+          onSave={() => void handleSave()}
+        />
+      )}
+    >
+      <RecordFieldsBody
+        visibleFields={visibleFields}
+        hiddenFields={hiddenFields}
+        showHidden={showHidden}
+        onToggleHidden={() => setShowHidden(v => !v)}
+        renderFieldRow={renderFieldRow}
+        formError={formError}
       />
-    </div>
+    </RecordModalShell>
   );
 };
 

@@ -168,14 +168,14 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
       {isOpen && position && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] border rounded-xl shadow-lg w-72 flex flex-col"
+          className="fixed z-9999 border rounded-xl shadow-lg w-72 flex flex-col"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
             maxHeight: `${position.maxHeight}px`,
           }}
         >
-          <div className="p-3 border-b bg-card rounded-t-xl rounded-tr-xl flex-shrink-0">
+          <div className="p-3 border-b bg-card rounded-t-xl rounded-tr-xl shrink-0">
             <div className="text-sm font-medium text-gray-900">
               {formatCompactNumber(totalItems)} more {totalItems === 1 ? 'event' : 'events'}
               {hasMore && (
@@ -189,7 +189,7 @@ const MoreEventsDropdown: React.FC<MoreEventsDropdownProps> = ({
             ref={scrollContainerRef}
             className="bg-card rounded-xl flex-1 overflow-y-auto p-3"
           >
-            <div className="space-y-2">
+            <div className="flex flex-col gap-y-2">
               {paginatedEvents.map((event, index) => (
                 <EventChip
                   key={event.id || index}

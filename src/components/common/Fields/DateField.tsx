@@ -4,11 +4,12 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useClickOutside } from '../../../hooks/useClickOutside';
 import { useDropdownPosition } from '../../../hooks/useDropdownPosition';
 import { getTodayISO } from '../../../utils/timeFormatUtils';
-import { buildCalendarWeeks, MONTH_LABELS } from '../../../utils/calendarUtils';
+import { formatISODate, matchesDateFormat, SUPPORTED_DATE_FORMATS } from '../../../utils/dateFormatUtils';
+import { CalendarPanel } from './CalendarPanel';
 
 interface DateProps {
   label?: string;
@@ -83,30 +84,6 @@ function convertToISO(date: string, fromFormat: string): string {
   return '';
 }
 
-// Convert from ISO (YYYY-MM-DD) to target format
-function convertFromISO(isoDate: string, toFormat: string): string {
-  const [year, month, day] = isoDate.split('-');
-
-  switch (toFormat) {
-    case 'YYYY-MM-DD':
-      return isoDate;
-    case 'YYYY/MM/DD':
-      return `${year}/${month}/${day}`;
-    case 'DD-MM-YYYY':
-      return `${day}-${month}-${year}`;
-    case 'MM-DD-YYYY':
-      return `${month}-${day}-${year}`;
-    case 'DD/MM/YYYY':
-      return `${day}/${month}/${year}`;
-    case 'MM/DD/YYYY':
-      return `${month}/${day}/${year}`;
-    case 'DD MM YYYY':
-      return `${day} ${month} ${year}`;
-    default:
-      return isoDate;
-  }
-}
-
 // Convert date from one format to another
 function convertDateFormat(date: string, fromFormat: string, toFormat: string): string {
   if (!date) return '';
@@ -114,31 +91,15 @@ function convertDateFormat(date: string, fromFormat: string, toFormat: string): 
   const isoDate = convertToISO(date, fromFormat);
   if (!isoDate) return date;
 
-  return convertFromISO(isoDate, toFormat);
+  return formatISODate(isoDate, toFormat);
 }
 
 // Validate if input matches the expected format pattern
 function validateFormat(input: string, format: string): boolean {
   if (!input.trim()) return false;
 
-  switch (format) {
-    case 'YYYY-MM-DD':
-      return /^\d{4}-\d{2}-\d{2}$/.test(input);
-    case 'YYYY/MM/DD':
-      return /^\d{4}\/\d{2}\/\d{2}$/.test(input);
-    case 'DD-MM-YYYY':
-      return /^\d{2}-\d{2}-\d{4}$/.test(input);
-    case 'MM-DD-YYYY':
-      return /^\d{2}-\d{2}-\d{4}$/.test(input);
-    case 'DD/MM/YYYY':
-      return /^\d{2}\/\d{2}\/\d{4}$/.test(input);
-    case 'MM/DD/YYYY':
-      return /^\d{2}\/\d{2}\/\d{4}$/.test(input);
-    case 'DD MM YYYY':
-      return /^\d{2} \d{2} \d{4}$/.test(input);
-    default:
-      return /^\d{4}-\d{2}-\d{2}$/.test(input);
-  }
+  // Unknown formats are checked as YYYY-MM-DD
+  return matchesDateFormat(input, SUPPORTED_DATE_FORMATS.includes(format) ? format : 'YYYY-MM-DD');
 }
 
 // Detect the format of a date string with better logic for ambiguous formats
@@ -195,24 +156,7 @@ function detectDateFormat(dateStr: string): string {
 
 // Get placeholder based on format
 function getPlaceholder(format: string): string {
-  switch (format) {
-    case 'YYYY-MM-DD':
-      return 'YYYY-MM-DD';
-    case 'YYYY/MM/DD':
-      return 'YYYY/MM/DD';
-    case 'DD-MM-YYYY':
-      return 'DD-MM-YYYY';
-    case 'MM-DD-YYYY':
-      return 'MM-DD-YYYY';
-    case 'DD/MM/YYYY':
-      return 'DD/MM/YYYY';
-    case 'MM/DD/YYYY':
-      return 'MM/DD/YYYY';
-    case 'DD MM YYYY':
-      return 'DD MM YYYY';
-    default:
-      return 'YYYY-MM-DD';
-  }
+  return SUPPORTED_DATE_FORMATS.includes(format) ? format : 'YYYY-MM-DD';
 }
 
 export const DateField: React.FC<DateProps> = ({
@@ -236,9 +180,6 @@ export const DateField: React.FC<DateProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showQuickSelect, setShowQuickSelect] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -345,9 +286,6 @@ export const DateField: React.FC<DateProps> = ({
 
   const closeAllDropdowns = () => {
     setIsOpen(false);
-    setShowYearPicker(false);
-    setShowMonthPicker(false);
-    setShowQuickSelect(false);
   };
 
   useClickOutside({
@@ -355,36 +293,6 @@ export const DateField: React.FC<DateProps> = ({
     onClose: closeAllDropdowns,
     excludeRefs: [buttonRef, inputRef, popoverRef, dropdownRef]
   });
-
-  // Add separate effect for year/month dropdowns
-  useEffect(() => {
-    if (!showYearPicker && !showMonthPicker && !showQuickSelect) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      const yearPicker = document.querySelector('[data-year-picker]');
-      const monthPicker = document.querySelector('[data-month-picker]');
-      const quickSelect = document.querySelector('[data-quick-select]');
-
-      // Check if click is outside all dropdowns
-      const isOutsideYear = !yearPicker?.contains(target);
-      const isOutsideMonth = !monthPicker?.contains(target);
-      const isOutsideQuick = !quickSelect?.contains(target);
-
-      if (showYearPicker && isOutsideYear) {
-        setShowYearPicker(false);
-      }
-      if (showMonthPicker && isOutsideMonth) {
-        setShowMonthPicker(false);
-      }
-      if (showQuickSelect && isOutsideQuick) {
-        setShowQuickSelect(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showYearPicker, showMonthPicker, showQuickSelect]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -422,21 +330,6 @@ export const DateField: React.FC<DateProps> = ({
     setError(validate(formattedDate));
     onChange(selected);
   };
-
-  const handleYearSelect = (year: number) => {
-    const newDate = new Date(calendarMonth);
-    newDate.setFullYear(year);
-    setCalendarMonth(newDate);
-    setShowYearPicker(false);
-  };
-
-  const handleMonthSelect = (month: number) => {
-    const newDate = new Date(calendarMonth);
-    newDate.setMonth(month);
-    setCalendarMonth(newDate);
-    setShowMonthPicker(false);
-  };
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -487,238 +380,8 @@ export const DateField: React.FC<DateProps> = ({
     }
   };
 
-  // Calendar logic
-  const getSafeCalendarMonth = (month: Date): Date => {
-    return Number.isNaN(month.getTime()) ? new Date() : month;
-  };
-
-  const safeCalendarMonth = getSafeCalendarMonth(calendarMonth);
-  const year = safeCalendarMonth.getFullYear();
-  const month = safeCalendarMonth.getMonth();
-  const todayISO = getTodayISO();
-  const weeks = buildCalendarWeeks(year, month, true);
-
-  const currentYear = new Date().getFullYear();
-  const [startYear, setStartYear] = React.useState(currentYear); // page starts at selected/current year
-  const years = React.useMemo(() => Array.from({ length: 12 }, (_, i) => startYear + i), [startYear]);
-  // Generate month options for dropdown
-  const months = MONTH_LABELS;
-
-  // For year dropdown
-  const goPrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setStartYear((y) => y - 12);
-  };
-  const goNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setStartYear((y) => y + 12);
-  };
-
-  // For month dropdown: change year of calendarMonth
-  const goPrevMonthYear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCalendarMonth((prev) => new Date(prev.getFullYear() - 1, prev.getMonth(), 1));
-  };
-  const goNextMonthYear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCalendarMonth((prev) => new Date(prev.getFullYear() + 1, prev.getMonth(), 1));
-  };
-
-  const renderCalendar = () => (
-    <div className="p-2 bg-background rounded-xl">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex w-full items-center justify-between">
-          <button
-            type="button"
-            className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
-            onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
-          >
-            <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
-          </button>
-
-          <div className="flex items-center gap-1">
-            {/* Month dropdown */}
-            <div className="relative" data-month-picker>
-              <button
-                type="button"
-                className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMonthPicker(!showMonthPicker);
-                  setShowYearPicker(false);
-                  setShowQuickSelect(false);
-                }}
-              >
-                {months[month]}
-                <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showMonthPicker ? 'rotate-90' : '-rotate-90'}`} />
-              </button>
-              {showMonthPicker && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
-                  <div className="flex items-center justify-between p-2 border-b">
-                    <button
-                      type="button"
-                      onClick={goPrevMonthYear}
-                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
-                    </button>
-                    <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                      {calendarMonth.getFullYear()}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={goNextMonthYear}
-                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 p-2">
-                    {months.map((monthName, index) => (
-                      <button
-                        key={monthName}
-                        className={[
-                          "w-full py-2 rounded-xl text-sm text-center transition-colors",
-                          "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
-                          index === month
-                            ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
-                            : ""
-                        ].join(" ")}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMonthSelect(index);
-                        }}
-                      >
-                        {monthName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            {/* Year dropdown */}
-            <div className="relative" data-year-picker>
-              <button
-                type="button"
-                className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowYearPicker(!showYearPicker);
-                  setShowMonthPicker(false);
-                  setShowQuickSelect(false);
-                }}
-              >
-                {year}
-                <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showYearPicker ? 'rotate-90' : '-rotate-90'}`} />
-              </button>
-              {showYearPicker && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
-                  <div className="flex items-center justify-between p-2 border-b">
-                    <button
-                      type="button"
-                      onClick={goPrev}
-                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
-                    </button>
-                    <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                      {currentYear}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
-                    >
-                      <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 p-2">
-                    {years.map((yearOption) => (
-                      <button
-                        type="button"
-                        key={yearOption}
-                        className={[
-                          "w-full py-2 rounded-md text-sm text-center transition-colors",
-                          "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] hover:text-black",
-                          yearOption === year
-                            ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
-                            : ""
-                        ].join(" ")}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleYearSelect(yearOption);
-                        }}
-                      >
-                        {yearOption}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="p-2 rounded-xl hover:bg-gray-100 text-[var(--color-text-brand-tertiary)] transition-colors"
-            onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
-          >
-            <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
-          </button>
-        </div>
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 text-xs text-gray-500 mb-2">
-        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-          <div key={d} className="text-center font-medium">{d}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {weeks.flat().map((day, idx) => {
-          let dayClasses = '';
-          if (day === convertDateFormat(date, dateFormat, 'YYYY-MM-DD')) {
-            dayClasses = 'bg-[var(--color-bg-brand-primary)] text-black font-bold';
-          } else if (day === todayISO) {
-            dayClasses = 'text-[var(--color-bg-brand-primary)]';
-          } else {
-            dayClasses = 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
-          }
-
-          return (
-            <button
-              type="button"
-              key={day || `empty-${idx}`}
-              className={`w-8 h-8 rounded-xl text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayClasses} ${day ? '' : 'opacity-0 pointer-events-none'}`}
-              onClick={() => day && !readOnly && handleDateSelect(day)}
-              disabled={!!(!day || readOnly || (min && day < convertDateFormat(min, dateFormat, 'YYYY-MM-DD')) || (max && day > convertDateFormat(max, dateFormat, 'YYYY-MM-DD')))}
-            >
-              {day ? Number(day.split('-')[2]) : ''}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Footer with Today button */}
-      {!hideTodayButton && (
-        <div className="flex justify-center mt-4 pt-3 border-t">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
-            onClick={() => !readOnly && handleDateSelect(todayISO)}
-            disabled={readOnly}
-          >
-            Today
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  const minISO = min ? convertDateFormat(min, dateFormat, 'YYYY-MM-DD') : '';
+  const maxISO = max ? convertDateFormat(max, dateFormat, 'YYYY-MM-DD') : '';
 
   return (
     <div className={`relative ${className} ${isBorder ? "field-component-border" : ""}`} ref={popoverRef}>
@@ -774,14 +437,22 @@ export const DateField: React.FC<DateProps> = ({
       {isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
+          className="fixed z-9999 border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
             left: `${calculatedPosition.left}px`,
           }}
         >
-          {renderCalendar()}
+          <CalendarPanel
+            calendarMonth={calendarMonth}
+            onCalendarMonthChange={setCalendarMonth}
+            selectedISO={convertDateFormat(date, dateFormat, 'YYYY-MM-DD')}
+            onSelect={handleDateSelect}
+            readOnly={readOnly}
+            hideTodayButton={hideTodayButton}
+            isDayDisabled={(day) => (!!minISO && day < minISO) || (!!maxISO && day > maxISO)}
+          />
         </div>,
         document.body
       )}

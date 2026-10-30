@@ -36,10 +36,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Modal Header - Fixed */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b">
           <div className="flex items-center gap-4">
             {/* Profile Icon with Pencil */}
-            <div className="w-12 h-12 rounded-full bg-[var(--color-brand-100)] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
               <UserPen className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -52,7 +52,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
             aria-label="Close modal"
           >
-            <X size={20} className="text-[var(--color-text-primary)]" />
+            <X size={20} className="text-(--color-text-primary)" />
           </button>
         </div>
 

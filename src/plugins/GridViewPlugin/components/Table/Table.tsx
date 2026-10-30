@@ -1209,9 +1209,9 @@ export const Table: React.FC<TableProps> = ({
     const isDragging = dragColumnIndex === index;
     const isHovering = hoverColumnIndex === index;
     return [
-      'relative flex-shrink-0 bg-gray-100 border-b group border-r',
+      'relative shrink-0 bg-gray-100 border-b group border-r border-secondary',
       isEditing ? 'overflow-visible' : 'overflow-hidden',
-      isLocked ? '!bg-[var(--color-readonly-header)]' : '',
+      isLocked ? 'bg-readonly-header!' : '',
       isNew ? 'ring-2 ring-yellow-300 bg-yellow-50' : '',
       isDragging ? 'opacity-50' : '',
       isHovering ? 'bg-blue-50' : ''
@@ -1335,7 +1335,7 @@ export const Table: React.FC<TableProps> = ({
                 ? `Primary key field ${primaryKeyColumnIds.indexOf(String(column.id)) + 1} of ${primaryKeyColumnIds.length}`
                 : 'Primary key';
               return (
-                <span title={label} aria-label={label} role="img" className="flex-shrink-0 inline-flex" data-testid={`primary-key-icon-${column.id}`}>
+                <span title={label} aria-label={label} role="img" className="shrink-0 inline-flex" data-testid={`primary-key-icon-${column.id}`}>
                   <KeyRound className="w-3.5 h-3.5 text-amber-500" />
                 </span>
               );
@@ -1402,7 +1402,7 @@ export const Table: React.FC<TableProps> = ({
     <div ref={tableContainerRef} className="w-full h-[calc(100vh-43px)] bg-background flex flex-col relative" >
       {/* Fixed Header - Toolbar */}
       <div //NOSONAR
-        className="sticky top-0 z-30 bg-muted border-b border-border/50"
+        className="sticky top-0 z-30 bg-muted border-b border-border"
         onMouseDown={() => setActiveCell(null)}>
         <div className="flex items-center bg-background gap-2 px-4 py-2">
           {/* Desktop Layout - Hidden on mobile */}
@@ -1493,14 +1493,14 @@ export const Table: React.FC<TableProps> = ({
                     : '';
                   return (
                     <div
-                      className="group flex-shrink-0 bg-gray-100 border-r border-b border-border/30 flex items-center justify-center"
-                      style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
+                      className="group shrink-0 bg-gray-100 border-r border-b border-secondary flex items-center justify-center"
+                      style={{ position: 'sticky', left: 0, zIndex: 25, width: '48px', minWidth: '48px', maxWidth: '48px', height: '35px', boxShadow: 'inset 1px 0 0 var(--color-border-secondary), 2px 0 4px -2px rgba(0,0,0,0.06)' }}
                     >
                       {!isBaseReadOnly() && canUpdateRecord() && (
                         <input
                           type="checkbox"
                           ref={selectAllCheckboxRef}
-                          className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-primary ${isAllRowsSelected ? '!grid' : '!hidden group-hover:!grid'}`}
+                          className={`checkbox-primary-brand w-4 h-4 text-primary rounded-xl focus:ring-(--ring-color-primary) ${isAllRowsSelected ? 'grid!' : 'hidden! group-hover:grid!'}`}
                           checked={isAllRowsSelected}
                           onChange={(e) => handleSelectAll(e.target.checked)}
                         />
@@ -1515,10 +1515,10 @@ export const Table: React.FC<TableProps> = ({
 
                 {/* Add column button - only show if user can create columns and not read-only */}
                 {canCreateColumn() && !isBaseReadOnly() && (
-                  <div className="flex-shrink-0 bg-gray-100 hover:bg-gray-200  flex items-center justify-center h-[35px] border-r border-b relative">
+                  <div className="shrink-0 bg-gray-100 hover:bg-gray-200  flex items-center justify-center h-[35px] border-r border-b relative">
                     <button
                       ref={addColumnButtonRef}
-                      className="p-1 rounded hover:bg-muted/70 transition-colors duration-200"
+                      className="p-1 rounded bg-transparent hover:bg-transparent transition-colors duration-200 cursor-pointer"
                       title="Add column"
                       onClick={() => setIsColumnModalOpen(prev => !prev)}
                     >
@@ -1574,8 +1574,8 @@ export const Table: React.FC<TableProps> = ({
               {/* FRONTEND PAGINATION: Add row button with optional loading indicator */}
               {!isBaseReadOnly() && canCreateRecord() && (
                 <div className="relative" style={{ height: '40px', width: `${totalTableWidth}px`, minWidth: `${totalTableWidth}px` }}>
-                  <div className="flex-shrink-0 w-[48px] h-10 border-r border-b border-border/30 flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
-                    <button className="p-1 rounded hover:bg-muted/50 transition-colors" title="Add row" onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}>
+                  <div className="shrink-0 w-[48px] h-10 border-r border-b border-secondary flex items-center justify-center bg-gray-100 hover:bg-gray-200" style={{ height: '40px', position: 'sticky', left: 0, zIndex: 2, boxShadow: 'inset 1px 0 0 var(--color-border-secondary), 2px 0 4px -2px rgba(0,0,0,0.06)' }}>
+                    <button className="p-1 rounded bg-transparent hover:bg-transparent transition-colors cursor-pointer" title="Add row" onClick={() => { setActiveCell(null); addNewRowAndFocus(); }}>
                       <Plus className="w-5 h-5 text-secondary" />
                     </button>
                   </div>

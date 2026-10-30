@@ -145,7 +145,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
         return (
           <div
             key={view.id}
-            className={`sidebar flex items-center gap-3 py-2 pr-3 pl-10 mt-1 first:mt-0 hover:bg-[var(--color-gray-100)] transition-all ease-in duration-200 rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative`}
+            className={`sidebar flex items-center gap-3 py-2 pr-3 pl-10 mt-1 first:mt-0 hover:bg-(--color-gray-100) transition-all ease-in duration-200 rounded-xl ${isViewActive(table.base_id, table.id, view.id) ? 'bg-blue-25 ' : ''} relative`}
           >
             {/* View icon and name - click to navigate */}
             <button
@@ -166,7 +166,7 @@ export const TableViews: React.FC<TableViewsProps> = ({
               </span>
               <span
                 title={view.title}
-                className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[170px]"
+                className="font-medium text-(--color-text-tertiary) truncate max-w-[170px]"
               >
                 {view.title}
               </span>

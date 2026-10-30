@@ -82,7 +82,7 @@ export const LookupAttachmentValue: React.FC<{ items: any[] }> = ({ items }) => 
             const image = isImageAttachment(file);
             return (
               <div
-                className="w-8 h-8 rounded-lg bg-card border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-[var(--color-brand-600)] focus:outline-none flex-shrink-0"
+                className="w-8 h-8 rounded-lg bg-card border flex items-center justify-center overflow-hidden cursor-pointer transition-all hover:border-brand-600 focus:outline-none shrink-0"
                 key={`att-chip-${index}-${file.name}`}
                 title={file.name}
                 style={{ minWidth: '28px', minHeight: '28px' }}
@@ -125,7 +125,7 @@ export const LookupAttachmentValue: React.FC<{ items: any[] }> = ({ items }) => 
         </div >
       </div >
       {open && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center">
           <button type="button" className="absolute inset-0 backdrop-blur-sm bg-opacity-40" aria-label="Close modal" tabIndex={-1} onClick={() => setOpen(false)} />
           <div className="relative bg-card border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-5 flex flex-col z-10">
             <div className="flex items-center mb-3">

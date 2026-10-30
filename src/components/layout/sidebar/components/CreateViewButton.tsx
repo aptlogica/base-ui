@@ -19,10 +19,10 @@ export const CreateViewButton: React.FC<CreateViewButtonProps> = ({
     <div className="relative w-full">
       <button
         ref={btnRef}
-        className="flex w-full items-center gap-2 text-left hover:bg-[var(--color-gray-100)] text-[var(--color-brand-700)] my-1 pl-10 pr-3 py-1 rounded-xl transition-all ease-in duration-200"
+        className="flex w-full items-center gap-2 text-left hover:bg-(--color-gray-100) text-(--color-brand-700) my-1 pl-10 pr-3 py-1 rounded-xl transition-all ease-in duration-200"
         onClick={() => setOpen(v => !v)}
       >
-        <Plus className="h-5 w-5 text-[var(--color-brand-700)]" /> Create View
+        <Plus className="h-5 w-5 text-(--color-brand-700)" /> Create View
       </button>
       {open && (
         <CreateViewPopover

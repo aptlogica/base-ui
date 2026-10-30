@@ -1359,7 +1359,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
+                className={`w-full px-3 py-2 bg-(--color-alpha-white) border border-(--color-border-primary) rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) text-(--text-color-primary) placeholder:text-(--color-text-placeholder) ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 onChange={e => {
@@ -1377,7 +1377,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                     <Search className="w-4 h-4" />
                   </span>
                   <input
-                    className="w-full pl-10 pr-3 py-2 text-sm text-[var(--text-color-primary)] border rounded-tl-lg rounded-tr-lg focus:outline-none bg-[var(--color-alpha-white)]"
+                    className="w-full pl-10 pr-3 py-2 text-sm text-(--text-color-primary) border rounded-tl-lg rounded-tr-lg focus:outline-none bg-(--color-alpha-white)"
                     placeholder="Search field type"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -1386,11 +1386,11 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
               </div>
               {/* Scrollable area for filtered types */}
               {filteredTypes.length > 0 && (
-                <div className={`max-h-[230px] p-2 space-y-1 overflow-y-auto rounded-bl-lg border-t-0 rounded-br-lg border bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)]`}>
+                <div className={`flex flex-col max-h-[230px] p-2 gap-y-1 overflow-y-auto rounded-bl-lg border-t-0 rounded-br-lg border bg-(--color-alpha-white) text-(--text-color-tertiary)`}>
                   {filteredTypes.map((type: FieldType) => (
                     <button
                       key={type.key}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-(--color-text-primary) rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors ${selectedType?.key === type.key ? 'bg-blue-100' : ''}`}
                       onClick={() => handleTypeSelect(type)}
                       style={{ fontWeight: 500, fontSize: 14 }}
                     >
@@ -1409,7 +1409,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
             <>
               <input
                 ref={fieldNameInputRef}
-                className={`w-full px-3 py-2 bg-[var(--color-alpha-white)] border border-[var(--color-border-primary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] text-[var(--text-color-primary)] placeholder:text-[var(--color-text-placeholder)] ${nameError ? "" : "mb-2"}`}
+                className={`w-full px-3 py-2 bg-(--color-alpha-white) border border-(--color-border-primary) rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) text-(--text-color-primary) placeholder:text-(--color-text-placeholder) ${nameError ? "" : "mb-2"}`}
                 placeholder="Enter Field name"
                 value={fieldName}
                 onChange={e => {
@@ -1449,7 +1449,7 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
       className={`${modalAnchorClass} z-50 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
         }`}
     >
-      <div className={`relative bg-[var(--color-alpha-white)] min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
+      <div className={`relative bg-(--color-alpha-white) min-h-[400px] max-h-[max(70vh,400px)] ${modalWidthClass}  shadow-lg shadow-gray-300 border rounded-xl p-3.5 flex flex-col overflow-hidden`} >
         <div className="flex items-center mb-4">
           <span className="text-lg font-semibold text-gray-900 flex-1">
             {initialValues ? 'Edit Field' : 'New Field'}
@@ -1471,13 +1471,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
         {/* Buttons at the bottom */}
         <div className="mt-auto pt-3 flex gap-2">
           <button
-            className="flex-1 px-16 py-2 rounded-xl border text-[var(--color-text-tertiary)] bg-[var(--color-alpha-white)] hover:bg-gray-100"
+            className="flex-1 px-16 py-2 rounded-xl border text-(--color-text-tertiary) bg-(--color-alpha-white) hover:bg-gray-100"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className={`flex-1 px-16 py-2 btn-primary !rounded-xl flex items-center justify-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`flex-1 px-16 py-2 btn-primary rounded-xl! flex items-center justify-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
             onClick={handleSave}
             disabled={isSaving}
           >

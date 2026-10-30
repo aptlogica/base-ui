@@ -135,7 +135,7 @@ const UserDropdown: React.FC = () => {
       {/* User Info in Header */}
       <div className="flex flex-col items-end cursor-default">
         {isLoadingProfile ? (
-          <div className="space-y-1">
+          <div className="flex flex-col gap-y-1">
             <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
             <div className="h-3 bg-gray-200 rounded animate-pulse w-32"></div>
           </div>
@@ -154,7 +154,7 @@ const UserDropdown: React.FC = () => {
       {/* User Avatar Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-10 h-10 flex items-center justify-center ${userProfile?.avatar ? 'border' : 'bg-green-500 hover:bg-green-600'} text-primary rounded-full transition-colors duration-200 relative flex-shrink-0`}
+        className={`w-10 h-10 flex items-center justify-center ${userProfile?.avatar ? 'border' : 'bg-green-500 hover:bg-green-600'} text-primary rounded-full transition-colors duration-200 relative shrink-0`}
         title={`${displayName} - User Menu`}
       >
         {userProfile?.avatar ? (
@@ -172,7 +172,7 @@ const UserDropdown: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-card border space-y-1 py rounded-xl shadow-lg z-50">
+        <div className="flex flex-col absolute right-0 top-full mt-2 w-56 bg-card border gap-y-1 py rounded-xl shadow-lg z-50">
           {/* Profile */}
           <div className="p-2">
             <button

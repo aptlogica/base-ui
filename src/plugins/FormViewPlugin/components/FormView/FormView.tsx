@@ -597,7 +597,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
 
   // Extract header rendering
   const renderHeader = () => (
-    <div className="flex-shrink-0 bg-background border-b border-border/50 px-4 py-3">
+    <div className="shrink-0 bg-background border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="text-lg font-semibold text-foreground truncate">Form View</h1>
@@ -606,7 +606,7 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
           </span>
         </div>
         
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {canCreateColumn() && !isReadOnly && (
             <button
               ref={addFieldButtonRef}

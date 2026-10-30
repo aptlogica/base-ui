@@ -52,8 +52,8 @@ const getColumnIdentity = (column: ColumnConfig): string => {
 
 // Red cell for a primary key problem. The editor inside paints its own background, and a clicked row forces a
 // blue one, so the red is forced onto the editor too and wins over the active cell and row styles.
-const INVALID_CELL_CLASS = 'border border-red-500 bg-red-50 [&>div]:!bg-red-50 [&_.field-component]:!bg-red-50 [&_.field-component-focus]:!bg-red-50';
-const READONLY_CELL_CLASS = 'bg-[var(--color-readonly-cell)] cursor-not-allowed [&>div]:!bg-[var(--color-readonly-cell)] [&>div]:!cursor-not-allowed [&_.field-component]:!bg-[var(--color-readonly-cell)] [&_.field-component]:!cursor-not-allowed';
+const INVALID_CELL_CLASS = 'border border-red-500 bg-red-50 [&>div]:bg-red-50! [&_.field-component]:bg-red-50! [&_.field-component-focus]:bg-red-50!';
+const READONLY_CELL_CLASS = 'bg-readonly-cell cursor-not-allowed [&>div]:bg-readonly-cell! [&>div]:cursor-not-allowed! [&_.field-component]:bg-readonly-cell! [&_.field-component]:cursor-not-allowed!';
 
 const getCellBorderClass = (isInvalid: boolean, isActive: boolean, isRowActive: boolean, isNonEditable: boolean): string => {
   let borderClass: string;
@@ -61,12 +61,12 @@ const getCellBorderClass = (isInvalid: boolean, isActive: boolean, isRowActive: 
     borderClass = INVALID_CELL_CLASS;
   } else if (isActive) {
     // Selected cell: green border, default background
-    borderClass = 'border border-[var(--color-brand-600)]';
+    borderClass = 'border border-brand-600';
   } else if (isRowActive) {
     // Other cells in a highlighted row: light blue background (overrides the cell's and its input's own bg)
-    borderClass = 'border-b border-border/30 bg-[var(--color-row-highlight-bg)] [&>div]:!bg-[var(--color-row-highlight-bg)] [&_.field-component]:!bg-[var(--color-row-highlight-bg)] [&_.field-component-focus]:!bg-[var(--color-row-highlight-bg)]';
+    borderClass = 'border-b border-secondary bg-(--color-row-highlight-bg) [&>div]:bg-(--color-row-highlight-bg)! [&_.field-component]:bg-(--color-row-highlight-bg)! [&_.field-component-focus]:bg-(--color-row-highlight-bg)!';
   } else {
-    return `border-b border-border/30 ${isNonEditable ? READONLY_CELL_CLASS : ''}`;
+    return `border-b border-secondary ${isNonEditable ? READONLY_CELL_CLASS : ''}`;
   }
   return isNonEditable ? `${borderClass} cursor-not-allowed` : borderClass;
 };
@@ -180,7 +180,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   return (
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div
-      className={`group grid transition-colors min-w-full ${isRowActive ? 'relative z-[2] row-highlighted' : ''}`}
+      className={`group grid transition-colors min-w-full ${isRowActive ? 'relative z-2 row-highlighted' : ''}`}
       style={{
         gridTemplateColumns: `48px ${columnWidths.map(w => w + 'px').join(' ')} 48px`,
         height: '40px',
@@ -197,13 +197,13 @@ export const TableRow: React.FC<TableRowProps> = ({
       data-row-id={rowId}
     >
       <div
-        className={`flex-shrink-0 w-13 border-r border-b border-border/30 ${isRowActive ? 'bg-[var(--color-row-highlight-bg)]' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
+        className={`shrink-0 w-full border-r border-b border-secondary ${isRowActive ? 'bg-(--color-row-highlight-bg)' : 'bg-background hover:bg-gray-50'} flex items-center justify-center relative select-none gap-2`}
         style={{
           height: '40px',
           position: 'sticky',
           left: 0,
           zIndex: 11,
-          boxShadow: 'inset 1px 0 0 var(--color-border), inset 0 -1px 0 var(--color-border)'
+          boxShadow: 'inset 1px 0 0 var(--color-border-secondary)'
         }}
       >
         {(() => {

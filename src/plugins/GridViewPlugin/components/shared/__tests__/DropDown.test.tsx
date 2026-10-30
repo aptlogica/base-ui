@@ -135,7 +135,7 @@ describe('Dropdown', () => {
 
       const selectedOption = screen.getAllByText(/Option 2/i).find(e => e.closest('li'));
       expect(selectedOption).toBeDefined();
-      expect(selectedOption!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
+      expect(selectedOption!.closest('li')).toHaveClass('bg-(--color-bg-brand-secondary)');
     });
 
     it('should show current selection in trigger', () => {
@@ -204,8 +204,8 @@ describe('Dropdown', () => {
       expect(option3).toBeDefined();
 
       // Check that selected options have highlight styling
-      expect(option1!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
-      expect(option3!.closest('li')).toHaveClass('bg-[var(--color-bg-brand-secondary)]');
+      expect(option1!.closest('li')).toHaveClass('bg-(--color-bg-brand-secondary)');
+      expect(option3!.closest('li')).toHaveClass('bg-(--color-bg-brand-secondary)');
     });
   });
 
@@ -240,7 +240,7 @@ describe('Dropdown', () => {
       await userEvent.click(trigger);
 
       const option1 = screen.getByText(/Option 1/i);
-      expect(option1).toHaveClass('hover:bg-[var(--color-bg-brand-primary)]');
+      expect(option1).toHaveClass('hover:bg-(--color-bg-brand-primary)');
     });
   });
 

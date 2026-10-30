@@ -122,7 +122,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
   return createPortal(
     <div //NOSONAR
-      className="fixed inset-0 bg-[#1e1d1db8] backdrop-blur-sm transition-all duration-200 flex flex-col gap-3 items-center justify-between z-[9999]"
+      className="fixed inset-0 bg-[#1e1d1db8] backdrop-blur-sm transition-all duration-200 flex flex-col gap-3 items-center justify-between z-9999"
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
@@ -169,7 +169,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
       {/* Preview Container */}
       <div //NOSONAR
-        className="w-full max-w-screen-xl h-[80vh] flex items-center justify-center px-20 overflow-auto scrollbar-none"
+        className="w-full max-w-(--breakpoint-xl) h-[80vh] flex items-center justify-center px-20 overflow-auto scrollbar-none"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e)=> e.stopPropagation()}
       >
@@ -228,7 +228,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
                 setCurrentIndex(images.findIndex(i => i.url === img.url));
               }}
               className={`w-14 h-14 rounded-xl overflow-hidden border ${img.url === currentImage?.url
-                  ? "border-[var(--color-bg-brand-primary)] shadow-sm"
+                  ? "border-(--color-bg-brand-primary) shadow-sm"
                   : "border-gray-300 opacity-70 hover:opacity-100"
                 } transition`}
               aria-label={`Show image ${images.findIndex(i => i.url === img.url) + 1}`}

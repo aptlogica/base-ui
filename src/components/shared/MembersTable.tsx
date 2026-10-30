@@ -538,7 +538,7 @@ export const MembersTable: React.FC<MembersTableProps> = ({
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             {member.avatar ? (
-                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
                                 <img
                                   src={member.avatar}
                                   alt={member.name}

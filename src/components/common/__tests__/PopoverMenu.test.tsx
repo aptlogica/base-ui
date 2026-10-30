@@ -242,7 +242,7 @@ describe('PopoverMenu', () => {
       
       // In portal mode, the menu has 'fixed' class for positioning
       // Since createPortal is mocked to render inline, we search the document
-      const menu = document.querySelector('.fixed.z-\\[9999\\]');
+      const menu = document.querySelector('.fixed.z-9999');
       expect(menu).toBeInTheDocument();
     });
   });

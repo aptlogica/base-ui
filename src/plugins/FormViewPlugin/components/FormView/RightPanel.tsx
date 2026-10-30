@@ -35,20 +35,20 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b flex-shrink-0 bg-sidebar">
+      <div className="p-4 border-b shrink-0 bg-sidebar">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text">Form Fields</h2>
           <span className="text-sm text-secondary">{config.fields.length}/{FIELD_TYPES.length} Field</span>
         </div>
       </div>
 
-      <div className="p-4 border-b flex-shrink-0 bg-sidebar">
-        <div className="flex gap-1 bg-[var(--color-gray-50)] border border-[var(--color-gray-200)] rounded-xl p-1">
+      <div className="p-4 border-b shrink-0 bg-sidebar">
+        <div className="flex gap-1 bg-(--color-gray-50) border border-(--color-gray-200) rounded-xl p-1">
           <button
             onClick={() => setActiveTab('fields')}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors ${
               activeTab === 'fields'
-                ? 'bg-card text-[var(--color-text-brand-secondary,#079455)] font-semibold border border-[var(--color-gray-200)] shadow-sm'
+                ? 'bg-card text-(--color-text-brand-secondary,#079455) font-semibold border border-(--color-gray-200) shadow-sm'
                 : 'border border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -58,7 +58,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             onClick={() => setActiveTab('appearance')}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors ${
               activeTab === 'appearance'
-                ? 'bg-card text-[var(--color-text-brand-secondary,#079455)] font-semibold border border-[var(--color-gray-200)] shadow-sm'
+                ? 'bg-card text-(--color-text-brand-secondary,#079455) font-semibold border border-(--color-gray-200) shadow-sm'
                 : 'border border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >

@@ -197,7 +197,7 @@ export const Time: React.FC<TimeProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] border bg-background rounded-xl shadow-lg max-h-80 animate-fade-in flex flex-col"
+            className="fixed z-9999 border bg-background rounded-xl shadow-lg max-h-80 animate-fade-in flex flex-col"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -206,12 +206,12 @@ export const Time: React.FC<TimeProps> = ({
             }}
           >
             {/* Scrollable time options */}
-            <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+            <div className="flex flex-col flex-1 overflow-y-auto p-1.5 gap-y-1">
               {timeOptions.map(option => (
                 <button
                   key={option}
                   type="button"
-                  className={`w-full px-4 py-2 text-md text-left text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] transition-colors ${displayValue === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                  className={`w-full px-4 py-2 text-md text-left text-(--color-text-primary) rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary) transition-colors ${displayValue === option ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''}`}
                   onClick={() => !readOnly && handleSelect(option)}
                   disabled={readOnly}
                 >
@@ -220,10 +220,10 @@ export const Time: React.FC<TimeProps> = ({
               ))}
             </div>
             {/* Fixed footer with Now button */}
-            <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background flex-shrink-0 rounded-bl-lg rounded-br-lg">
+            <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background shrink-0 rounded-bl-lg rounded-br-lg">
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+                className="px-4 py-2 rounded-xl bg-(--color-bg-brand-primary) text-black hover:bg-(--color-bg-brand-secondary) text-sm font-medium transition-colors"
                 onClick={() => !readOnly && handleNow()}
                 disabled={readOnly}
               >

@@ -38,7 +38,7 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                 disabled={disabled}
                 className={`w-full flex items-center gap-2 px-3 py-2 border rounded-xl text-sm focus:outline-none ${disabled
                     ? 'btn-disabled'
-                    : 'bg-[var(--color-alpha-white)] text-[var(--text-color-primary)] focus:ring-1 focus:ring-[var(--ring-color-brand)]'
+                    : 'bg-(--color-alpha-white) text-(--text-color-primary) focus:ring-1 focus:ring-(--ring-color-brand)'
                     }`}
                 onClick={() => !disabled && setOpen((v) => !v)}
                 aria-haspopup="listbox"
@@ -54,11 +54,11 @@ export function FieldTypeDropdown({ selectedType, setSelectedType, fieldTypes, d
                 {open ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
             </button>
             {open && !disabled && (
-                <div className="absolute z-50 mt-1 left-0 p-2 space-y-1 w-full bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] border rounded-xl shadow-lg max-h-72 overflow-y-auto transition-all ease">
+                <div className="flex flex-col absolute z-50 mt-1 left-0 p-2 gap-y-1 w-full bg-(--color-alpha-white) text-(--text-color-tertiary) border rounded-xl shadow-lg max-h-72 overflow-y-auto transition-all ease">
                     {fieldTypes.map((type) => (
                         <button
                             key={type.key}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl ${selectedType?.key === type.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : ''}`}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--color-bg-brand-primary) hover:text-black rounded-xl ${selectedType?.key === type.key ? 'bg-(--color-bg-brand-secondary) text-black font-bold ' : ''}`}
                             onClick={() => {
                                 setSelectedType(type);
                                 setOpen(false);

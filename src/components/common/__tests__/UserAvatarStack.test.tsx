@@ -237,7 +237,7 @@ describe('UserAvatarStack', () => {
   it('positions avatars with negative space', () => {
     const { container } = render(<UserAvatarStack users={mockUsers.slice(0, 3)} />);
     
-    const stack = container.querySelector('.-space-x-2');
+    const stack = container.querySelector('.avatar-stack');
     expect(stack).toBeInTheDocument();
   });
 

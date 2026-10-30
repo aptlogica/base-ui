@@ -43,7 +43,7 @@ export const FieldConfigPopover: React.FC<FieldConfigPopoverProps> = ({
 }) => {
   return (
     <FieldConfigPopoverShell buttonLabel={buttonLabel} title={title} className={className}>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-y-4">
         <div>
           <AdvancedDropdown
             label={dropdownLabel}
@@ -103,7 +103,7 @@ export const FieldConfigPopoverShell: React.FC<FieldConfigPopoverShellProps> = (
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-primary)] hover:text-black font-semibold rounded-xl transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-(--color-bg-brand-primary) text-black hover:bg-(--color-bg-brand-primary) hover:text-black font-semibold rounded-xl transition-colors"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >

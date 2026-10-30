@@ -80,7 +80,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
           <span className="text-xs text-gray-700 truncate flex-1 min-w-0" title={base.title || base.name}>
             {base.title || base.name}
           </span>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="min-w-[120px]">
               <RoleDropdown
                 value={baseAssignment?.role || ''}
@@ -108,7 +108,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                   // Remove base from selection
                   onToggleBase(workspace.id, base.id);
                 }}
-                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
                 title="Clear selection"
                 aria-label="Clear base role selection"
               >
@@ -129,11 +129,11 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
           <span className="text-sm font-medium text-gray-900 truncate" title={workspace.title || workspace.name}>
             {workspace.title || workspace.name}
           </span>
-          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-300 text-xs font-medium rounded-lg flex-shrink-0">
+          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-300 text-xs font-medium rounded-lg shrink-0">
             {baseCount} Base{baseCount === 1 ? '' : 's'}
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="min-w-[160px]">
             <RoleDropdown
               value={assignment?.role || ''}
@@ -154,7 +154,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                 e.stopPropagation();
                 onRoleChange(workspace.id, null);
               }}
-              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
               title="Clear selection"
               aria-label="Clear role selection"
             >

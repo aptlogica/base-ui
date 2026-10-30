@@ -13,7 +13,7 @@ type Props = {
 };
 
 const inputBase =
-  "field-component field-component-border field-component-focus !h-10 !rounded-xl disabled:opacity-60 disabled:cursor-not-allowed";
+  "field-component field-component-border field-component-focus h-10! rounded-xl! disabled:opacity-60 disabled:cursor-not-allowed";
 
 export const DefaultValueEditor: React.FC<Props> = ({ fieldType, value, disabled = false, onChange }) => {
   const normalizedType = String(fieldType || '').trim();

@@ -47,7 +47,7 @@ const getPercentValue = (value: number | null): number => {
 
 const getProgressColorClass = (color: string): string => {
   const colorMap: Record<string, string> = {
-    green: 'bg-[var(--color-utility-brand-500)]',
+    green: 'bg-(--color-utility-brand-500)',
     blue: 'bg-blue-500',
     yellow: 'bg-yellow-500',
     orange: 'bg-orange-500',
@@ -57,7 +57,7 @@ const getProgressColorClass = (color: string): string => {
     indigo: 'bg-indigo-500',
     teal: 'bg-teal-500',
   };
-  return colorMap[color] || 'bg-[var(--color-utility-brand-500)]';
+  return colorMap[color] || 'bg-(--color-utility-brand-500)';
 };
 
 const validatePercent = (val: string, required: boolean): string | null => {

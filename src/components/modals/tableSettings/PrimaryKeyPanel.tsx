@@ -135,7 +135,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
   if (loadError || !primaryKey) {
     return (
       <div className="p-6 text-sm text-red-600 flex items-center gap-1">
-        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <AlertCircle className="w-4 h-4 shrink-0" />
         <span>{(loadError as any)?.message || 'Failed to load the primary key'}</span>
       </div>
     );
@@ -143,14 +143,14 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 pt-4 flex-shrink-0">
+      <div className="px-4 pt-4 shrink-0">
         <h3 className="text-lg font-semibold text-primary">Primary Key</h3>
         <p className="mt-1 text-sm text-secondary">Select fields that uniquely identify each record. Multiple fields create a composite key.</p>
       </div>
 
       {locked && (
-        <div role="note" className="mx-4 mt-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900 flex gap-2 flex-shrink-0">
-          <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div role="note" className="mx-4 mt-3 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900 flex gap-2 shrink-0">
+          <Lock className="w-4 h-4 mt-0.5 shrink-0" />
           <div>
             <p className="font-medium">The primary key can't be changed while this table has link fields</p>
             <p className="mt-0.5">
@@ -162,8 +162,8 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
         </div>
       )}
 
-      <div className="mx-4 mt-3 flex items-center gap-2 text-sm flex-shrink-0">
-        <KeyRound className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      <div className="mx-4 mt-3 flex items-center gap-2 text-sm shrink-0">
+        <KeyRound className="w-4 h-4 text-gray-500 shrink-0" />
         <span className="text-gray-600">Key:</span>
         {keyTitles.length > 0 ? (
           <span className="font-medium text-primary truncate" data-testid="primary-key-summary">{keyTitles.join(' + ')}</span>
@@ -239,7 +239,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                           aria-label={`Key field ${position + 1}: ${column.title}`}
                           className="inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium whitespace-nowrap max-w-full"
                         >
-                          <span className="w-5 h-5 rounded-full bg-[var(--color-brand-600)] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                          <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-xs font-semibold flex items-center justify-center shrink-0" aria-hidden="true">
                             {position + 1}
                           </span>
                           <span className="truncate">{position + 1} · {column.title}</span>
@@ -259,11 +259,11 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
       {violation && (
         <div
           role="alert"
-          className="mx-4 mt-3 p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-800 max-h-64 overflow-y-auto flex-shrink-0"
+          className="mx-4 mt-3 p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-800 max-h-64 overflow-y-auto shrink-0"
           data-testid="primary-key-violation"
         >
           <p className="font-medium flex items-center gap-1">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             Primary key not saved
           </p>
           <p className="mt-1" data-testid="primary-key-violation-message">{violation.message}</p>
@@ -276,7 +276,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
                   <li key={f.column}>{f.title} is empty in {f.count} {f.count === 1 ? 'record' : 'records'}</li>
                 ))}
               </ul>
-              <ul className="mt-1 pl-5 space-y-0.5">
+              <ul className="flex flex-col mt-1 pl-5 gap-y-0.5">
                 {violation.null_records.map(r => (
                   <li key={r.id}>
                     Record #{r.id}{r.title ? ` (${r.title})` : ''}
@@ -312,17 +312,17 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 px-4 py-3 mt-3 border-t flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 mt-3 border-t shrink-0">
         <div className="min-w-0">
           {message && (
             <div className={`text-sm flex items-center gap-1 ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
-              {message.ok ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+              {message.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
               <span>{message.text}</span>
             </div>
           )}
         </div>
         {!locked && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -339,7 +339,7 @@ const PrimaryKeyPanel: React.FC<PrimaryKeyPanelProps> = ({ table }) => {
               type="button"
               onClick={save}
               disabled={!changed || selected.length === 0 || updatePrimaryKey.isPending}
-              className="px-5 h-10 rounded-xl bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-700)] text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 h-10 rounded-xl bg-brand-600 hover:bg-(--color-brand-700) text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {updatePrimaryKey.isPending ? 'Saving…' : 'Save primary key'}
             </button>

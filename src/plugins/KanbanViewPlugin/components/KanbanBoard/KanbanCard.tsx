@@ -323,7 +323,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
       )}
 
       {/* Card Fields - Title will now display like other fields */}
-      <div className="space-y-4 pt-3">
+      <div className="flex flex-col gap-y-4 pt-3">
         {detailCols.map(col => {
           // Include links fields - they can be displayed using FieldDisplay (like Gallery)
 
@@ -360,7 +360,7 @@ const KanbanCard = memo<KanbanCardProps>((props) => {
             <div key={col.id || col.key || `field-${col.column_name}`} className="group/metadata">
               {/* Field Title with Icon */}
               <div className="flex items-center gap-2 mb-1">
-                <div className="text-gray-400 flex-shrink-0">
+                <div className="text-gray-400 shrink-0">
                   
                   {getFieldTypeIconWithMargin(
                     fieldType === 'checkbox' ? 'boolean' : fieldType,

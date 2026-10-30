@@ -510,7 +510,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
 
                             if (selectedRecords.length === 1) {
                                 return (
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border shrink min-w-fit overflow-hidden" style={{ maxWidth: 'calc(100% - 1.5rem)' }}>
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[0])}
@@ -524,7 +524,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 handleRemoveRecord(selectedRecords[0].id);
                                             }}
                                             disabled={disabled}
-                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
+                                            className={`rounded-full p-0.5 shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -535,7 +535,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                             return (
                                 <>
                                     {/* Show first record */}
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-fit max-w-fit overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border shrink-0 min-w-fit max-w-fit overflow-hidden">
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[0])}
@@ -549,13 +549,13 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 handleRemoveRecord(selectedRecords[0].id);
                                             }}
                                             disabled={disabled}
-                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
+                                            className={`rounded-full p-0.5 shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
                                     </div>
                                     {/* Show second record */}
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 min-w-0 max-w-[40%] overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-xs rounded-full border shrink-0 min-w-0 max-w-[40%] overflow-hidden">
                                         <span
                                             className="truncate block min-w-0 flex-1 text-blue-500"
                                             title={getRecordDisplayText(selectedRecords[1])}
@@ -569,7 +569,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 handleRemoveRecord(selectedRecords[1].id);
                                             }}
                                             disabled={disabled}
-                                            className={`rounded-full p-0.5 flex-shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
+                                            className={`rounded-full p-0.5 shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200 text-black'}`}
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -577,7 +577,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                     {/* Show count for remaining records if more than 2 */}
                                     {selectedRecords.length > 2 && (
                                         <div //NOSONAR
-                                            className="flex items-center px-2 py-1 bg-blue-100 text-xs rounded-full border flex-shrink-0 cursor-pointer hover:opacity-80"
+                                            className="flex items-center px-2 py-1 bg-blue-100 text-xs rounded-full border shrink-0 cursor-pointer hover:opacity-80"
                                             title={selectedRecords.slice(2).map(r => getRecordDisplayText(r)).join(', ')}
                                             role="button"
                                             tabIndex={disabled ? -1 : 0}
@@ -608,7 +608,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                             );
                         })()}
                     </div>
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
                 </div>
             </div>
 
@@ -625,9 +625,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                     }}
                 >
                     {/* Header */}
-                    <div className="p-4 border-b bg-gray-50 flex-shrink-0">
+                    <div className="p-4 border-b bg-gray-50 shrink-0">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center gap-x-2">
                                 <Link className="w-4 h-4 text-blue-600" />
                                 <span className="font-semibold text-gray-900">{getRelationTypeDisplay()}</span>
                             </div>
@@ -672,7 +672,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                 </button>
                             )}
                         </div>
-                        <div className="flex justify-end items-center space-x-2 mt-3">
+                        <div className="flex justify-end items-center gap-x-2 mt-3">
                             <div className="text-xs text-gray-500">
                                 {formatCompactNumber(selectedRecords.length)} of {formatCompactNumber(totalItems)} selected{hasMore && ` (${formatCompactNumber(paginatedRecords.length)} loaded)`}
                             </div>
@@ -737,7 +737,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 data-index={virtualRow.index}
                                                 ref={rowVirtualizer.measureElement}
                                                 className={`p-4 border-b hover:bg-gray-50 cursor-pointer bg-card transition-colors ${isSelected ? 'bg-blue-500' : ''
-                                                    } ${isFocused ? 'bg-[var(--color-bg-brand-secondary)] text-black' : ''
+                                                    } ${isFocused ? 'bg-(--color-bg-brand-secondary) text-black' : ''
                                                     }`}
                                                 style={{
                                                     position: 'absolute',
@@ -762,9 +762,9 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex-1 min-w-0">
                                                         {/* Mini-form display with better layout */}
-                                                        <div className="space-y-2">
+                                                        <div className="flex flex-col gap-y-2">
                                                             {/* Main title */}
-                                                            <div className="flex items-center space-x-2">
+                                                            <div className="flex items-center gap-x-2">
                                                                 <h4 className="font-medium text-gray-900 truncate">
                                                                     {getRecordDisplayText(record)}
                                                                 </h4>
@@ -772,7 +772,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
 
                                                             {/* Status indicator */}
                                                             {isSelected && (
-                                                                <div className="flex items-center space-x-1 mt-2">
+                                                                <div className="flex items-center gap-x-1 mt-2">
                                                                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                                                     <span className="text-xs text-blue-500 font-medium">Linked</span>
                                                                 </div>
@@ -780,7 +780,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                                                    <div className="flex items-center gap-x-2 ml-3 shrink-0">
                                                         {isRecordLoading ? (
                                                             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex items-center justify-center" aria-label="Loading" />
                                                         ) : (
@@ -818,7 +818,7 @@ export const LinksField: React.FC<LinksFieldProps> = ({
                         {isLoadingMore && (
                             <div  //NOSONAR
                                 className="p-4 text-center text-gray-500" role="status" aria-live="polite">
-                                <div className="flex items-center justify-center space-x-2">
+                                <div className="flex items-center justify-center gap-x-2">
                                     <Loader size={4} />
                                     <span className="text-sm">Loading more records...</span>
                                 </div>

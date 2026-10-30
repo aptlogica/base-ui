@@ -214,13 +214,13 @@ const HeaderWorkspaceDropdown: React.FC = () => {
         >
           {/* Workspace Icon */}
           {displayWorkspace ? (
-            <div className={`w-8 h-8 ${workspaceIcon.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+            <div className={`w-8 h-8 ${workspaceIcon.color} rounded-full flex items-center justify-center shrink-0`}>
               <span className="text-white font-bold text-[10px]">
                 {workspaceIcon.initials}
               </span>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-gray-200 border rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-gray-200 border rounded-full flex items-center justify-center shrink-0">
               <span className="text-black font-bold text-[10px]">S</span>
             </div>
           )}
@@ -232,13 +232,13 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
           {/* Read Only Tag */}
           {(isWorkspaceReadOnly() || isBaseReadOnly()) && (
-            <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border flex-shrink-0">
+            <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border shrink-0">
               Read only
             </span>
           )}
 
           {/* Dropdown Icon - chevron up when open */}
-          <ChevronsUpDown className="w-4 h-4 text-tertiary transition-transform flex-shrink-0" />
+          <ChevronsUpDown className="w-4 h-4 text-tertiary transition-transform shrink-0" />
         </button>
 
         {/* Workspace Dropdown */}
@@ -254,7 +254,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
           >
             <div className="flex flex-col" style={{ minHeight: '200px', maxHeight: '384px' }}>
               {/* Workspaces Header */}
-              <div className="px-4 py-2 flex-shrink-0">
+              <div className="px-4 py-2 shrink-0">
                 <div className="text-xs font-semibold text-primary tracking-wide">Workspaces</div>
               </div>
 
@@ -294,7 +294,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {/* Workspace Icon */}
-                          <div className={`w-10 h-10 ${iconColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <div className={`w-10 h-10 ${iconColor} rounded-full flex items-center justify-center shrink-0`}>
                             <span className={`${textColor} text-center font-semibold text-[10px] text-base`}>
                               {workspaceInitials}
                             </span>
@@ -307,7 +307,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                             </span>
 
                             {/* Right side: Badge and Status Indicator */}
-                            <div className="flex items-center gap-2 flex-shrink-0 pr-2">
+                            <div className="flex items-center gap-2 shrink-0 pr-2">
                               {/* Access Level Badge - Don't show for owner/co-owner */}
                               {workspace.access_level && workspace.access_level !== 'owner' && workspace.access_level !== 'co-owner' && (
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getAccessLevelBadgeClasses(workspace.access_level)}`}>
@@ -338,12 +338,12 @@ const HeaderWorkspaceDropdown: React.FC = () => {
 
               {/* Separator - only show if there are workspaces and user can create */}
               {workspaces && workspaces.length > 0 && canCreateWorkspace() && (
-                <div className="border-t flex-shrink-0"></div>
+                <div className="border-t shrink-0"></div>
               )}
 
               {/* Create Workspace Button - only show if user has permission */}
               {canCreateWorkspace() && (
-                <div className="p-2 flex-shrink-0">
+                <div className="p-2 shrink-0">
                   <button
                     className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1"
                     onClick={() => {
@@ -351,7 +351,7 @@ const HeaderWorkspaceDropdown: React.FC = () => {
                       setWorkspaceDropdownOpen(false);
                     }}
                   >
-                    <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 flex items-center justify-center shrink-0">
                       <Plus className="w-5 h-5 text-primary" />
                     </div>
                     <span>Create Workspace</span>

@@ -124,7 +124,7 @@ const ResetPasswordPage: React.FC = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-y-4">
           <div className="relative">
             <label htmlFor="reset-password-new" className="field-component-label">
               New Password{' '}
@@ -154,7 +154,7 @@ const ResetPasswordPage: React.FC = () => {
                   }
                 }}
                 placeholder="Enter your new password"
-                className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${passwordError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}
+                className={`field-component field-component-border field-component-focus placeholder-(--color-text-placeholder) ${passwordError ? "border-destructive bg-red-50" : ""} shadow-(--shadow-xs)`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-50 flex items-center gap-2">
@@ -174,7 +174,7 @@ const ResetPasswordPage: React.FC = () => {
                   <HelpCircle className={`w-4 h-4 ${passwordError ? "text-red-400" : "text-gray-400"} cursor-help`} />
                   <div className="invisible group-hover:visible group-focus-within:visible absolute left-0 mt-1 w-72 bg-card border rounded-xl shadow-lg p-4 text-sm z-50">
                     <h4 className="font-medium mb-2 text-primary">Password Requirements:</h4>
-                    <ul className="space-y-1">
+                    <ul className="flex flex-col gap-y-1">
                       {(() => {
                         const validation = validatePasswordStrength(formData.password, '', '', '');
                         const hasPassword = formData.password && formData.password.trim().length > 0;
@@ -252,7 +252,7 @@ const ResetPasswordPage: React.FC = () => {
                   }
                 }}
                 placeholder="Confirm your new password"
-                className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${confirmPasswordError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}
+                className={`field-component field-component-border field-component-focus placeholder-(--color-text-placeholder) ${confirmPasswordError ? "border-destructive bg-red-50" : ""} shadow-(--shadow-xs)`}
                 style={{ boxShadow: "var(--shadow-xs)" }}
               />
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-50 flex items-center gap-2">

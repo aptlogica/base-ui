@@ -247,7 +247,7 @@ const ActionButtons: React.FC<{
     {onDragStart && (
       <button
         type="button"
-        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute left-0 top-1/2 -translate-y-1/2 py-1 text-gray-400 hover:text-(--color-gray-600) cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
         draggable={draggable}
         onDragStart={e => { e.stopPropagation(); onDragStart(); }}
         onDragEnd={e => { e.stopPropagation(); onDragEnd?.(); }}
@@ -261,7 +261,7 @@ const ActionButtons: React.FC<{
       {!field.isSystem && onEdit && (
         <button
           type="button"
-          className="p-1 text-[var(--color-gray-400)] hover:text-[var(--color-gray-600)] bg-[var(--color-alpha-white)] rounded shadow-sm"
+          className="p-1 text-gray-400 hover:text-(--color-gray-600) bg-(--color-alpha-white) rounded shadow-sm"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -275,7 +275,7 @@ const ActionButtons: React.FC<{
       {!field.isSystem && onDelete && (
         <button
           type="button"
-          className="p-1 text-red-500 hover:text-red-700 bg-[var(--color-alpha-white)] rounded shadow-sm cursor-pointer"
+          className="p-1 text-red-500 hover:text-red-700 bg-(--color-alpha-white) rounded shadow-sm cursor-pointer"
           title="Delete field"
           onClick={e => {
             e.stopPropagation();
@@ -293,12 +293,12 @@ const ActionButtons: React.FC<{
 
 // Extract container className computation
 const getContainerClassName = (isSelected: boolean, isDragging: boolean, isDragOver: boolean, dropPosition?: DropPosition | null, labelPosition?: string): string => {
-  const spacing = labelPosition === 'left' ? 'space-y-7' : 'space-y-2';
+  const spacing = labelPosition === 'left' ? 'flex flex-col gap-y-7' : 'flex flex-col gap-y-2';
   const isSideDrop = dropPosition === 'left' || dropPosition === 'right';
   return `relative group ${spacing} p-4 rounded-xl transition-all select-none
-    ${isSelected ? 'bg-[var(--color-utility-brand-50)] border-2 border-[var(--color-brand-200)] shadow-sm' : 'hover:bg-[var(--color-hover-bg)]'}
-    ${isDragging ? 'opacity-50 border-dashed border-2  border-[var(--color-brand-400)]' : ''}
-    ${isDragOver && !isSideDrop ? 'ring-2 ring-[var(--ring-color-primary)]' : ''}`;
+    ${isSelected ? 'bg-(--color-utility-brand-50) border-2 border-brand-200 shadow-sm' : 'hover:bg-(--color-hover-bg)'}
+    ${isDragging ? 'opacity-50 border-dashed border-2  border-(--color-brand-400)' : ''}
+    ${isDragOver && !isSideDrop ? 'ring-2 ring-(--ring-color-primary)' : ''}`;
 };
 
 // Edge zones (as a fraction of the field width) that place the dragged field beside the target
@@ -346,7 +346,7 @@ const FieldContent: React.FC<{
     <>
       <div className={`flex gap-4 ${labelPosition} ${appearance?.labelPosition === 'left' ? 'relative' : ''}`}>
         <label
-          className={`text-sm font-medium ${appearance?.labelPosition === 'left' ? 'w-32 flex-shrink-0' : 'block'}`}
+          className={`text-sm font-medium ${appearance?.labelPosition === 'left' ? 'w-32 shrink-0' : 'block'}`}
           style={{ color: appearance?.textColor || undefined }}
         >
           {getFieldDisplayName(field)}
@@ -422,7 +422,7 @@ export const SortableFormField: React.FC<SortableFormFieldProps> = ({
       {sideDropIndicator && (
         <span
           data-testid={`side-drop-indicator-${sideDropIndicator}`}
-          className={`absolute top-2 bottom-2 w-1 rounded-full bg-[var(--color-brand-400)] ${sideDropIndicator === 'left' ? '-left-1' : '-right-1'}`}
+          className={`absolute top-2 bottom-2 w-1 rounded-full bg-(--color-brand-400) ${sideDropIndicator === 'left' ? '-left-1' : '-right-1'}`}
         />
       )}
       <ActionButtons

@@ -58,7 +58,7 @@ export const SelectOptionsMenu: React.FC<SelectOptionsMenuProps> = ({
               <span className="truncate" title={opt.option}>{opt.option}</span>
               {selected && (
                 <Check
-                  className="w-4 h-4 flex-shrink-0 ml-1"
+                  className="w-4 h-4 shrink-0 ml-1"
                   style={{ color: opt.color ? getReadableTextColor(opt.color) : '#000000' }}
                 />
               )}

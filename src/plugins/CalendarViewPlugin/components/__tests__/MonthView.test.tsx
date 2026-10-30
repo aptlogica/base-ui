@@ -100,7 +100,7 @@ describe('MonthView', () => {
       }];
 
       const { container } = render(<MonthView {...defaultProps} currentDate={today} events={todayEvents} />);
-      const todayCell = container.querySelector(String.raw`.bg-\[var\(--color-bg-brand-primary\)\]`);
+      const todayCell = container.querySelector(String.raw`.bg-\(--color-bg-brand-primary\)`);
       expect(todayCell).toBeInTheDocument();
     });
   });

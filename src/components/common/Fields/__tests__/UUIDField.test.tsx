@@ -81,7 +81,7 @@ describe('UUIDField', () => {
       fireEvent.change(input, { target: { value: 'ORD-2291-A' } });
       fireEvent.blur(input);
       expect(input.className).toContain('field-component-focus');
-      expect(input.className).toContain('border-[var(--color-error-500)]');
+      expect(input.className).toContain('border-(--color-error-500)');
     });
 
     it('clears the value', () => {

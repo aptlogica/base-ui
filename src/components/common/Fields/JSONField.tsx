@@ -94,9 +94,9 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
           style={{ paddingLeft: `${indent}px` }}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 text-gray-500 mr-1 shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-500 mr-1 shrink-0" />
           )}
           <span className="text-gray-600">[</span>
           <span className="text-gray-500 ml-1 text-xs">{data.length} items</span>
@@ -119,7 +119,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                       <>
                         {isItemExpanded ? (
                           <ChevronDown
-                            className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0 cursor-pointer"
+                            className="w-4 h-4 text-gray-500 mr-1 shrink-0 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleExpand(itemPath);
@@ -127,7 +127,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                           />
                         ) : (
                           <ChevronRight
-                            className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0 cursor-pointer"
+                            className="w-4 h-4 text-gray-500 mr-1 shrink-0 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleExpand(itemPath);
@@ -177,9 +177,9 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
           style={{ paddingLeft: `${indent}px` }}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 text-gray-500 mr-1 shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-500 mr-1 shrink-0" />
           )}
           <span className="text-gray-600">{'{'}</span>
           <span className="text-gray-500 ml-1 text-xs">{keys.length} keys</span>
@@ -203,7 +203,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                       <>
                         {isValExpanded ? (
                           <ChevronDown
-                            className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0 cursor-pointer"
+                            className="w-4 h-4 text-gray-500 mr-1 shrink-0 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleExpand(keyPath);
@@ -211,7 +211,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                           />
                         ) : (
                           <ChevronRight
-                            className="w-4 h-4 text-gray-500 mr-1 flex-shrink-0 cursor-pointer"
+                            className="w-4 h-4 text-gray-500 mr-1 shrink-0 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleExpand(keyPath);
@@ -432,7 +432,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
       </button>
       {/* Modal for editing JSON */}
       {isModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center">
           {/* Backdrop */}
           <button
             type="button"
@@ -443,16 +443,16 @@ export const JSONField: React.FC<JSONFieldProps> = ({
             style={{ cursor: 'pointer' }}
           />
           {/* Modal Content */}
-          <div className="relative bg-[var(--color-card)] border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
+          <div className="relative bg-(--color-card) border rounded-xl shadow-xl w-full max-w-5xl h-[85vh] p-6 flex flex-col z-10">
             <div className="flex items-center mb-4">
               <FileJson className="w-8 h-8 rounded icon-primary p-1 mr-2" />
-              <span className="text-lg font-medium text-[var(--color-text-primary)]">{readOnly ? 'View JSON' : 'Edit JSON'}</span>
+              <span className="text-lg font-medium text-(--color-text-primary)">{readOnly ? 'View JSON' : 'Edit JSON'}</span>
               {!readOnly && (
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => setViewMode('tree')}
                     className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'tree'
-                      ? 'bg-[var(--color-brand-600)] text-black'
+                      ? 'bg-brand-600 text-black'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
@@ -461,7 +461,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                   <button
                     onClick={() => setViewMode('text')}
                     className={`px-3 py-1 text-xs rounded-xl transition-colors ${viewMode === 'text'
-                      ? 'bg-[var(--color-brand-600)] text-black'
+                      ? 'bg-brand-600 text-black'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
@@ -479,7 +479,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
             </div>
             <div className="flex-1 overflow-auto min-h-[380px]">
               {readOnly || viewMode === 'tree' ? (
-                <div className="w-full h-full bg-[var(--background)] border rounded-xl p-4 text-sm font-mono overflow-auto">
+                <div className="w-full h-full bg-(--background) border rounded-xl p-4 text-sm font-mono overflow-auto">
                   {jsonData !== null && jsonData !== undefined ? (
                     <JSONTreeNode
                       data={jsonData}
@@ -498,7 +498,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
                   value={modalValue}
                   onChange={handleModalChange}
                   rows={12}
-                  className="w-full h-full bg-[var(--background)] text-[var(--color-text-primary)] border rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-[var(--color-brand-600)] transition-all resize-none"
+                  className="w-full h-full bg-(--background) text-(--color-text-primary) border rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-brand-600 transition-all resize-none"
                   placeholder={placeholder}
                   disabled={disabled}
                   onKeyDown={(e) => {
@@ -518,7 +518,7 @@ export const JSONField: React.FC<JSONFieldProps> = ({
               <div className="flex justify-end mt-4 gap-2">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-(--color-text-primary) border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>

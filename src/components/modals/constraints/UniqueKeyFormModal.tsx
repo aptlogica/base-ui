@@ -106,7 +106,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       // Escape closes this popup without closing the settings popup
       onKeyDown={e => {
         if (e.key === 'Escape') {
@@ -120,12 +120,12 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
         open
         aria-modal="true"
         aria-labelledby="unique-key-form-title"
-        className="bg-modal !p-0 flex flex-col relative overflow-hidden !max-w-2xl !max-h-[90vh] min-h-[420px] text-inherit"
+        className="bg-modal p-0! flex flex-col relative overflow-hidden max-w-2xl! max-h-[90vh]! min-h-[420px] text-inherit"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
               <Key className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -140,18 +140,18 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-5 space-y-6">
-            <div className="space-y-1.5">
-              <label htmlFor="unique-key-name" className={`field-component-label ${nameError ? '!text-red-600' : '!text-primary'}`}>
+          <div className="flex flex-col p-5 gap-y-6">
+            <div className="flex flex-col gap-y-1.5">
+              <label htmlFor="unique-key-name" className={`field-component-label ${nameError ? 'text-red-600!' : 'text-primary!'}`}>
                 Name <span className="field-component-required">*</span>
               </label>
               <input
@@ -167,13 +167,13 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
                   if (e.target.value.trim()) setNameError(false);
                   setNameEdited(true);
                 }}
-                className={`field-component field-component-focus border ${nameError ? '!border-red-500 focus:!border-red-500 bg-red-50' : 'field-component-border'}`}
+                className={`field-component field-component-focus border ${nameError ? 'border-red-500! focus:border-red-500! bg-red-50' : 'field-component-border'}`}
               />
               <p className="text-xs text-gray-500">{name.length}/{MAX_NAME_LENGTH} characters</p>
             </div>
 
-            <div className="space-y-1.5">
-              <p className="field-component-label !text-primary">
+            <div className="flex flex-col gap-y-1.5">
+              <p className="field-component-label text-primary!">
                 Columns <span className="field-component-required">*</span>
               </p>
               <ColumnPicker columns={columns} value={columnIds} onChange={changeColumns} />
@@ -184,14 +184,14 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
 
             {defaultConflict && !error && (
               <div className="text-sm flex items-center gap-1 text-amber-600" role="alert">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{UNIQUE_DEFAULT_CONFLICT_MESSAGE}</span>
               </div>
             )}
 
             {error && (
               <div className="text-sm flex items-center gap-1 text-red-600" role="alert">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -199,7 +199,7 @@ const UniqueKeyFormModal: React.FC<UniqueKeyFormModalProps> = ({ table, columns,
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

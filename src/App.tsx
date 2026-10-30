@@ -130,7 +130,7 @@ const Layout = () => {
     <RouteContextProvider>
       <div className="min-h-screen w-screen h-screen flex flex-col bg-background">
         {/* Header - full width at top */}
-        <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm flex-shrink-0">
+        <header className="flex items-center justify-between bg-card px-6 py-2 border-b shadow-sm shrink-0">
           <div className="flex items-center gap-2">
             <ExtensionPoint id="layout:header-left" />
           </div>
@@ -145,7 +145,7 @@ const Layout = () => {
           {sidebarPosition === 'left' && flyoutOpen && (
             <aside
               style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-              className="sidebar-flyout-bg border-r flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
+              className="sidebar-flyout-bg border-r shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
               {!sidebarCollapsed && (
                 <Sidebar
@@ -174,7 +174,7 @@ const Layout = () => {
           {sidebarPosition === 'right' && flyoutOpen && (
             <aside
               style={{ width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-              className="sidebar-flyout-bg border-l flex-shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
+              className="sidebar-flyout-bg border-l shrink-0 shadow-inner overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out relative"
             >
               {!sidebarCollapsed && (
                 <Sidebar
@@ -185,7 +185,7 @@ const Layout = () => {
               )}
               <button
                 onClick={() => updateSidebarCollapsed(!sidebarCollapsed)}
-                className='absolute top-1/2 left-[-8px] rounded-full bg-[var(--color-alpha-white)] text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
+                className='absolute top-1/2 left-[-8px] rounded-full bg-(--color-alpha-white) text-primary p-1 shadow-md z-40 hover:bg-gray-100 transition-colors outline-none'
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -555,7 +555,7 @@ const WorkspacesGuard: React.FC<{ children: React.ReactNode }> = ({ children }) 
   if (isLoading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-3">
+        <div className="flex flex-col items-center gap-y-3">
           <Loader size={10} />
           <div className="text-sm text-gray-600 dark:text-gray-300">Preparing your workspace…</div>
         </div>

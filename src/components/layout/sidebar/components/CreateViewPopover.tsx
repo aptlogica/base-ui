@@ -143,15 +143,15 @@ export const CreateViewPopover: React.FC<CreateViewPopoverProps> = ({
         transition: 'opacity 200ms ease-out, transform 200ms ease-out',
       }}
     >
-      {/* <div className="text-xs font-medium text-[var(--color-text-primary)] mb-2 px-2">Select View Type</div> */}
-      <div className="space-y-1">
+      {/* <div className="text-xs font-medium text-(--color-text-primary) mb-2 px-2">Select View Type</div> */}
+      <div className="flex flex-col gap-y-1">
         {VIEW_TYPES.map((viewType) => {
           const viewIconInfo = VIEW_ICONS[viewType.type as keyof typeof VIEW_ICONS] || VIEW_ICONS.grid;
           const IconComponent = viewIconInfo.icon;
           return (
             <button
               key={viewType.type}
-              className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-[var(--color-text-primary)] rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              className="w-full px-2 py-1.5 flex items-center gap-2 text-left text-(--color-text-primary) rounded-lg hover:bg-gray-200 transition-colors duration-200"
               onClick={() => {
                 onOpenModal(viewType.type);
                 onClose();

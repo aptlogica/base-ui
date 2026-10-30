@@ -243,7 +243,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
       <div key={col.id || col.key || `field-${col.column_name}`} className="group/metadata">
         {/* Field Title with Icon */}
         <div className="flex items-center gap-2 mb-1">
-          <div className="text-gray-400 flex-shrink-0">
+          <div className="text-gray-400 shrink-0">
             {getFieldTypeIconWithMargin(
               fieldType === 'checkbox' ? 'boolean' : fieldType,
               getRelationTypeFromField(col)
@@ -312,7 +312,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
     >
       {/* Image Section with Carousel - Only show if we have image files */}
       {hasImageFiles && (
-        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+        <div className="aspect-square bg-linear-to-br from-gray-50 to-gray-100 relative overflow-hidden">
           {currentImage && isImage(currentImage) && (currentImage.thumbnail_url || currentImage.url) && !imageError ? (
             <img
               src={toSafeSrc(currentImage.thumbnail_url || currentImage.url)}
@@ -389,7 +389,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
 
       {/* No Image Placeholder - Show a simple placeholder for records without images */}
       {!hasImageFiles && (
-        <div className="aspect-square bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 relative overflow-hidden flex items-center justify-center">
+        <div className="aspect-square bg-linear-to-br from-gray-50 via-gray-100 to-gray-50 relative overflow-hidden flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 bg-gray-200/50 rounded-full flex items-center justify-center mb-3 mx-auto">
               <ImageIcon className="w-8 h-8 text-gray-400" />
@@ -401,7 +401,7 @@ export const GalleryCard: React.FC<GalleryCardProps> = ({
       {/* Content Section */}
       <div className="p-5 min-h-[140px] flex flex-col">
         {/* Metadata - Title will now display like other fields */}
-        <div className="space-y-4 flex-1">
+        <div className="flex flex-col gap-y-4 flex-1">
           {formatMetadata}
         </div>
       </div>

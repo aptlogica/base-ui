@@ -81,7 +81,7 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
     <div className="w-full relative">
       {/* Label */}
       {label && (
-        <label className="field-component-label !text-primary">
+        <label className="field-component-label text-primary!">
           {label}
           {required && <span className="field-component-required">*</span>}
         </label>
@@ -97,9 +97,9 @@ export const MultiLineText: React.FC<MultiLineTextProps> = ({
         readOnly={!allowEdit}
         maxLength={maxLength}
         rows={rows}
-        className={`w-full text-[var(--color-text-primary)] p-3 rounded-[var(--radius-lg)] text-sm leading-normal ${className}
+        className={`w-full text-(--color-text-primary) p-3 rounded-lg text-sm leading-normal ${className}
           resize-none overflow-y-auto overflow-x-hidden
-          whitespace-pre-wrap break-words
+          whitespace-pre-wrap wrap-break-word
           transition-all duration-200 outline-none
           ${isBorder ? "field-component-border field-component-focus" : ""}
           ${error ? "border-red-500 bg-red-50" : "border"}

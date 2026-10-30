@@ -89,7 +89,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Search */}
-      <div className="p-4 flex-shrink-0">
+      <div className="p-4 shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-3 w-4 h-4 text-secondary" />
           <input
@@ -97,13 +97,13 @@ export const FieldsList: React.FC<FieldsListProps> = ({
             placeholder="Search fields..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-background border outline-none focus:ring-1 focus:ring-[var(--ring-color-brand)] text-[var(--text-color-primary)] placeholder:text-[var(--text-color-placeholder)] transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-background border outline-none focus:ring-1 focus:ring-(--ring-color-brand) text-(--text-color-primary) placeholder:text-(--text-color-placeholder) transition-colors"
           />
         </div>
       </div>
 
       {/* Select All Fields - Separate scrollable section */}
-      <div className="px-4 pb-2 flex-shrink-0">
+      <div className="px-4 pb-2 shrink-0">
         <div className="rounded-xl p-3 bg-muted/50">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">{selectedCount}/{totalCount} selected</span>
@@ -123,7 +123,7 @@ export const FieldsList: React.FC<FieldsListProps> = ({
 
       {/* Fields List - Scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <div className="space-y-2 ">
+        <div className="flex flex-col gap-y-2 ">
           {filteredFields.map((field) => (
             <SortableFieldItem
               key={field.id}

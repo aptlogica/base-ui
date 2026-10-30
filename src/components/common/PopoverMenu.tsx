@@ -296,12 +296,12 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
 
   const getMenuClasses = () => {
     if (portaled) {
-      return `fixed z-[9999] min-w-[210px] p-2 space-y-1 bg-card border rounded-xl shadow-lg`;
+      return `fixed z-9999 flex flex-col min-w-[210px] p-2 gap-y-1 bg-card border rounded-xl shadow-lg`;
     }
 
     const horizontalClass = position.horizontal === 'right' ? 'right-0' : 'left-0';
     const verticalClass = position.vertical === 'up' ? 'bottom-full mb-2' : 'top-full mt-2';
-    return `absolute z-50 min-w-[210px] p-2 space-y-1 bg-card border rounded-xl shadow-lg ${horizontalClass} ${verticalClass}`;
+    return `absolute z-50 flex flex-col min-w-[210px] p-2 gap-y-1 bg-card border rounded-xl shadow-lg ${horizontalClass} ${verticalClass}`;
   };
 
   const renderMenu = () => (

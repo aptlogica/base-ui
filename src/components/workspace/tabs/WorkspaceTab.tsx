@@ -256,7 +256,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
   }, [workspaceDropdownOpen]);
 
   return (
-    <div className="space-y-0">
+    <div className="flex flex-col gap-y-0">
       {/* Header with Workspace Dropdown, Edit Details, and Create Workspace */}
       <div className="flex items-center justify-between gap-4 mb-6">
         {/* Workspace Dropdown */}
@@ -268,7 +268,7 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
           >
             {selectedWorkspace ? (
               <>
-                <div className={`w-10 h-10 ${workspaceIcon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <div className={`w-10 h-10 ${workspaceIcon.color} rounded-lg flex items-center justify-center shrink-0`}>
                   <span className="text-white text-sm">
                     {workspaceIcon.initials}
                   </span>
@@ -279,19 +279,19 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
               </>
             ) : (
               <>
-                <div className="w-8 h-8 bg-gray-400 border justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-gray-400 border justify-center shrink-0">
                   <span className="text-white text-sm">W</span>
                 </div>
                 <span title="Select Workspace" className="text-sm font-medium text-gray-500">Select Workspace</span>
               </>
             )}
-            <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" />
+            <ChevronsUpDown className="w-4 h-4 text-gray-400 transition-transform shrink-0" />
           </button>
 
           {/* Workspace Dropdown Menu */}
           {workspaceDropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-96 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-2 space-y-1">
+              <div className="flex flex-col p-2 gap-y-1">
                 {workspaces.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-500 text-sm">
                     No workspaces found
@@ -317,10 +317,10 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
                           setSelectedWorkspaceId(ws.id);
                           setWorkspaceDropdownOpen(false);
                         }}
-                        className={`w-full space-y-1 flex items-center gap-3 px-3 py-1 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
+                        className={`flex flex-col w-full gap-y-1 flex items-center gap-3 px-3 py-1 rounded-xl text-left hover:bg-gray-100 transition-colors ${isSelected ? 'bg-gray-50' : ''
                           }`}
                       >
-                        <div className={`w-10 h-10 ${icon.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-10 h-10 ${icon.color} rounded-lg flex items-center justify-center shrink-0`}>
                           <span className="text-white text-sm">
                             {icon.initials}
                           </span>
@@ -333,13 +333,13 @@ export const WorkspaceTab: React.FC<WorkspaceTabProps> = () => {
 
                             {/* Access Level Badge - Don't show for owner/co-owner */}
                             {ws.access_level && ws.access_level !== 'owner' && ws.access_level !== 'co-owner' && (
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${accessLevelClasses}`}>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border shrink-0 ${accessLevelClasses}`}>
                                 {getRoleLabel(ws.access_level)}
                               </span>
                             )}
 
                             {isSelected && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0 ml-auto"></div>
+                              <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 shrink-0 ml-auto"></div>
                             )}
                           </div>
                         </div>

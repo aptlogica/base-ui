@@ -35,14 +35,14 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
   const baseClasses = `
     relative w-full min-w-0 max-w-full px-3 py-2.5 text-left bg-background border rounded-xl shadow-xs text-primary
     cursor-pointer transition-all duration-200 ease-in-out
-    focus:outline-none focus:border-[--color-brand-600]
+    focus:outline-none focus:border-brand-600
     flex items-center justify-between
   `;
 
   const stateClasses = `
     ${disabled ? 'bg-gray-50 cursor-not-allowed opacity-60' : 'hover:border'}
     ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border'}
-    ${isOpen ? 'border-[var(--color-brand-600)] ring-1 ring-[var(--color-focus-ring)] ring-opacity-20' : ''}
+    ${isOpen ? 'border-brand-600 ring-1 ring-(--color-focus-ring) ring-opacity-20' : ''}
   `;
 
   return (
@@ -69,9 +69,9 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
         )}
       </div>
 
-      <div className="flex shrink-0 items-center space-x-1 ml-2">
+      <div className="flex shrink-0 items-center gap-x-1 ml-2">
         {multiple && selectedCount > 0 && (
-          <span className="inline-flex items-center justify-center p-3 h-4 w-4 rounded-full text-xs font-medium bg-[var(--color-bg-brand-primary)] text-black">
+          <span className="inline-flex items-center justify-center p-3 h-4 w-4 rounded-full text-xs font-medium bg-(--color-bg-brand-primary) text-black">
             {selectedCount}
           </span>
         )}

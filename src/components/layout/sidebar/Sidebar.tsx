@@ -239,7 +239,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
       <div key={table.id}>
         <div
-          className={`flex items-center gap-3 py-1.5 px-3 mb-1 hover:bg-[var(--color-gray-100)] rounded-xl ${isActive ? 'bg-[var(--color-gray-100)]' : ''
+          className={`flex items-center gap-3 py-1.5 px-3 mb-1 hover:bg-(--color-gray-100) rounded-xl ${isActive ? 'bg-(--color-gray-100)' : ''
             } relative hover:shadow-xs transition-all ease-in duration-200`}
         >
           {/* Expand/collapse chevron */}
@@ -251,7 +251,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <ChevronDown
               size={12}
-              className={`text-[var(--color-gray-500)] ${isExpanded ? '' : 'rotate-[-90deg]'}`}
+              className={`text-(--color-gray-500) ${isExpanded ? '' : '-rotate-90'}`}
             />
           </button>
           {/* Table icon */}
@@ -273,7 +273,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <span
               title={table.title}
-              className="font-medium text-[var(--color-text-tertiary)] truncate max-w-[160px]"
+              className="font-medium text-(--color-text-tertiary) truncate max-w-[160px]"
             >
               {table.title}
             </span>
@@ -450,7 +450,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {showCreateTableBaseId && ReactDOM.createPortal(
         <Suspense fallback={
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-10000">
             <Loader />
           </div>
         }>
@@ -601,7 +601,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Import Table Modal */}
       {showImportModal && selectedImportType && selectedBase?.id && effectiveSelectedWorkspace?.id && ReactDOM.createPortal(
         <Suspense fallback={
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-10000">
             <Loader />
           </div>
         }>

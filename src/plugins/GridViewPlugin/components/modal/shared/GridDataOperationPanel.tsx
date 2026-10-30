@@ -245,12 +245,12 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
   };
 
   const renderSharedScope = () => (
-    <section className="space-y-2">
+    <section className="flex flex-col gap-y-2">
       <div>
         <h3 className="text-sm font-semibold text-foreground">Scope</h3>
         <p className="text-sm text-secondary">Choose where this action should run.</p>
       </div>
-      <div className="space-y-2 rounded-xl border bg-card p-3">
+      <div className="flex flex-col gap-y-2 rounded-xl border bg-card p-3">
         {[
           { value: 'all', label: 'All rows' },
           { value: 'filtered', label: 'Filtered rows' },
@@ -272,7 +272,7 @@ export const GridDataOperationPanel: React.FC<GridDataOperationPanelProps> = ({
   );
 
   const renderGenericPanel = () => (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+    <div className="flex flex-col flex-1 overflow-y-auto px-5 py-4 gap-y-6">
       <ColumnSelectionSection
         columns={columns}
         selectedColumnIds={selectedColumnIds}

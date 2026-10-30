@@ -68,15 +68,15 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
   const selectedColumnId = selectedColumnIds[0] ?? '';
 
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
-      <section className="space-y-2">
+    <div className="flex flex-col flex-1 gap-y-6 overflow-y-auto px-5 py-4">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Column to extract from</h3>
           <p className="text-sm text-secondary">Select one column to extract values from.</p>
         </div>
 
         <div className="rounded-xl border bg-card p-3">
-          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+          <div className="flex flex-col max-h-56 gap-y-1 overflow-y-auto pr-1">
             {filterGridDataOperationColumns(columns)
               .map((column) => {
                 const columnId = getGridColumnIdentity(column);
@@ -104,13 +104,13 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
         </div>
       </section>
 
-      <section className="space-y-2">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Extraction method</h3>
           <p className="text-sm text-secondary">Choose how text should be extracted.</p>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-card">
+        <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
           <label className={`flex cursor-pointer items-start gap-3 p-4 hover:bg-muted/50 ${method === 'between_characters' ? 'border-b' : ''}`}>
             <input
               type="radio"
@@ -159,7 +159,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
                       value={startAfter}
                       onChange={(event) => onStartAfterChange(event.target.value)}
                       placeholder="Enter starting value"
-                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] text-[var(--color-text-primary)]"
+                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-brand-600 text-(--color-text-primary)"
                     />
                   </div>
                   <div>
@@ -169,7 +169,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
                       value={endBefore}
                       onChange={(event) => onEndBeforeChange(event.target.value)}
                       placeholder="Enter ending value"
-                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] text-[var(--color-text-primary)]"
+                      className="h-11 w-full rounded-xl border bg-alpha-white px-4 text-sm transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-brand-600 text-(--color-text-primary)"
                     />
                   </div>
                 </div>
@@ -179,7 +179,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-y-3">
         <h3 className="text-sm font-semibold text-foreground">Output option</h3>
         <label className="flex cursor-pointer items-start gap-3 hover:bg-muted/50" htmlFor="keep-original-column" aria-label="Keep original column">
           <input
@@ -196,7 +196,7 @@ export const ExtractSubstringPanel: React.FC<ExtractSubstringPanelProps> = ({
         </label>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-y-3">
         <h3 className="text-sm font-semibold text-foreground">Where to add new columns</h3>
         {[
           { value: 'next_to_original', label: 'Next to original column' },

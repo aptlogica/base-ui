@@ -47,7 +47,7 @@ const FieldRow: React.FC<{
     className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
     style={{ userSelect: 'none' }}
   >
-    <span className="w-5 h-5 flex text-primary items-center justify-center flex-shrink-0">
+    <span className="w-5 h-5 flex text-primary items-center justify-center shrink-0">
       {getFieldTypeIconComponent(col.uidt || 'text', undefined, getRelationTypeFromField(col)) || (
         <span className="w-4 h-4 text-gray-400" />
       )}
@@ -64,7 +64,7 @@ const FieldRow: React.FC<{
         className="sr-only peer"
         aria-label={`Toggle visibility for ${col.title}`}
       />
-      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-(--color-focus-ring) rounded-full peer peer-checked:bg-primary transition-colors" />
       <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
     </label>
   </div>
@@ -219,7 +219,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
       >
         {IconComponent ? <IconComponent className="w-4 h-4" /> : <List className="w-4 h-4" />}
         {label}
-        <span className="ml-1 w-8 rounded-xl bg-[var(--color-success-200)] text-[var(--color-success-700)] text-xs font-bold">{visibleCount}</span>
+        <span className="ml-1 w-8 rounded-xl bg-(--color-success-200) text-(--color-success-700) text-xs font-bold">{visibleCount}</span>
       </button>
       {open && position && createPortal(
         <div
@@ -230,7 +230,7 @@ export function FieldsPopover({ columns, fieldConfig, onFieldToggle, label = 'Fi
           {/* Search bar */}
           <div className="p-2 border-b flex items-center gap-2">
             <input
-              className="field-component field-component-focus field-component-border !h-10"
+              className="field-component field-component-focus field-component-border h-10!"
               placeholder="Search fields"
               value={search}
               onChange={handleSearchChange}

@@ -92,7 +92,7 @@ export const NewRowSplitButton: React.FC<NewRowSplitButtonProps> = ({ onAddGridR
       {menuOpen && (
         <div
           role="menu"
-          className="absolute bottom-full left-0 mb-2 min-w-[220px] z-50 rounded-xl border bg-card p-1 space-y-1 shadow-lg select-none animate-fade-in"
+          className="flex flex-col absolute bottom-full left-0 mb-2 min-w-[220px] z-50 rounded-xl border bg-card p-1 gap-y-1 shadow-lg select-none animate-fade-in"
         >
           {MODE_OPTIONS.map(({ mode: optionMode, label, Icon }) => (
             <button

@@ -32,9 +32,9 @@ export const GridActionDropdown: React.FC<GridActionDropdownProps> = ({
       
       trigger={(
         <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl hover:bg-sidebar-menu focus:outline-none bg-card text-secondary">
-          {TriggerIcon ? <TriggerIcon className="w-4 h-4 flex-shrink-0" /> : null}
+          {TriggerIcon ? <TriggerIcon className="w-4 h-4 shrink-0" /> : null}
           <span className='small:hidden overflow-hidden truncate'>{label}</span>
-          {isOpen ? <ChevronUp className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
+          {isOpen ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
         </span>
       )}
       items={actions.map((action) => {

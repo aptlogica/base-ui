@@ -167,7 +167,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
                 type="button"
                 aria-label={`Edit ${title}`}
                 onClick={() => openItem(item)}
-                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 flex-shrink-0"
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 shrink-0"
               >
                 <Edit className="w-4 h-4 text-secondary" />
                 Edit
@@ -177,7 +177,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
                 aria-label={`Delete ${title}`}
                 onClick={() => setDeleteItem(item)}
                 disabled={deleteAutomation.isPending}
-                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 flex-shrink-0 disabled:opacity-50"
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 shrink-0 disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
@@ -192,18 +192,18 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
   const content = (
       <div className={embedded
         ? 'flex flex-col relative overflow-hidden h-full'
-        : 'bg-modal !p-0 flex flex-col relative overflow-hidden h-[680px] !max-h-[90vh] !max-w-6xl'}
+        : 'bg-modal p-0! flex flex-col relative overflow-hidden h-[680px] max-h-[90vh]! max-w-6xl!'}
       >
         {/* Header: table name - tab (the settings popup has its own header) */}
         {embedded ? tabTypes.length === 1 && (
-          <div className="px-4 pt-4 flex-shrink-0">
+          <div className="px-4 pt-4 shrink-0">
             <h3 className="text-base font-semibold text-primary">{tab.label}</h3>
             <p className="text-sm text-secondary">{tab.description}</p>
           </div>
         ) : (
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
               <Zap className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -214,19 +214,19 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
         )}
 
         {/* Tabs (the webhooks view has only one type, so no tabs) */}
         {tabTypes.length > 1 && (
-          <div className="border-b flex-shrink-0">
+          <div className="border-b shrink-0">
             <Tabs
-              className="!px-4 !border-b-0"
+              className="px-4! border-b-0!"
               activeKey={activeTab}
               onChange={changeTab}
               tabs={tabTypes.map(type => {
@@ -238,7 +238,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
         )}
 
         {/* Search + add */}
-        <div className="flex items-center justify-between gap-3 p-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 p-4 shrink-0">
           <div className="relative w-72 max-w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -255,7 +255,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
           <button
             type="button"
             onClick={() => setForm({ type: activeTab })}
-            className="px-4 h-10 rounded-xl btn-primary text-primary text-sm font-medium transition-all flex items-center gap-2 flex-shrink-0"
+            className="px-4 h-10 rounded-xl btn-primary text-primary text-sm font-medium transition-all flex items-center gap-2 shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add {tab.singular}
@@ -263,8 +263,8 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
         </div>
 
         {error && (
-          <div className="mx-4 mb-3 text-sm text-red-600 flex items-center gap-1 flex-shrink-0">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="mx-4 mb-3 text-sm text-red-600 flex items-center gap-1 shrink-0">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -342,7 +342,7 @@ const TableTriggersModal: React.FC<TableTriggersModalProps> = ({ table, view, on
 
   return (
     <div //NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       // Escape closes the list only when no popup is open on top of it
       onKeyDown={e => e.key === 'Escape' && !form && !deleteItem && onClose?.()}
     >

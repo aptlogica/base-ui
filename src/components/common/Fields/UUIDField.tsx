@@ -20,7 +20,7 @@ interface UUIDFieldProps {
 }
 
 const MONO_TEXT = 'font-mono text-xs truncate';
-const COPY_BUTTON_CLASS = 'shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-alpha-white)] text-[var(--text-color-tertiary)] hover:text-[var(--text-color-primary)]';
+const COPY_BUTTON_CLASS = 'shrink-0 flex items-center justify-center w-6 h-6 rounded-md border border-(--color-border-primary) bg-(--color-alpha-white) text-(--text-color-tertiary) hover:text-(--text-color-primary)';
 
 // Copies the value to the clipboard and shows a tick for a moment
 const CopyButton: React.FC<Readonly<{ value: string }>> = ({ value }) => {
@@ -76,12 +76,12 @@ const AutoUUIDField: React.FC<Readonly<{ current: string; borderClass: string }>
           aria-label="UUID"
           onKeyDown={handleKeyDown}
           onPaste={e => { e.preventDefault(); flashReadOnlyTip(); }}
-          className={`${MONO_TEXT} flex-1 min-w-0 bg-transparent outline-none cursor-default text-[var(--text-color-secondary)] placeholder:font-sans placeholder:italic placeholder:text-[var(--color-text-placeholder)]`}
+          className={`${MONO_TEXT} flex-1 min-w-0 bg-transparent outline-none cursor-default text-(--text-color-secondary) placeholder:font-sans placeholder:italic placeholder:text-(--color-text-placeholder)`}
         />
         {current && <CopyButton value={current} />}
       </div>
       {showReadOnlyTip && (
-        <output className="absolute left-2 top-full mt-1 z-20 w-max max-w-[280px] px-2.5 py-2 rounded-lg bg-[var(--color-gray-900)] text-[var(--color-alpha-white)] text-xs shadow-lg">
+        <output className="absolute left-2 top-full mt-1 z-20 w-max max-w-[280px] px-2.5 py-2 rounded-lg bg-(--color-gray-900) text-(--color-alpha-white) text-xs shadow-lg">
           {UUID_READ_ONLY_MESSAGE}
         </output>
       )}
@@ -117,7 +117,7 @@ const ManualUUIDDisplay: React.FC<Readonly<ManualUUIDDisplayProps>> = ({
   placeholder,
   onStartEditing,
 }) => {
-  const textClass = `${MONO_TEXT} w-full min-w-0 ${current ? 'text-[var(--text-color-primary)]' : 'text-[var(--color-text-placeholder)] font-sans'}`;
+  const textClass = `${MONO_TEXT} w-full min-w-0 ${current ? 'text-(--text-color-primary)' : 'text-(--color-text-placeholder) font-sans'}`;
 
   return (
     <div
@@ -216,7 +216,7 @@ const ManualUUIDField: React.FC<Readonly<ManualUUIDFieldProps>> = ({
 
   // Like SingleLineText: a bordered field (forms) draws its own focus and error border; in the grid the
   // cell's outline is the only border, and the grid turns it red for an invalid value
-  const errorClass = error ? 'border border-[var(--color-error-500)] bg-red-50' : '';
+  const errorClass = error ? 'border border-(--color-error-500) bg-red-50' : '';
   const inputStateClass = isBorder ? `field-component-focus ${errorClass}` : '';
 
   return (

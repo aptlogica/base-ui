@@ -210,7 +210,7 @@ export const Formula: React.FC<FormulaProps> = ({
           if ((classes.includes('min-h-[400px]') && classes.includes('max-h-[max(70vh,400px)]')) ||
             classes.includes('w-[500px]') ||
             classes.includes('w-[416px]') ||
-            (classes.includes('bg-[var(--color-alpha-white)]') && classes.includes('shadow-lg') && classes.includes('border'))) {
+            (classes.includes('bg-(--color-alpha-white)') && classes.includes('shadow-lg') && classes.includes('border'))) {
             const rect = currentElement.getBoundingClientRect();
             // Verify it's a modal (has reasonable dimensions and is visible)
             if (rect.width > 300 && rect.height > 300 && rect.top >= 0 && rect.left >= 0) {
@@ -931,7 +931,7 @@ export const Formula: React.FC<FormulaProps> = ({
     <div className={`relative w-full ${className}`}>
 
 
-      <div className="space-y-2.5">
+      <div className="flex flex-col gap-y-2.5">
         {/* Error Display - Show on first render if error exists, or after blur */}
         {formulaError && (
           <div className="text-xs text-red-600">
@@ -955,16 +955,16 @@ export const Formula: React.FC<FormulaProps> = ({
                   <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
                   {tooltipPosition && createPortal(
                     <div
-                      className="fixed w-80 bg-card border rounded-xl shadow-lg p-4 text-sm z-[10000]"
+                      className="fixed w-80 bg-card border rounded-xl shadow-lg p-4 text-sm z-10000"
                       style={{ top: `${tooltipPosition.top}px`, left: `${tooltipPosition.left}px` }}
                     >
                       <h4 className="mb-3 text-primary font-semibold">How to use formulas:</h4>
 
-                      <ul className="space-y-2 text-gray-600">
-                        <li className="pb-2 border-b border-primary">• Use <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">{'{FieldName}'}</span> to refer to other fields — always wrap names in curly brackets and note that they're case-sensitive.</li>
-                        <li className="pb-2 border-b border-primary">• You can click any function to add it and combine it with operators like <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">+</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">-</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">*</span>, or <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">/</span>.</li>
+                      <ul className="flex flex-col gap-y-2 text-gray-600">
+                        <li className="pb-2 border-b border-primary">• Use <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">{'{FieldName}'}</span> to refer to other fields — always wrap names in curly brackets and note that they're case-sensitive.</li>
+                        <li className="pb-2 border-b border-primary">• You can click any function to add it and combine it with operators like <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">+</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">-</span>, <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">*</span>, or <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">/</span>.</li>
                         <li className="pb-2 border-b border-primary">• Make sure the field type matches the function: math needs numbers, text needs text, and date functions need date/time fields.</li>
-                        <li>• For plain text, use quotes — for example: <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">"Hello"</span> or <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--color-utility-bg)] text-gray-700 text-xs font-mono font-semibold">"World"</span>.</li>
+                        <li>• For plain text, use quotes — for example: <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">"Hello"</span> or <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-utility-bg text-gray-700 text-xs font-mono font-semibold">"World"</span>.</li>
                       </ul>
                     </div>,
                     document.body
@@ -975,7 +975,7 @@ export const Formula: React.FC<FormulaProps> = ({
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+                  className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors shrink-0"
                   aria-label="Clear formula"
                   title="Clear formula"
                 >
@@ -1059,7 +1059,7 @@ export const Formula: React.FC<FormulaProps> = ({
                 }}
                 onMouseUp={updateCursorPosition}
                 placeholder="Enter formula (e.g., ADD({Price}, {Tax})"
-                className={`w-full field-component p-2.5 resize-none !h-[75px] ${formulaError
+                className={`w-full field-component p-2.5 resize-none h-[75px]! ${formulaError
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'field-component-focus'
                   } ${isBorder ? "field-component-border" : ""} ${disabled ? "bg-gray-100 cursor-not-allowed" : ""
@@ -1077,7 +1077,7 @@ export const Formula: React.FC<FormulaProps> = ({
               <button
                 ref={showAllFunctionsButtonRef}
                 onClick={handleShowAllFunctionsClick}
-                className="px-2.5 py-1 text-xs text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:bg-gray-50 rounded transition-colors"
+                className="px-2.5 py-1 text-xs text-brand-600 hover:text-(--color-brand-700) hover:bg-gray-50 rounded transition-colors"
                 aria-label="View all functions"
                 title="View all functions"
               >
@@ -1112,7 +1112,7 @@ export const Formula: React.FC<FormulaProps> = ({
                     </button>
                     {hoveredFunctionButton === func.name && quickFunctionTooltipPosition && createPortal(
                       <div
-                        className="fixed z-[10000] bg-card rounded-xl shadow-lg px-3 py-2.5 text-sm max-w-xs"
+                        className="fixed z-10000 bg-card rounded-xl shadow-lg px-3 py-2.5 text-sm max-w-xs"
                         style={{
                           top: `${quickFunctionTooltipPosition.top}px`,
                           left: `${quickFunctionTooltipPosition.left}px`,
@@ -1157,7 +1157,7 @@ export const Formula: React.FC<FormulaProps> = ({
         {/* Select Field - Dropdown below cursor when '{' is typed */}
         {showFieldDropdown && isTextareaFocused && filteredColumns.length > 0 && cursorPosition && createPortal(
           <div //NOSONAR
-            className="field-dropdown fixed z-[10000] bg-white dark:bg-[var(--color-utility-bg)] shadow-lg rounded-xl border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
+            className="field-dropdown fixed z-10000 bg-white dark:bg-utility-bg shadow-lg rounded-xl border min-w-[150px] max-w-[200px] max-h-[200px] overflow-hidden"
             style={{
               top: `${cursorPosition.top}px`,
               left: `${cursorPosition.left}px`
@@ -1185,7 +1185,7 @@ export const Formula: React.FC<FormulaProps> = ({
                           updateCursorPosition();
                         }, 0);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded transition-colors"
+                      className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-(--color-bg-brand-primary) hover:text-black rounded transition-colors"
                     >
                       {displayName}
                     </button>
@@ -1200,7 +1200,7 @@ export const Formula: React.FC<FormulaProps> = ({
         {/* All Functions Modal - Fixed position, aligned with NewColumnModal */}
         {showAllFunctions && allFunctionsModalPosition && createPortal(
           <div //NOSONAR
-            className="all-functions-modal fixed z-[10000] bg-[var(--color-alpha-white)] shadow-lg border rounded-xl w-[350px] overflow-hidden flex flex-col"
+            className="all-functions-modal fixed z-10000 bg-(--color-alpha-white) shadow-lg border rounded-xl w-[350px] overflow-hidden flex flex-col"
             style={{
               top: `${allFunctionsModalPosition.top}px`,
               left: `${allFunctionsModalPosition.left}px`,
@@ -1213,7 +1213,7 @@ export const Formula: React.FC<FormulaProps> = ({
             }}
           >
             {/* Modal Header */}
-            <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
+            <div className="px-4 py-3 border-b border-gray-100 shrink-0">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-gray-700">Functions & Operators</h3>
                 <button
@@ -1233,7 +1233,7 @@ export const Formula: React.FC<FormulaProps> = ({
                   placeholder="Search functions..."
                   value={functionSearchQuery}
                   onChange={(e) => setFunctionSearchQuery(e.target.value)}
-                  className="w-full field-component !pl-9 !pr-3 !py-2 field-component-focus field-component-border"
+                  className="w-full field-component pl-9! pr-3! py-2! field-component-focus field-component-border"
                   autoFocus
                 />
                 {functionSearchQuery && (
@@ -1249,7 +1249,7 @@ export const Formula: React.FC<FormulaProps> = ({
             </div>
 
             {/* Modal Content - Single scroll area */}
-            <div className="overflow-y-auto flex-1 bg-[var(--color-alpha-white)]">
+            <div className="overflow-y-auto flex-1 bg-(--color-alpha-white)">
               {Object.keys(filteredFormulaFunctions).length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-gray-500">
                   No functions found matching "{functionSearchQuery}"
@@ -1280,13 +1280,13 @@ export const Formula: React.FC<FormulaProps> = ({
                           })()}
                         </span>
                         {expandedCategories.has(category) ? (
-                          <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
+                          <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-2" />
                         ) : (
-                          <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />
+                          <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-2" />
                         )}
                       </button>
                       {expandedCategories.has(category) && (
-                        <div className="px-4 py-2 space-y-1.5">
+                        <div className="flex flex-col px-4 py-2 gap-y-1.5">
                           {functions.map((func) => {
                             const functionKey = `${category}-${func.name}`;
                             const isExpanded = expandedFunctions.has(functionKey);
@@ -1300,7 +1300,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                       setSelectedFunction(functionKey);
                                       insertFunction(func.name);
                                     }}
-                                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold ' : 'text-primary'} truncate`}
+                                    className={`w-full px-3 py-2 text-left hover:bg-(--color-bg-brand-primary) hover:text-black rounded-xl flex items-center gap-2 ${selectedFunction === functionKey ? 'bg-(--color-bg-brand-secondary) text-black font-bold ' : 'text-primary'} truncate`}
                                     title={func.description || func.name}
                                   >
                                     {func.name.replaceAll(/[()]/g, '')}
@@ -1311,7 +1311,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                       e.stopPropagation();
                                       insertFunction(func.name);
                                     }}
-                                    className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors text-gray-400 hover:text-[var(--color-brand-600)] hover:bg-gray-100"
+                                    className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors text-gray-400 hover:text-brand-600 hover:bg-gray-100"
                                     aria-label="Insert function"
                                     title="Insert function"
                                   >
@@ -1323,7 +1323,7 @@ export const Formula: React.FC<FormulaProps> = ({
                                       e.stopPropagation();
                                       toggleFunction(functionKey);
                                     }}
-                                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${isExpanded
+                                    className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${isExpanded
                                         ? "bg-gray-200 text-gray-700"
                                         : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                                       }`}
@@ -1334,11 +1334,11 @@ export const Formula: React.FC<FormulaProps> = ({
                                   </button>
                                 </div>
                                 {isExpanded && (
-                                  <div className="mt-1.5 ml-0.5 pl-2.5 py-2 text-xs border-l-2 dark:bg-[var(--color-hover-bg)]">
+                                  <div className="mt-1.5 ml-0.5 pl-2.5 py-2 text-xs border-l-2 dark:bg-(--color-hover-bg)">
                                     {func.description && (
                                       <div className="text-gray-600 mb-2 leading-relaxed text-xs">{func.description}</div>
                                     )}
-                                    <div className="space-y-1.5">
+                                    <div className="flex flex-col gap-y-1.5">
                                       <div>
                                         <span className="text-gray-500">Syntax: </span>
                                         <code className="text-gray-800 font-mono bg-gray-50 px-1.5 py-0.5 rounded text-xs">
