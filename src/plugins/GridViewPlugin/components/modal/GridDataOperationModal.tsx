@@ -1000,7 +1000,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
   const hasPreviewContent = Boolean(preview || (action?.id === 'fuzzy_deduplication' && scanProgress));
 
   return createPortal(
-    <div className="fixed inset-0 z-[10040] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-10040 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close grid action modal"
@@ -1008,7 +1008,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
         onClick={onClose}
       />
 
-      <div className="relative z-[10041] flex h-[calc(100vh-2rem)] w-full max-w-full flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
+      <div className="relative z-10041 flex h-[calc(100vh-2rem)] w-full max-w-full flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b px-6 py-5">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -1033,7 +1033,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
         <div className="grid flex-1 min-h-0 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1.8fr)_440px]">
           <div className="min-h-0 overflow-hidden border-r bg-muted/20 p-6">
             {showPreviewLoading ? (
-              <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/70 bg-background/60 px-6 text-center text-sm text-secondary">
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-background/60 px-6 text-center text-sm text-secondary">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                 Calculating preview...
               </div>
@@ -1083,7 +1083,7 @@ export const GridDataOperationModal: React.FC<GridDataOperationModalProps> = ({
               />
             ) : null}
             {!showPreviewLoading && !hasPreviewContent ? (
-              <div className="flex h-full items-center justify-center rounded-2xl border-2 border-dashed border-border/70 bg-background/60 px-6 text-center text-sm text-secondary">
+              <div className="flex h-full items-center justify-center rounded-2xl border-2 border-dashed border-border bg-background/60 px-6 text-center text-sm text-secondary">
                 Preview will appear here once the data is ready.
               </div>
             ) : null}

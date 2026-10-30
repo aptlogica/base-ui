@@ -92,7 +92,7 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ columns, value, onChange })
   const dropdown = isShown && ReactDOM.createPortal(
     <div //NOSONAR
       ref={dropdownRef}
-      className="fixed z-[10000] bg-card border rounded-xl shadow-lg flex flex-col overflow-hidden"
+      className="fixed z-10000 bg-card border rounded-xl shadow-lg flex flex-col overflow-hidden"
       style={{ left: position?.left, width: position?.width, top: position?.top, bottom: position?.bottom, maxHeight: position?.maxHeight }}
       // Escape closes only the dropdown, not the popup it belongs to
       onKeyDown={e => {
@@ -102,7 +102,7 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ columns, value, onChange })
         }
       }}
     >
-      <div className="p-2 border-b flex-shrink-0">
+      <div className="p-2 border-b shrink-0">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -134,11 +134,11 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ columns, value, onChange })
                 title={reason || undefined}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
               >
-                <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                <span className="w-4 h-4 flex items-center justify-center shrink-0">
                   {checked && <Check className="w-4 h-4 text-green-600" />}
                 </span>
                 <span className={`flex-1 text-sm truncate ${reason ? 'text-gray-400' : 'text-primary'}`}>{column.title}</span>
-                {reason && <span className="text-xs text-gray-400 flex-shrink-0">Not allowed</span>}
+                {reason && <span className="text-xs text-gray-400 shrink-0">Not allowed</span>}
               </button>
             </li>
           );

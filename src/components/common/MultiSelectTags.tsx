@@ -221,14 +221,14 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
         className={`
           min-h-[40px] px-4 py-2 border rounded-xl
           flex items-center gap-2 cursor-pointer
-          ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white]'}
+          ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'focus:border focus:border-brand-600 bg-(--color-alpha-white)'}
           transition-colors
         `}
         onClick={handleInputClick}
         onKeyDown={handleKeyDown}
       >
         {/* Search Icon */}
-        <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <Search className="w-4 h-4 text-gray-400 shrink-0" />
 
         {/* Tags Container */}
         <div className="flex-1 flex flex-wrap items-center gap-2 min-w-0">
@@ -243,7 +243,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                 return (
                   <div
                     key={optionValue}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm flex-shrink-0 ${isDisabled
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm shrink-0 ${isDisabled
                       ? 'bg-gray-200 text-gray-500 border border-gray-300'
                       : 'bg-gray-100 text-gray-700'
                       }`}
@@ -256,7 +256,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                       <button
                         type="button"
                         onClick={(e) => handleRemoveTag(optionValue, e)}
-                        className="hover:bg-gray-200 rounded-full p-0.5 transition-colors flex-shrink-0"
+                        className="hover:bg-gray-200 rounded-full p-0.5 transition-colors shrink-0"
                         aria-label={`Remove ${label}`}
                       >
                         <X className="w-3 h-3" />
@@ -266,7 +266,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                 );
               })}
               {!disabled && (
-                <span className="text-sm text-gray-500 flex-shrink-0">Add more</span>
+                <span className="text-sm text-gray-500 shrink-0">Add more</span>
               )}
             </>
           )}
@@ -274,7 +274,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
 
         {/* Chevron Icon */}
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </div>
 
@@ -284,7 +284,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
           ref={dropdownRef}
           id={dropdownId}
           role="listbox"
-          className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden"
+          className="fixed z-9999 bg-card border rounded-xl shadow-lg overflow-hidden"
           style={{
             ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
             ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
@@ -309,7 +309,7 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                   e.stopPropagation();
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-10 pr-3 py-2 text-sm border rounded-xl text-primary outline-none focus:border focus:border-[--color-brand-600] bg-[--color-alpha-white]"
+                className="w-full pl-10 pr-3 py-2 text-sm border rounded-xl text-primary outline-none focus:border focus:border-brand-600 bg-(--color-alpha-white)"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -363,10 +363,10 @@ export const MultiSelectTags: React.FC<MultiSelectTagsProps> = ({
                           )}
                         </div>
                         {isSelected && (
-                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 ml-2" />
+                          <Check className="w-4 h-4 text-green-600 shrink-0 ml-2" />
                         )}
                         {option.disabled && !isSelected && (
-                          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">Member</span>
+                          <span className="text-xs text-gray-400 shrink-0 ml-2">Member</span>
                         )}
                       </button>
                     </li>

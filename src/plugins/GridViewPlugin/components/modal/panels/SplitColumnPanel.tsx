@@ -101,8 +101,8 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
     switch (mode) {
       case 'separator':
         return (
-          <div className="space-y-4 px-6">
-            <div className="space-y-2">
+          <div className="flex flex-col gap-y-4 px-6">
+            <div className="flex flex-col gap-y-2">
               <p className="text-sm font-medium text-foreground">Separator type</p>
               <Dropdown
                 options={SEPARATOR_OPTIONS}
@@ -112,20 +112,20 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
             </div>
 
             {splitSeparatorType === 'custom' && (
-              <div className="flex flex-col space-y-2">
+              <div className="flex flex-col flex-col gap-y-2">
                 <p className="text-sm font-medium text-foreground">Custom separator</p>
                 <input
                   type="text"
                   value={splitCustomSeparator}
                   onChange={(event) => onSplitCustomSeparatorChange(event.target.value)}
                   placeholder="Enter custom separator"
-                  className="w-full rounded-xl border bg-alpha-white px-4 py-3 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full rounded-xl border bg-alpha-white px-4 py-3 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-brand-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
                 />
                 <span className="pt-1 text-xs text-secondary">Only used when "Custom" is selected.</span>
               </div>
             )}
 
-            <div className="space-y-1">
+            <div className="flex flex-col gap-y-1">
               <p className="text-sm font-medium text-foreground">Maximum Split Columns</p>
               <input
                 type="number"
@@ -133,7 +133,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
                 value={splitMaxColumns}
                 onChange={(event) => onSplitMaxColumnsChange(event.target.value)}
                 placeholder="10"
-                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-[var(--color-text-primary)]"
+                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-brand-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-(--color-text-primary)"
               />
               <div className="text-xs text-secondary">
                 Additional values will be added in the last column.
@@ -143,7 +143,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
         );
       case 'fixed_length':
         return (
-          <div className="space-y-4 px-6">
+          <div className="flex flex-col gap-y-4 px-6">
             <div className="flex gap-2">
               <Dropdown
                 options={FIXED_LENGTH_OPTIONS}
@@ -155,7 +155,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
                 value={splitCharacterCount}
                 onChange={(event) => onSplitCharacterCountChange(event.target.value)}
                 placeholder="Enter number of characters"
-                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-[var(--color-text-primary)]"
+                className="h-11 w-full rounded-xl border bg-alpha-white px-4 transition-colors focus:border-transparent focus:outline-none focus:ring-1 focus:ring-brand-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 text-(--color-text-primary)"
               />
             </div>
           </div>
@@ -176,8 +176,8 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
   };
 
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
-      <section className="space-y-2">
+    <div className="flex flex-col flex-1 gap-y-6 overflow-y-auto px-5 py-4">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Column to split</h3>
           <p className="text-sm text-secondary">Choose one source column to split.</p>
@@ -197,7 +197,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
             </span>
           </div>
 
-          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+          <div className="flex flex-col max-h-56 gap-y-1 overflow-y-auto pr-1">
             {visibleColumns.length === 0 ? (
               <div className="px-2 py-2 text-sm text-secondary">No columns available.</div>
             ) : (
@@ -228,13 +228,13 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
         </div>
       </section>
 
-      <section className="space-y-2">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Split by</h3>
           <p className="text-sm text-secondary">Choose how the value should be separated.</p>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-card">
+        <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
           <div className="border-b p-4">
             <label aria-label="Split by separator" className="flex cursor-pointer items-start gap-3">
               <input
@@ -252,7 +252,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
             {renderSplitModeFields('separator')}
           </div>
 
-          <div className="border-b p-4 space-y-2">
+          <div className="flex flex-col border-b p-4 gap-y-2">
             <label aria-label="Split by fixed length" className="flex cursor-pointer items-start gap-3">
               <input
                 type="radio"
@@ -269,7 +269,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
             {renderSplitModeFields('fixed_length')}
           </div>
 
-          <div className="p-4 space-y-2">
+          <div className="flex flex-col p-4 gap-y-2">
             <label aria-label="Split by pattern" className="flex cursor-pointer items-start gap-3">
               <input
                 type="radio"
@@ -288,7 +288,7 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-y-3">
         <h3 className="text-sm font-semibold text-foreground">Output option</h3>
         <label className="flex cursor-pointer items-start gap-3" aria-label="keep-original">
           <input
@@ -304,13 +304,13 @@ export const SplitColumnPanel: React.FC<SplitColumnPanelProps> = ({
         </label>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-col gap-y-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Where to add new columns</h3>
           <p className="text-sm text-secondary">Choose where the split columns should appear.</p>
         </div>
 
-        <div className="space-y-3 rounded-xl border bg-card p-4">
+        <div className="flex flex-col gap-y-3 rounded-xl border bg-card p-4">
           <label className="flex cursor-pointer items-start gap-3" aria-label="next-to-original">
             <input
               type="radio"

@@ -88,7 +88,7 @@ const LoaderComponent: React.FC<LoaderProps> = ({
   return (
     <div className={`${getContainerClass()} ${className}`} style={{ gap }}>
       <output
-        className="flex flex-row flex-shrink-0"
+        className="flex flex-row shrink-0"
         style={{ gap: dotGap }}
         aria-live="polite"
         aria-label="Loading"

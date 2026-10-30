@@ -301,14 +301,14 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
       onKeyDown={handleKeyDown}
     >
       <div // NOSONAR
-        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh]"
+        className="bg-modal max-w-7xl! p-0! flex flex-col h-[90vh] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
               <UserPlus className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -330,7 +330,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
           <div className="p-0 h-full">
             <div className={`grid grid-cols-1 h-full ${Array.isArray(baseMembers) && baseMembers.length > 0 ? 'lg:grid-cols-2' : ''} gap-6`}>
               {/* Left Column - Add Members */}
-              <div className="space-y-4 bg-card p-4 lg:p-6">
+              <div className="flex flex-col gap-y-4 bg-card p-4 lg:p-6">
                 {/* Select Member */}
                 <div>
                   <label 
@@ -378,11 +378,11 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
               {/* Right Column - People with access (only show when there are members) */}
               {!baseMembersQuery.isLoading && Array.isArray(baseMembers) && baseMembers.length > 0 && (
                 <div className="flex flex-col h-full min-h-0 bg-gray-50 border-l p-4 lg:p-6">
-                  <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">People with access</h3>
+                  <h3 className="text-sm font-semibold text-primary shrink-0 mb-4">People with access</h3>
 
                   {/* Members List - Scrollable */}
                   <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-y-3">
                       {baseMembers.map((member: any) => {
                         const memberId = member.id || member.access_id || member.user_id;
                         const displayName = member.display_name || member.name || member.email || 'Unknown User';
@@ -402,10 +402,10 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                                 <img
                                   src={avatar}
                                   alt={displayName}
-                                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                  className="w-10 h-10 rounded-full object-cover shrink-0"
                                 />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm shrink-0">
                                   {getInitials(displayName)}
                                 </div>
                               )}
@@ -448,7 +448,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveMember(member)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors shrink-0"
                                   title="Remove member"
                                   aria-label="Remove member"
                                   disabled={removeUserFromBaseMutation.isPending}
@@ -469,7 +469,7 @@ export const AddBaseMembersModal: React.FC<AddBaseMembersModalProps> = ({
         </form>
 
         {/* Footer - Fixed at Bottom */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

@@ -32,7 +32,7 @@ const HeaderLogo: React.FC<HeaderLogoProps> = () => {
       className="flex items-center justify-center transition-all duration-200"
       title="Go to Homepage"
     >
-      <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-xl shadow-xs">
+      <div className="w-10 h-10 flex items-center justify-center shrink-0 border rounded-xl shadow-xs">
         {isHovered ? (
           <Home className="w-5 h-5 text-primary" />
         ) : (

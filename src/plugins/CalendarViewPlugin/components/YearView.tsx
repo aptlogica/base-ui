@@ -78,7 +78,7 @@ const YearView: React.FC<YearViewProps> = ({
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Year header */}
-      <div className="border-b p-2 flex-shrink-0">
+      <div className="border-b p-2 shrink-0">
         <h2 className="text-2xl font-bold text-gray-900">
           {currentDate.getFullYear()}
         </h2>
@@ -117,8 +117,8 @@ const YearView: React.FC<YearViewProps> = ({
 
                   if (isCurrentMonthDay) {
                     dayCellClass = isTodayDate
-                      ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black';
+                      ? 'bg-(--color-bg-brand-primary) text-black'
+                      : 'text-(--color-text-primary) hover:bg-(--color-bg-brand-primary) hover:text-black';
                   }
 
                   return (
@@ -134,7 +134,7 @@ const YearView: React.FC<YearViewProps> = ({
                       {/* Event indicators - show dot if date has events */}
                       {dayEvents.length > 0 && (
                         <div className="absolute top-1.5 right-2 flex justify-center mb-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-bg-brand-primary)]" title={`${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}`} />
+                          <div className="w-1.5 h-1.5 rounded-full bg-(--color-bg-brand-primary)" title={`${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}`} />
                         </div>
                       )}
                       <span className="text-xs">{date.getDate()}</span>

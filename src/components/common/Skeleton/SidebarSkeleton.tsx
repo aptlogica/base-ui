@@ -6,7 +6,7 @@ import React from 'react';
 import { Skeleton } from './Skeleton';
 
 const renderTableSkeleton = (showViews: boolean) => (
-  <div className="mb-2 space-y-1">
+  <div className="flex flex-col mb-2 gap-y-1">
     {/* Table item skeleton */}
     <div className="flex items-center gap-3 py-2 pr-3 pl-7">
       <Skeleton variant="circular" width={15} height={15} />
@@ -16,7 +16,7 @@ const renderTableSkeleton = (showViews: boolean) => (
     
     {/* Nested views skeleton */}
     {showViews && (
-      <div className="pl-7 space-y-1">
+      <div className="flex flex-col pl-7 gap-y-1">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 py-1 pr-3 pl-6">
             <Skeleton variant="circular" width={12} height={12} />
@@ -32,7 +32,7 @@ export const SidebarSkeleton: React.FC<{ itemCount?: number }> = React.memo(({
   itemCount = 5 
 }) => {
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-y-2">
       {/* Create View Button skeleton */}
       <div className="mb-2 px-2">
         <Skeleton variant="rectangular" width="100%" height={32} />

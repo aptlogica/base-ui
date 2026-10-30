@@ -414,7 +414,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     if (layout === 'record') {
         return (
             <div //NOSONAR
-                className="bg-modal-backdrop relative"
+                className="bg-modal-backdrop"
                 onClick={(e) => e.target === e.currentTarget && requestClose()}
                 onKeyDown={(e) => e.stopPropagation()}
             >
@@ -425,14 +425,14 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     onClick={requestClose}
                 />
                 <div //NOSONAR
-                    className="bg-modal w-full h-full relative !p-0 !max-w-[99rem] !max-h-[45rem] flex flex-col overflow-hidden !rounded-[1.5rem]"
+                    className="bg-modal w-full h-full relative p-0! max-w-[99rem]! max-h-180! flex flex-col overflow-hidden rounded-3xl!"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b flex-shrink-0">
+                    <div className="min-h-7 h-20 flex items-center justify-between px-6 py-3 border-b shrink-0">
                         <RecordTitle tableTitle={table?.title} title={title} />
-                        <div className="flex items-center gap-2 relative flex-shrink-0">
+                        <div className="flex items-center gap-2 relative shrink-0">
                             <RecordNavButtons onPrevious={onPrevious} onNext={onNext} hasPrevious={hasPrevious} hasNext={hasNext} disabled={submitting} showSeparator={canCreateRecord()} />
                             {canCreateRecord() && (
                                 <button
@@ -446,7 +446,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                             )}
                             <button
                                 type="button"
-                                className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 flex-shrink-0"
+                                className="px-3 py-1.5 text-sm rounded-lg border bg-card hover:bg-gray-50 text-gray-700 shrink-0"
                                 onClick={requestClose}
                             >
                                 Cancel
@@ -457,12 +457,12 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                     {/* Scrollable Content Area */}
                     <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
                         <div className="px-6 py-6 mx-auto w-full max-w-[820px]">
-                            <div className="space-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
+                            <div className="flex flex-col gap-y-4">{visibleFields.map(renderRecordLayoutField)}</div>
 
                             <HiddenFieldsToggle count={hiddenFields.length} shown={showHidden} onToggle={() => setShowHidden(v => !v)} />
 
                             {showHidden && hiddenFields.length > 0 && (
-                                <div className="space-y-4">{hiddenFields.map(renderRecordLayoutField)}</div>
+                                <div className="flex flex-col gap-y-4">{hiddenFields.map(renderRecordLayoutField)}</div>
                             )}
 
                             {formError && (
@@ -477,24 +477,24 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     }
 
     return (
-        <div className="bg-modal-backdrop relative">
+        <div className="bg-modal-backdrop">
             <button
                 type="button"
                 aria-label="Close modal"
                 className="absolute inset-0"
                 onClick={requestClose}
             />
-            <div className="bg-modal w-full relative max-w-4xl !p-0 flex flex-col overflow-hidden">
+            <div className="bg-modal w-full relative max-w-4xl p-0! flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+                <div className="flex items-center justify-between p-4 border-b shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
-                        <CirclePlus className="w-5 h-5 icons-primary flex-shrink-0" />
+                        <CirclePlus className="w-5 h-5 icons-primary shrink-0" />
                         <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] flex-shrink-0">{table?.title}</span>
+                            <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded truncate max-w-[150px] shrink-0">{table?.title}</span>
                             <h2 className="text-2xl font-semibold truncate">{title}</h2>
                         </div>
                     </div>
-                    <button type="button" className="p-2 flex-shrink-0" onClick={requestClose} aria-label="Close">
+                    <button type="button" className="p-2 shrink-0" onClick={requestClose} aria-label="Close">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -503,7 +503,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
                 <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" onInput={handleInput}>
                     <div className="p-6">
                         {/* Visible fields */}
-                        <div className="space-y-4">
+                        <div className="flex flex-col gap-y-4">
                             {visibleFields.map(renderDefaultLayoutField)}
                         </div>
 
@@ -512,7 +512,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
                         {/* Hidden fields */}
                         {showHidden && hiddenFields.length > 0 && (
-                            <div className="space-y-4">
+                            <div className="flex flex-col gap-y-4">
                                 {hiddenFields.map(renderDefaultLayoutField)}
                             </div>
                         )}
@@ -525,7 +525,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
                 {/* Footer - Fixed at Bottom */}
                 {canCreateRecord() && (
-                    <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+                    <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
                         <button
                             type="button"
                             onClick={requestClose}

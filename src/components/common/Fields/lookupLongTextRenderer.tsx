@@ -51,7 +51,7 @@ export const LookupLongTextValue: React.FC<{ items: any[] }> = ({ items }) => {
         </button>
       </div>
       {open && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center">
           <button type="button" className="absolute inset-0 backdrop-blur-sm bg-opacity-40" aria-label="Close modal" tabIndex={-1} onClick={() => setOpen(false)} />
           <div className="relative bg-card border rounded-xl shadow-xl w-full max-w-4xl h-[80vh] p-5 flex flex-col z-10">
             <div className="flex items-center mb-3">
@@ -60,10 +60,10 @@ export const LookupLongTextValue: React.FC<{ items: any[] }> = ({ items }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-auto min-h-[320px] bg-background border rounded-xl p-3 text-sm space-y-2">
+            <div className="flex flex-col flex-1 overflow-auto min-h-[320px] bg-background border rounded-xl p-3 text-sm gap-y-2">
               {textItems.map((text, index) => (
                 <div key={`lookup-long-text-${index}`} //NOSONAR
-                  className="px-3 py-2 border rounded-lg whitespace-pre-wrap break-words text-gray-700">
+                  className="px-3 py-2 border rounded-lg whitespace-pre-wrap wrap-break-word text-gray-700">
                   {text}
                 </div>
               ))}

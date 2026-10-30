@@ -457,14 +457,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         }}
       />
       <div // NOSONAR
-        className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl max-w-[94vw] max-h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
+        className="bg-(--color-card) border border-(--color-border-primary) rounded-xl shadow-2xl max-w-[94vw] max-h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-brand-100 text-brand-800 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-brand-100 text-brand-800 rounded-xl flex items-center justify-center shrink-0">
               <Upload className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -486,7 +486,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               onClose();
             }}
             disabled={isImporting}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Close"
           >
             <X className="text-gray-500 h-5 w-5" />
@@ -502,11 +502,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               : 'overflow-y-auto overflow-x-hidden'
             }`}
         >
-          <div className={uiStep === 'review' ? 'flex-1 grid grid-cols-1 gap-6 lg:gap-0 lg:min-h-0 lg:grid-cols-[44%_56%]' : 'p-4 space-y-4 overflow-y-auto overflow-x-hidden'}>
+          <div className={uiStep === 'review' ? 'flex-1 grid grid-cols-1 gap-6 lg:gap-0 lg:min-h-0 lg:grid-cols-[44%_56%]' : 'p-4 flex flex-col gap-y-4 overflow-y-auto overflow-x-hidden'}>
             {uiStep === 'review' ? (
               <>
                 {/* Left: Column Mapping + Cleanup - independently scrollable */}
-                <div className="p-6 relative z-10 bg-[var(--color-card)] lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden lg:border-r">
+                <div className="p-6 relative z-10 bg-(--color-card) lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden lg:border-r">
                   <ImportCleanupOptions value={cleanupOptions} onChange={setCleanupOptions} />
                   {preview ? (
                     <ImportColumnMapper
@@ -531,7 +531,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
 
                 {/* Right: Preview - independently scrollable */}
-                <div className="p-6 relative z-0 bg-[var(--color-card)] border-t lg:border-t-0 lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden">
+                <div className="p-6 relative z-0 bg-(--color-card) border-t lg:border-t-0 lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden">
                   {preview ? (
                     <ImportDataPreviewGrid
                       preview={preview}
@@ -548,7 +548,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             ) : (
               <>
                 {/* File Upload Area */}
-                <div className="space-y-1">
+                <div className="flex flex-col gap-y-1">
                   <label htmlFor="file-upload-input" className="block text-sm font-medium text-primary mb-1">
                     Select File <span className="text-brand-600">*</span>
                   </label>
@@ -581,7 +581,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center">
                           <FileText size={22} className="text-green-600" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="flex flex-col gap-y-1">
                           <div className="text-sm font-semibold text-primary">{selectedFile.name}</div>
                           <div className="text-xs text-secondary">{formatFileSize(selectedFile.size)}</div>
                         </div>
@@ -605,11 +605,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <div className="w-16 h-16 bg-gray-100 rounded-xl border flex items-center justify-center">
                           <Upload size={22} className="text-gray-400" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="flex flex-col gap-y-1">
                           <div className="text-xl text-primary">
                             Drop your document here or
                           </div>
-                          <span className="text-[var(--color-blue-700)] text-xl hover:underline font-semibold">Browse files</span>
+                          <span className="text-blue-700 text-xl hover:underline font-semibold">Browse files</span>
                           <div className="text-xs text-secondary">
                             {config.label} file (max {formatFileSize(config.maxSize)})
                           </div>
@@ -625,7 +625,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
 
                 {/* Title Input */}
-                {/* <div className="space-y-1">
+                {/* <div className="flex flex-col gap-y-1">
                   <label htmlFor="tableTitle" className="field-component-label">
                     Table Title <span className="field-component-required">*</span>
                   </label>
@@ -653,9 +653,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <HelpCircle
                           className={`w-4 h-4 ${titleHelpIconClass} cursor-help`}
                         />
-                        <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-lg p-3 text-sm z-50">
+                        <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-(--color-card) border border-(--color-border-primary) rounded-xl shadow-lg p-3 text-sm z-50">
                           <h4 className="font-medium text-foreground mb-2">Table title requirements:</h4>
-                          <ul className="space-y-1">
+                          <ul className="flex flex-col gap-y-1">
                             <li className={`flex items-center ${title.trim().length >= 3 ? 'text-green-600' : 'text-gray-500'}`}>
                               • Minimum 3 characters
                             </li>
@@ -703,7 +703,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Footer - Fixed at Bottom */}
         {(
-          <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+          <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
             {isImporting && (
               <div className="mr-auto min-w-[220px]">
                 <div className="flex items-center justify-between text-xs text-secondary mb-1">
@@ -722,7 +722,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isImporting}
-              className="px-16 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+              className="px-16 py-2 rounded-xl border border-(--color-border-primary) bg-(--color-card) hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
             >
               Cancel
             </button>
@@ -762,7 +762,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   type="button"
                   onClick={handleBack}
                   disabled={isImporting}
-                  className="px-10 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
+                  className="px-10 py-2 rounded-xl border border-(--color-border-primary) bg-(--color-card) hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700"
                 >
                   Back
                 </button>

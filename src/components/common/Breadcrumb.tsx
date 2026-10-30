@@ -245,7 +245,7 @@ const Breadcrumb: React.FC = () => {
     const baseIcon = getBaseIcon(currentBase, 0);
 
     const baseIconElement = baseImage ? (
-      <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+      <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
         <img
           src={baseImage}
           alt={baseName}
@@ -253,7 +253,7 @@ const Breadcrumb: React.FC = () => {
         />
       </div>
     ) : (
-      <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+      <div className={`w-8 h-8 ${baseIcon.color} rounded-lg flex items-center justify-center text-white font-semibold text-xs shrink-0`}>
         {baseIcon.letter}
       </div>
     );
@@ -520,7 +520,7 @@ const Breadcrumb: React.FC = () => {
 
       // Use image if available, otherwise use initial with colored background
       const baseIconElement = baseImage ? (
-        <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 border">
+        <div className="w-8 h-8 rounded-md overflow-hidden shrink-0 border">
           <img
             src={baseImage}
             alt={baseName}
@@ -528,7 +528,7 @@ const Breadcrumb: React.FC = () => {
           />
         </div>
       ) : (
-        <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
+        <div className={`w-8 h-8 ${icon.color} rounded-md flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
           {icon.letter}
         </div>
       );
@@ -626,7 +626,7 @@ const Breadcrumb: React.FC = () => {
   }
 
   return (
-    <nav className="flex items-center space-x-1 text-sm overflow-hidden" aria-label="Breadcrumb">
+    <nav className="flex items-center gap-x-1 text-sm overflow-hidden" aria-label="Breadcrumb">
       <div className="py-2">
         <ChevronRight className="w-fit h-6 text-gray-300" />
       </div>
@@ -654,7 +654,7 @@ const Breadcrumb: React.FC = () => {
         return (
           <React.Fragment key={`${item.type}-${item.id}`}>
             {index > 0 && (
-              <ChevronRight size={12} className="text-gray-400 mx-1 flex-shrink-0" />
+              <ChevronRight size={12} className="text-gray-400 mx-1 shrink-0" />
             )}
             <div className="relative" ref={currentRef}>
               <button
@@ -663,14 +663,14 @@ const Breadcrumb: React.FC = () => {
               >
                 {item.icon}
                 <span className={`font-medium truncate max-w-[150px] ${isLast
-                  ? 'text-[var(--color-text-primary)]'
-                  : 'text-gray-700 group-hover:text-[var(--color-text-primary)]'
+                  ? 'text-(--color-text-primary)'
+                  : 'text-gray-700 group-hover:text-(--color-text-primary)'
                   }`} title={item.label}>
                   {item.label}
                 </span>
                 <ChevronDown
                   size={12}
-                  className={`text-gray-400 transition-transform flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''
+                  className={`text-gray-400 transition-transform shrink-0 ${isDropdownOpen ? 'rotate-180' : ''
                     }`}
                 />
               </button>
@@ -678,7 +678,7 @@ const Breadcrumb: React.FC = () => {
               {/* Dropdown Menu - Portal to body to avoid overflow clipping */}
               {isDropdownOpen && dropdownPosition && ReactDOM.createPortal(
                 <div
-                  className="breadcrumb-dropdown-portal fixed bg-card border rounded-xl shadow-lg z-[9999] w-80 flex flex-col overflow-hidden"
+                  className="breadcrumb-dropdown-portal fixed bg-card border rounded-xl shadow-lg z-9999 w-80 flex flex-col overflow-hidden"
                   style={{
                     top: `${dropdownPosition.top}px`,
                     left: `${dropdownPosition.left}px`
@@ -686,7 +686,7 @@ const Breadcrumb: React.FC = () => {
                 >
                   <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="px-4 py-2 flex-shrink-0">
+                    <div className="px-4 py-2 shrink-0">
                       <div className="text-xs font-semibold text-primary tracking-wide">
                         {(() => {
                           if (item.type === 'base') return 'Bases';
@@ -728,7 +728,7 @@ const Breadcrumb: React.FC = () => {
                                 </span>
 
                                 {/* Right side: Status dot + Menu (for bases only) */}
-                                <div className="flex items-center gap-2 flex-shrink-0">
+                                <div className="flex items-center gap-2 shrink-0">
                                   {/* Status Indicator - only for selected */}
                                   {dropdownItem.isActive && (
                                     <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100"></div>
@@ -757,12 +757,12 @@ const Breadcrumb: React.FC = () => {
 
                     {/* Separator */}
                     {dropdownItems.length > 0 && item.type == "base" && (
-                      <div className="border-t flex-shrink-0"></div>
+                      <div className="border-t shrink-0"></div>
                     )}
 
                     {/* Only show Create Base button */}
                     {item.type === 'base' && canCreateBase() && (
-                      <div className="p-2 flex-shrink-0">
+                      <div className="p-2 shrink-0">
                         <button
                           className="w-full text-left px-3 py-1 text-sm text-primary hover:bg-gray-100 shadow-xs rounded-xl border transition-all duration-200 font-semibold flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={(e) => {
@@ -777,7 +777,7 @@ const Breadcrumb: React.FC = () => {
                             setShowCreateBase(true);
                           }}
                         >
-                          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 flex items-center justify-center shrink-0">
                             <Plus className="w-5 h-5 text-primary" />
                           </div>
                           <span>Create New Base</span>

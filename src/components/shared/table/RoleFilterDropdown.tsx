@@ -127,7 +127,7 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
           data-dropdown-menu="role-filter"
           role={menuRole}
           tabIndex={menuTabIndex}
-          className="fixed z-[9999] bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
+          className="fixed z-9999 bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto"
           style={{
             ...(position.top !== undefined && { top: `${position.top}px` }),
             ...(position.bottom !== undefined && { bottom: `${position.bottom}px` }),
@@ -141,7 +141,7 @@ export const RoleFilterDropdown: React.FC<RoleFilterDropdownProps> = ({
             }
           }}
         >
-          <div className="p-2 space-y-1">
+          <div className="flex flex-col p-2 gap-y-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();

@@ -236,10 +236,10 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
             onSelect={(key) => handleFieldSelect(idx, key)}
             placeholder="Select field"
             menuTestId={`sort-field-options-${idx}`}
-            buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-[--color-brand-600] flex items-center justify-between"
-            menuClassName="absolute z-50 mt-1 p-2 space-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+            buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-brand-600 flex items-center justify-between"
+            menuClassName="flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
             optionClassName={(_, isSelected) =>
-              `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`
+              `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors ${isSelected ? 'bg-(--color-bg-brand-primary) text-black' : ''}`
             }
           />
         </div>
@@ -251,7 +251,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
               type="button"
               className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
               cursor-pointer transition-all duration-200 ease-in-out
-              focus:outline-none focus:border-[--color-brand-600]
+              focus:outline-none focus:border-brand-600
               flex items-center justify-between"
               aria-haspopup="listbox"
               aria-expanded={dirDropdownOpen === idx}
@@ -267,11 +267,11 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
               )}
             </button>
             {dirDropdownOpen === idx && (
-              <div className="absolute z-50 mt-1 p-2 space-y-1 left-0 w-32 text-primary bg-background border rounded-xl shadow-lg max-h-32 overflow-y-auto">
+              <div className="flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-32 text-primary bg-background border rounded-xl shadow-lg max-h-32 overflow-y-auto">
                 {['asc', 'desc'].map((dir) => (
                   <button
                     key={dir}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${sort.direction === dir ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl  hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors ${sort.direction === dir ? 'bg-(--color-bg-brand-primary) text-black' : ''}`}
                     onClick={() => handleDirSelect(idx, dir as 'asc' | 'desc')}
                     type="button"
                   >
@@ -358,7 +358,7 @@ export const SortPopover: React.FC<SortPopoverProps> = ({ columns, sorts, onChan
             {displaySorts.map((element, index) => renderSortRow(element, index))}
             {availableColumns.length > 0 && (
               <button
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : 'text-secondary cursor-not-allowed opacity-60'}`}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns ? 'text-primary hover:bg-(--color-bg-brand-primary) hover:text-black' : 'text-secondary cursor-not-allowed opacity-60'}`}
                 data-testid="add-sort-button"
                 disabled={!hasUnusedColumns}
                 onClick={handleAddSort}

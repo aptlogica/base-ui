@@ -114,7 +114,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
     <button
       type="button"
       onClick={() => setForm({})}
-      className="px-4 h-10 rounded-xl btn-primary text-primary text-sm font-medium transition-all flex items-center gap-2 flex-shrink-0"
+      className="px-4 h-10 rounded-xl btn-primary text-primary text-sm font-medium transition-all flex items-center gap-2 shrink-0"
     >
       <Plus className="w-4 h-4" />
       Add check constraint
@@ -127,14 +127,14 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className="text-sm text-primary break-words"
+              className="text-sm text-primary wrap-break-word"
               title={`${item.constraint_name} in Postgres`}
             >
               {item.title}
             </span>
             {item.status === "missing" && (
               <span title="This constraint is not in the database any more. Edit and save it to add it again, or delete it.">
-                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
               </span>
             )}
           </div>
@@ -171,7 +171,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
                 type="button"
                 aria-label={`Edit ${item.title}`}
                 onClick={() => setForm({ item })}
-                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 flex-shrink-0"
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-gray-700 shrink-0"
               >
                 <Edit className="w-4 h-4 text-secondary" />
                 Edit
@@ -181,7 +181,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
                 aria-label={`Delete ${item.title}`}
                 onClick={() => setDeleteItem(item)}
                 disabled={deleteConstraint.isPending}
-                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 flex-shrink-0 disabled:opacity-50"
+                className="h-8 px-2 rounded-xl hover:bg-gray-100 flex items-center gap-1.5 text-sm text-red-600 shrink-0 disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
@@ -256,7 +256,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
         e.key === "Escape" && (form || deleteItem) && e.stopPropagation()
       }
     >
-      <div className="px-4 pt-4 flex-shrink-0">
+      <div className="px-4 pt-4 shrink-0">
         <h3 className="text-base font-semibold text-primary">
           Check Constraints
         </h3>
@@ -266,7 +266,7 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
       </div>
 
       {/* Search, category filter + add */}
-      <div className="flex items-center justify-between gap-3 p-4 flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 p-4 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <div className="relative w-64 max-w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -304,8 +304,8 @@ const CheckConstraintsPanel: React.FC<{ table: any }> = ({ table }) => {
       </div>
 
       {error && (
-        <div className="mx-4 mb-3 text-sm text-red-600 flex items-center gap-1 flex-shrink-0">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="mx-4 mb-3 text-sm text-red-600 flex items-center gap-1 shrink-0">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}

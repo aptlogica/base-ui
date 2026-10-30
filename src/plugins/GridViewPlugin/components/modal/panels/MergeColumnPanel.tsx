@@ -68,7 +68,7 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
     onMergePlacementChange,
 }) => {
     return (
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+        <div className="flex flex-col flex-1 overflow-y-auto px-5 py-4 gap-y-6">
             <ColumnSelectionSection
                 columns={columns}
                 selectedColumnIds={selectedColumnIds}
@@ -78,7 +78,7 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
                 description="Select two or more columns to merge."
             />
 
-            <section className="space-y-2">
+            <section className="flex flex-col gap-y-2">
                 <div>
                     <h3 className="text-sm font-semibold text-foreground">Merge format</h3>
                     <p className="text-sm text-secondary">
@@ -86,7 +86,7 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
                     </p>
                 </div>
 
-                <div className="space-y-2 rounded-xl border bg-card">
+                <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
                     {MERGE_FORMATS.map((option, index) => (
                         <div
                             key={option.value}
@@ -109,13 +109,13 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
                                 </span>
                             </label>
                             {option.value === 'custom' && mergeFormat === 'custom' && (
-                                <div className="space-y-2 px-4 pb-4">
+                                <div className="flex flex-col gap-y-2 px-4 pb-4">
                                     <input
                                         type="text"
                                         value={mergeCustomSeparator}
                                         onChange={(event) => onMergeCustomSeparatorChange(event.target.value)}
                                         placeholder="Enter custom separator"
-                                        className="w-full h-11 px-4 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed text-foreground"
+                                        className="w-full h-11 px-4 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed text-foreground"
                                     />
                                     <p className="text-sm text-secondary">This will be the separator for the new merged column.</p>
                                 </div>
@@ -125,25 +125,25 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
                 </div>
             </section>
 
-            <section className="space-y-4">
+            <section className="flex flex-col gap-y-4">
                 <div>
                     <h3 className="text-sm font-semibold text-foreground">New column</h3>
                     <p className="text-sm text-secondary">
                         Provide a name for the new column.
                     </p>
                 </div>
-                <div className='space-y-2'>
+                <div className='flex flex-col gap-y-2'>
                     <h2 className="text-sm text-foreground">Column name</h2>
                     <input
                         type="text"
                         value={mergeColumnTitle}
                         onChange={(event) => onMergeColumnTitleChange(event.target.value)}
                         placeholder="Enter column name"
-                        className="w-full h-11 px-4 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed text-foreground"
+                        className="w-full h-11 px-4 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed text-foreground"
                     />
                     <p className="text-sm text-secondary">This will be the header for the new merged column.</p>
                 </div>
-                <div className='space-y-2'>
+                <div className='flex flex-col gap-y-2'>
                     <h3 className="text-sm font-semibold text-foreground">Output Option</h3>
                     <label
                         aria-label="keep-original-column"
@@ -165,7 +165,7 @@ export const MergeColumnPanel: React.FC<MergeColumnPanelProps> = ({
                         </span>
                     </label>
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-y-2">
                     <h3 className="text-sm font-semibold text-foreground">Where to add new columns</h3>
                     <label
                         aria-label="at-end-of-table"

@@ -448,7 +448,7 @@ const HomePage: React.FC = () => {
           </div>
 
           {/* Right Side - Action Cards */}
-          <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0 w-full lg:w-auto">
+          <div className="flex flex-col sm:flex-row gap-4 shrink-0 w-full lg:w-auto">
             {/* Create New Base - Only owner, co-owner, maintainer can create */}
             <button
               type="button"
@@ -508,8 +508,8 @@ const HomePage: React.FC = () => {
         <div className="flex items-center gap-3 w-full sm:w-auto">
           {/* Search Input */}
           <div className="relative flex-1 sm:flex-none w-72">
-            <div className="flex items-center bg-gray-50 border rounded-xl px-3 py-2 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] focus-within:border-[var(--color-focus-ring)] outline-none transition-all">
-              <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+            <div className="flex items-center bg-gray-50 border rounded-xl px-3 py-2 focus-within:outline-none focus-within:ring-1 focus-within:ring-(--color-focus-ring) focus-within:border-(--color-focus-ring) outline-none transition-all">
+              <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
               <input
                 type="text"
                 placeholder="Search bases"
@@ -526,7 +526,7 @@ const HomePage: React.FC = () => {
               ref={sortButtonRef}
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
               className={`flex items-center gap-2 px-3 py-2 text-sm border rounded-xl bg-background transition-all duration-200 whitespace-nowrap ${isSortDropdownOpen
-                ? 'border-primary ring-1 ring-primary ring-opacity-20'
+                ? 'border-primary ring-1 ring-(--ring-color-primary) ring-opacity-20'
                 : 'border hover:border-gray-400'
                 }`}
             >
@@ -550,7 +550,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">Recent</span>
                       {sortOption === 'recent' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 shrink-0"></div>
                       )}
                     </div>
                   </button>
@@ -564,7 +564,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">A-Z</span>
                       {sortOption === 'a-z' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 shrink-0"></div>
                       )}
                     </div>
                   </button>
@@ -578,7 +578,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-primary">Z-A</span>
                       {sortOption === 'z-a' && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full ring ring-green-100 shrink-0"></div>
                       )}
                     </div>
                   </button>
@@ -628,7 +628,7 @@ const HomePage: React.FC = () => {
                 <div className="flex items-start gap-3 border-b p-5">
                   {/* Icon on left - Use image if available, otherwise use initial with colored background */}
                   {baseImage ? (
-                    <div className="w-12 h-12 border rounded-xl overflow-hidden flex-shrink-0 shadow-xs">
+                    <div className="w-12 h-12 border rounded-xl overflow-hidden shrink-0 shadow-xs">
                       <img
                         src={baseImage}
                         alt={baseName}
@@ -636,7 +636,7 @@ const HomePage: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-xs`}>
+                    <div className={`w-12 h-12 border rounded-xl ${icon.color} flex items-center justify-center text-white font-semibold shrink-0 shadow-xs`}>
                       {icon.letter}
                     </div>
                   )}
@@ -649,7 +649,7 @@ const HomePage: React.FC = () => {
                       </h3>
                       {/* Show badge in place of menu for read-only access, otherwise show menu */}
                       {base.access_level && (base.access_level === 'workspace-read' || base.access_level === 'base-read') ? (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-lg border flex-shrink-0 text-gray-700">
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-lg border shrink-0 text-gray-700">
                           {getRoleLabel(base.access_level)}
                         </span>
                       ) : (
@@ -776,7 +776,7 @@ const HomePage: React.FC = () => {
       {/* Create Table Modal - Lazy loaded with Suspense */}
       {showCreateTableBaseId && (
         <Suspense fallback={
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-10000">
             <Loader />
           </div>
         }>

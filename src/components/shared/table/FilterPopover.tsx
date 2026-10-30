@@ -223,13 +223,13 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
         </button>
         {logicDropdownOpen === rowKey && (
           <div //NOSONAR
-            className="absolute z-50 space-y-1 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
+            className="flex flex-col absolute z-50 gap-y-1 mt-1 p-1 left-0 w-20 bg-background border rounded-xl shadow-lg"
             onMouseLeave={() => setLogicDropdownOpen(null)}
           >
             {['AND', 'OR'].map((logic) => (
               <button
                 key={logic}
-                className={`w-full text-left px-3 py-1.5 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${currentLogic === logic ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                className={`w-full text-left px-3 py-1.5 text-sm rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black ${currentLogic === logic ? 'bg-(--color-bg-brand-primary) text-black' : 'text-primary'
                   }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -338,7 +338,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       }
       return (
         <input
-          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-brand-600"
           placeholder="Enter a value"
           value={currentValue}
           onChange={e => {
@@ -407,7 +407,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   onUpdateFilter(filterIndex, { value: '' });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
             >
               <X className="w-3 h-3" />
             </button>
@@ -489,7 +489,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
             >
               <X className="w-3 h-3" />
             </button>
@@ -506,7 +506,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
       return (
         <input
           type="number"
-          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+          className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-brand-600"
           placeholder="Enter a value"
           value={currentValue}
           onChange={e => {
@@ -553,7 +553,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   onUpdateFilter(filterIndex, { value: '' });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
             >
               <X className="w-3 h-3" />
             </button>
@@ -602,7 +602,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   onUpdateFilter(filterIndex, { value: '' });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
             >
               <X className="w-3 h-3" />
             </button>
@@ -654,7 +654,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   onUpdateFilter(filterIndex, { value: '' });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0 ml-1"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0 ml-1"
             >
               <X className="w-3 h-3" />
             </button>
@@ -698,7 +698,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                   onUpdateFilter(filterIndex, { value: '' });
                 }
               }}
-              className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+              className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
             >
               <X className="w-3 h-3" />
             </button>
@@ -753,7 +753,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                 });
               }
             }}
-            className="hover:bg-blue-200 rounded-full p-0.5 flex-shrink-0"
+            className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
           >
             <X className="w-3 h-3" />
           </button>
@@ -769,7 +769,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
     }
     return (
       <input
-        className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-[--color-brand-600]"
+        className="flex-1 min-w-0 px-3 py-1.5 text-sm border rounded-xl bg-background text-primary placeholder-gray-400 focus:outline-none focus:border-brand-600"
         placeholder="Enter a value"
         value={currentValue}
         onChange={e => {
@@ -868,9 +868,9 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                       setFieldDropdownOpen(null);
                     },
                     `filter-field-options-${idx}`,
-                    "absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto",
+                    "flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-full min-w-[200px] bg-background border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto",
                     (_, isSelected) =>
-                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'}`
+                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors whitespace-nowrap ${isSelected ? 'bg-(--color-bg-brand-primary) text-black' : 'text-primary'}`
                   )}
                 </div>
 
@@ -881,9 +881,9 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     filterOperatorOptions,
                     filter.operator,
                     (value) => onUpdateFilter(idx, { operator: value }),
-                    "absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto",
+                    "flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-max bg-background border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto",
                     (op) =>
-                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${filter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                      `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors ${filter.operator === op.value ? 'bg-(--color-bg-brand-primary) text-black' : 'text-primary'
                       }`
                   )}
                 </div>
@@ -942,9 +942,9 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     setHasUserInteracted(true);
                   },
                   "filter-new-field-options",
-                  "absolute z-50 mt-1 p-2 space-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto",
+                  "flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-full min-w-[200px] bg-background border border-primary rounded-xl shadow-lg max-h-64 overflow-y-auto",
                   (_, isSelected) =>
-                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : ''}`,
+                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors whitespace-nowrap group ${isSelected ? 'bg-(--color-bg-brand-primary) text-black' : ''}`,
                   (_, isSelected) => (isSelected ? 'text-black' : 'text-primary group-hover:text-black')
                 )}
               </div>
@@ -959,9 +959,9 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
                     setNewFilter(f => ({ ...f, operator: value }));
                     setHasUserInteracted(true);
                   },
-                  "absolute z-50 mt-1 p-2 space-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto",
+                  "flex flex-col absolute z-50 mt-1 p-2 gap-y-1 left-0 w-max bg-background border border-primary rounded-xl shadow-lg max-h-72 overflow-y-auto",
                   (op) =>
-                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-primary'
+                    `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors group ${newFilter.operator === op.value ? 'bg-(--color-bg-brand-primary) text-black' : 'text-primary'
                     }`,
                   (op) => (newFilter.operator === op.value ? 'text-black' : 'text-primary group-hover:text-black')
                 )}
@@ -995,7 +995,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
               <button
                 type="button"
                 className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-xl ${canAddFilter
-                  ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                  ? 'text-primary hover:bg-(--color-bg-brand-primary) hover:text-black'
                   : 'text-gray-400 cursor-not-allowed opacity-60'
                   }`}
                 disabled={!canAddFilter}
@@ -1017,7 +1017,7 @@ export function FilterPopover({ columns, filters, onAddFilter, onRemoveFilter, o
             {showNewFilterRow && (
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-(--color-bg-brand-primary) hover:text-black rounded-xl"
                 onClick={handleAdd}
               >
                 <Plus className="w-5 h-5" />

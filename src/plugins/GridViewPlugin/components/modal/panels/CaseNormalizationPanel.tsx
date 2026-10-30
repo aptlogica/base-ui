@@ -53,7 +53,7 @@ export const CaseNormalizationPanel: React.FC<CaseNormalizationPanelProps> = ({
   onCaseFormatChange,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+    <div className="flex flex-col flex-1 overflow-y-auto px-5 py-4 gap-y-6">
       <ColumnSelectionSection
         columns={columns}
         selectedColumnIds={selectedColumnIds}
@@ -63,7 +63,7 @@ export const CaseNormalizationPanel: React.FC<CaseNormalizationPanelProps> = ({
         description="Choose the columns to normalize."
       />
 
-      <section className="space-y-2">
+      <section className="flex flex-col gap-y-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Case format</h3>
           <p className="text-sm text-secondary">
@@ -71,7 +71,7 @@ export const CaseNormalizationPanel: React.FC<CaseNormalizationPanelProps> = ({
           </p>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-card">
+        <div className="flex flex-col gap-y-2 rounded-xl border bg-card">
           {CASE_FORMATS.map((option, index) => (
             <label
               aria-label={option.label}

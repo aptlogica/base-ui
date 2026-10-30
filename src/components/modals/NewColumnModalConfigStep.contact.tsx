@@ -14,9 +14,9 @@ const renderValidationToggle = (checked: boolean, onChange: (checked: boolean) =
         onChange={e => onChange(e.target.checked)}
         className="sr-only peer"
       />
-      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-(--color-focus-ring) rounded-full peer peer-checked:bg-primary transition-colors" />
       <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-      <span className="text-sm font-medium text-[var(--color-text-tertiary)]">{label}</span>
+      <span className="text-sm font-medium text-(--color-text-tertiary)">{label}</span>
     </label>
   </div>
 );
@@ -94,7 +94,7 @@ export function renderContactConfigStep(props: any) {
     case 'phoneNumber':
       return (
         <>
-          <div className="mb-3 space-y-2">
+          <div className="flex flex-col mb-3 gap-y-2">
             <div className="mb-4">
               {renderValidationToggle(
                 phoneValid,
@@ -104,7 +104,7 @@ export function renderContactConfigStep(props: any) {
             </div>
             <div>
               <button
-                className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
+                className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2"
                 onClick={() => setShowPhoneDefault((v: boolean) => !v)}
               >
                 <Plus className="w-5 h-5" />
@@ -131,7 +131,7 @@ export function renderContactConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
             'absolute right-2 top-0.5 text-gray-400 hover:text-red-500 text-sm'
           )}
         </>
@@ -148,7 +148,7 @@ export function renderContactConfigStep(props: any) {
           <div className="mb-0">
             <button
               type="button"
-              className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2"
+              className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2"
               onClick={() => setShowEmailDefault((v: boolean) => !v)}
             >
               <Plus className="w-5 h-5" />
@@ -172,7 +172,7 @@ export function renderContactConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             'absolute right-2 top-2 text-gray-400 hover:text-red-500'
           )}
         </>
@@ -189,7 +189,7 @@ export function renderContactConfigStep(props: any) {
           <div className="mb-4">
             <button
               type="button"
-              className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
+              className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800)"
               onClick={() => setShowUrlDefault((v: boolean) => !v)}
             >
               <Plus className="w-5 h-5" />
@@ -215,7 +215,7 @@ export function renderContactConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
             'absolute right-2 top-2 text-gray-400 hover:text-red-500'
           )}
         </>

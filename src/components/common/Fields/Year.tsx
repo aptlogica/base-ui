@@ -269,7 +269,7 @@ export const Year: React.FC<YearProps> = ({
       {isOpen && calculatedPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] left-0 border bg-background rounded-xl shadow-lg p-0 select-none"
+          className="fixed z-9999 left-0 border bg-background rounded-xl shadow-lg p-0 select-none"
           style={{
             ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
             ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),
@@ -315,8 +315,8 @@ export const Year: React.FC<YearProps> = ({
                   type="button"
                   className={`py-2 rounded-xl text-center text-sm font-medium transition-colors ${
                     isSelected
-                      ? "bg-[var(--color-bg-brand-primary)] text-black font-bold"
-                      : "text-gray-900 hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)]"
+                      ? "bg-(--color-bg-brand-primary) text-black font-bold"
+                      : "text-gray-900 hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary)"
                   } ${
                     isCurrentYear ? "border" : ""
                   }`}

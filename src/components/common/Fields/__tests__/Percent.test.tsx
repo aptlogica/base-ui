@@ -265,7 +265,7 @@ describe('Percent Component', () => {
                 <Percent value={50} onChange={mockOnChange} config={{ displayAsProgress: true, progressColor: 'unknown' as any }} />
             );
 
-            const progressBar = container.querySelector(String.raw`.bg-\[var\(--color-utility-brand-500\)\]`);
+            const progressBar = container.querySelector(String.raw`.bg-\(--color-utility-brand-500\)`);
             expect(progressBar).toBeInTheDocument();
         });
     });

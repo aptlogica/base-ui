@@ -50,9 +50,9 @@ const colorOptions = [
   '#EBE9FE', '#D5EEFC', '#FEFDE6', '#D7FAEA'
 ];
 
-const labelClass = 'block text-sm font-medium text-[var(--color-gray-700)]';
+const labelClass = 'block text-sm font-medium text-(--color-gray-700)';
 const outlineButtonClass =
-  'h-9 px-3 flex-1 flex items-center justify-center gap-2 border border-[var(--color-gray-300)] rounded-lg text-sm font-medium text-[var(--color-gray-700)] bg-background hover:bg-gray-50 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed';
+  'h-9 px-3 flex-1 flex items-center justify-center gap-2 border border-gray-300 rounded-lg text-sm font-medium text-(--color-gray-700) bg-background hover:bg-gray-50 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed';
 
 interface ToggleRowProps {
   id: string;
@@ -71,8 +71,8 @@ const ToggleRow: React.FC<Readonly<ToggleRowProps>> = ({ id, label, checked, onC
       onChange={(e) => onChange(e.target.checked)}
       className="sr-only"
     />
-    <div className={`w-7 h-4 rounded-full transition-colors ${checked ? 'bg-[var(--color-bg-brand-primary)]' : 'bg-[var(--color-gray-100)] border border-[var(--color-gray-200)]'}`}>
-      <div className={`w-3 h-3 bg-white rounded-full shadow transform transition-transform mt-[0.0625rem] ${checked ? 'translate-x-[0.8125rem]' : 'translate-x-[0.0625rem]'}`} />
+    <div className={`w-7 h-4 rounded-full transition-colors ${checked ? 'bg-(--color-bg-brand-primary)' : 'bg-(--color-gray-100) border border-(--color-gray-200)'}`}>
+      <div className={`w-3 h-3 bg-white rounded-full shadow transform transition-transform mt-0.25 ${checked ? 'translate-x-3.25' : 'translate-x-0.25'}`} />
     </div>
   </label>
 );
@@ -87,7 +87,7 @@ interface ColorBarInputProps {
 const ColorBarInput: React.FC<Readonly<ColorBarInputProps>> = ({ id, label, value, onChange }) => (
   <div>
     <label htmlFor={id} className={`${labelClass} mb-1.5`}>{label}</label>
-    <div className="relative p-1 border border-[var(--color-gray-300)] rounded-lg bg-background">
+    <div className="relative p-1 border border-gray-300 rounded-lg bg-background">
       <div className="h-7 w-full rounded-md" style={{ backgroundColor: value }} />
       <input
         id={id}
@@ -128,7 +128,7 @@ interface SegmentedControlProps<T extends string> {
 const SegmentedControl = <T extends string>({ label, options, value, onChange }: Readonly<SegmentedControlProps<T>>) => (
   <fieldset className="min-w-0">
     <legend className={`${labelClass} mb-2`}>{label}</legend>
-    <div className="flex w-full p-2 gap-1 rounded-lg bg-[var(--color-gray-100)]">
+    <div className="flex w-full p-2 gap-1 rounded-lg bg-(--color-gray-100)">
       {options.map((option) => {
         const isActive = option.value === value;
         return (
@@ -137,9 +137,9 @@ const SegmentedControl = <T extends string>({ label, options, value, onChange }:
             type="button"
             aria-pressed={isActive}
             onClick={() => onChange(option.value)}
-            className={`flex-1 min-w-0 h-8 px-[0.875rem] py-[0.375rem] flex items-center justify-center rounded-md border text-sm whitespace-nowrap transition-colors ${isActive
-              ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)] font-semibold text-[var(--color-gray-900)] shadow-xs'
-              : 'border-transparent font-medium text-[var(--color-gray-500)] hover:text-[var(--color-gray-700)]'
+            className={`flex-1 min-w-0 h-8 px-3.5 py-1.5 flex items-center justify-center rounded-md border text-sm whitespace-nowrap transition-colors ${isActive
+              ? 'border-(--color-bg-brand-primary) bg-(--color-bg-brand-primary) font-semibold text-(--color-gray-900) shadow-xs'
+              : 'border-transparent font-medium text-(--color-gray-500) hover:text-(--color-gray-700)'
               }`}
           >
             {option.label}
@@ -170,12 +170,12 @@ const ImageOptionGrid = <T extends string>({ label, options, value, onChange }: 
             aria-pressed={isActive}
             onClick={() => onChange(option.value)}
             className={`flex flex-col items-center gap-2 p-2 pb-3 rounded-xl border transition-colors ${isActive
-              ? 'border-[var(--color-bg-brand-primary)] bg-[var(--color-bg-brand-primary)]/5'
-              : 'border-[var(--color-gray-200)] hover:border-[var(--color-gray-300)]'
+              ? 'border-(--color-bg-brand-primary) bg-(--color-bg-brand-primary)/5'
+              : 'border-(--color-gray-200) hover:border-gray-300'
               }`}
           >
             <img src={option.image} alt="" aria-hidden="true" className="w-full h-auto block" />
-            <span className="text-sm text-center leading-tight text-[var(--color-gray-700)]">{option.label}</span>
+            <span className="text-sm text-center leading-tight text-(--color-gray-700)">{option.label}</span>
           </button>
         );
       })}
@@ -353,10 +353,10 @@ const ImageSettingField: React.FC<Readonly<ImageSettingFieldProps>> = ({ kind, l
           )}
         </div>
       )}
-      {checkingUrl && <p className="text-xs text-[var(--color-gray-500)] mt-1">Checking image…</p>}
+      {checkingUrl && <p className="text-xs text-(--color-gray-500) mt-1">Checking image…</p>}
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       {kind === 'banner' && !hasPreview && (
-        <p className="text-xs text-[var(--color-gray-500)] mt-1">
+        <p className="text-xs text-(--color-gray-500) mt-1">
           SVG, PNG, JPG or GIF (max. {BANNER_MAX_WIDTH} × {BANNER_MAX_HEIGHT}px)
         </p>
       )}
@@ -417,8 +417,8 @@ export const AppearanceSettings: React.FC<Readonly<AppearanceSettingsProps>> = (
   const update = (patch: Partial<Appearance>) => onChange({ ...ap, ...patch });
 
   return (
-    <div className="space-y-5">
-      <h4 className="text-sm font-medium text-[var(--color-gray-900)]">Appearance Settings</h4>
+    <div className="flex flex-col gap-y-5">
+      <h4 className="text-sm font-medium text-(--color-gray-900)">Appearance Settings</h4>
 
       <div>
         <span className={`${labelClass} mb-2`}>Background Color</span>
@@ -430,8 +430,8 @@ export const AppearanceSettings: React.FC<Readonly<AppearanceSettingsProps>> = (
               aria-label={`Background color ${color}`}
               onClick={() => update({ backgroundColor: color })}
               className={`flex-1 aspect-square max-w-9 rounded-lg border transition-all ${ap.backgroundColor === color
-                ? 'border-[var(--color-bg-brand-primary)] ring-2 ring-[var(--color-bg-brand-primary)] ring-offset-1'
-                : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+                ? 'border-(--color-bg-brand-primary) ring-2 ring-(--color-bg-brand-primary) ring-offset-1'
+                : 'border-gray-300 hover:border-gray-400'
                 }`}
               style={{ backgroundColor: color }}
             />

@@ -200,7 +200,7 @@ export const PhoneNumber: React.FC<PhoneNumberProps> = ({
                   }
                 }
             }
-            className={`field-component ${localValue ? "text-gray-800" : "!text-gray-500"}
+            className={`field-component ${localValue ? "text-gray-800" : "text-gray-500!"}
               } ${disabled || readOnly ? "text-gray-400 cursor-not-allowed" : ""} max-w-full overflow-hidden`}
             style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >

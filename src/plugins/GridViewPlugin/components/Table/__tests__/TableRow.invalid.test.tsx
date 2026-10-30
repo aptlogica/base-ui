@@ -43,7 +43,7 @@ describe('TableRow primary key cells', () => {
     expect(cell).toHaveAttribute('title', 'Required: part of the primary key');
     expect(cell.className).toContain('border-red-500');
     // The editor inside paints its own background, so the red is forced onto it
-    expect(cell.className).toContain('[&>div]:!bg-red-50');
+    expect(cell.className).toContain('[&>div]:bg-red-50!');
     expect(screen.getByTestId('cell-emps').closest('[role="gridcell"]')).not.toHaveAttribute('data-invalid');
   });
 

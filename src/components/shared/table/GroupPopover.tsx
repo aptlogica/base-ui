@@ -297,7 +297,7 @@ export const GroupPopover: React.FC<{
           style={{ top: position.top, left: position.left }}
         >
           {/* Grouping Rules */}
-          <div className="space-y-3">
+          <div className="flex flex-col gap-y-3">
             {displayGroups.length === 0 && <div className="text-gray-400 text-sm mb-2">No group options</div>}
             {displayGroups.map((group) => {
               const column = popoverColumns.find(col => col.key === group.column);
@@ -332,13 +332,12 @@ export const GroupPopover: React.FC<{
                       onSelect={(key) => updateGroupingField(group.id, key)}
                       placeholder="Select field"
                       menuTestId={`group-field-options-${group.id}`}
-                      buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-[--color-brand-600] flex items-center justify-between"
-                      menuClassName="absolute z-50 top-full mt-1 p-2 space-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                      buttonClassName="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:border-brand-600 flex items-center justify-between"
+                      menuClassName="absolute z-50 top-full mt-1 p-2 gap-y-1 w-full bg-background border text-primary rounded-xl shadow-lg max-h-64 overflow-y-auto"
                       optionClassName={(_, isSelected) =>
                         `w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl transition-colors ${isSelected
-                          ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                          : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
-                        }`
+                          ? 'bg-(--color-bg-brand-primary) text-black'
+                          : 'hover:bg-(--color-bg-brand-primary) hover:text-black'}`
                       }
                     />
                   </div>
@@ -350,7 +349,7 @@ export const GroupPopover: React.FC<{
                         type="button"
                         className="w-full px-3 py-2 text-left bg-background border rounded-xl shadow-xs
                        cursor-pointer transition-all duration-200 ease-in-out
-                       focus:outline-none focus:border-[--color-brand-600]
+                       focus:outline-none focus:border-brand-600
                        flex items-center justify-between"
                         aria-haspopup="listbox"
                         onClick={() => handleSortDropdownToggle(group.id)}
@@ -364,13 +363,13 @@ export const GroupPopover: React.FC<{
                       </button>
 
                       {sortDropdownOpen === group.id && (
-                        <div className="absolute z-50 top-full mt-1 p-2 space-y-1 left-0 w-full text-primary bg-background border rounded-xl shadow-lg max-h-32 overflow-y-auto">
+                        <div className="flex flex-col absolute z-50 top-full mt-1 p-2 gap-y-1 left-0 w-full text-primary bg-background border rounded-xl shadow-lg max-h-32 overflow-y-auto">
                           {sortOptions.map((option) => (
                             <button
                               key={option.value}
                               className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${group.direction === option.value
-                                ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                                : 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                                ? 'bg-(--color-bg-brand-primary) text-black'
+                                : 'hover:bg-(--color-bg-brand-primary) hover:text-black'
                                 }`}
                               onClick={() => updateGroupingDirection(group.id, option.value as any)}
                             >
@@ -399,7 +398,7 @@ export const GroupPopover: React.FC<{
             {displayGroups.length < 3 && (
               <button
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium mt-2 ${hasUnusedColumns
-                  ? 'text-primary hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                  ? 'text-primary hover:bg-(--color-bg-brand-primary) hover:text-black'
                   : 'text-gray-400 cursor-not-allowed opacity-60'
                   }`}
                 onClick={addGrouping}

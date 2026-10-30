@@ -181,7 +181,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
         <div //NOSONAR
           className="bg-modal-backdrop" onClick={onClose}>
           <div //NOSONAR
-            className="bg-[var(--color-card)] border rounded-xl shadow-2xl w-full transform transition-all duration-200 scale-100 relative max-w-6xl mx-4 min-h-[90vh] max-h-[90vh] flex flex-col"
+            className="bg-(--color-card) border rounded-xl shadow-2xl w-full transform transition-all duration-200 scale-100 relative max-w-6xl mx-4 min-h-[90vh] max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -253,7 +253,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                         {/* File Name - Inline Editable with Action Icons */}
                         <div className="text-xs font-medium w-full">
                           {!readOnly && editingIndex === index ? (
-                            <div className="flex items-center gap-1 border rounded-[var(--radius-lg)] bg-[--color-alpha-white] focus:border focus:border-[--color-brand-600] px-2 py-1 w-full min-w-0">
+                            <div className="flex items-center gap-1 border rounded-lg bg-(--color-alpha-white) focus:border focus:border-brand-600 px-2 py-1 w-full min-w-0">
                               <input
                                 type="text"
                                 value={editingTitle}
@@ -266,7 +266,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
                                   }
                                 }}
                                 onBlur={() => handleSaveEdit(index)}
-                                className="flex-1 min-w-0 w-full px-1 py-0.5 text-xs text-[var(--color-text-primary)] bg-transparent border-none outline-none placeholder-gray-400"
+                                className="flex-1 min-w-0 w-full px-1 py-0.5 text-xs text-(--color-text-primary) bg-transparent border-none outline-none placeholder-gray-400"
                                 placeholder="Enter filename..."
                                 autoFocus
                                 onClick={(e) => e.stopPropagation()}

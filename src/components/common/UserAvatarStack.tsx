@@ -119,11 +119,11 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
         className={`flex items-center ${shouldShowDropdown || onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={handleClick}
       >
-        <div className="flex -space-x-2">
+        <div className="avatar-stack flex *:not-first:-ml-2">
           {visibleUsers.map((user, index) => (
             <div
               key={user.id}
-              className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center flex-shrink-0 relative`}
+              className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center shrink-0 relative`}
               style={{ zIndex: maxVisible - index }}
               title={user.name}
             >
@@ -143,7 +143,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
 
           {remainingCount > 0 && showCount && (
             <div
-              className={`${sizeClasses[size]} rounded-full border-2 bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-700 font-medium`}
+              className={`${sizeClasses[size]} rounded-full border-2 bg-gray-200 flex items-center justify-center shrink-0 text-gray-700 font-medium`}
               title={`${remainingCount} more ${remainingCount === 1 ? 'member' : 'members'}`}
               style={{ zIndex: 0 }}
             >
@@ -170,7 +170,7 @@ export const UserAvatarStack: React.FC<UserAvatarStackProps> = ({
                 key={user.id}
                 className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <div className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center flex-shrink-0`}>
+                <div className={`${sizeClasses[size]} rounded-full border-2 flex items-center justify-center shrink-0`}>
                   {user.avatar ? (
                     <img
                       src={user.avatar}

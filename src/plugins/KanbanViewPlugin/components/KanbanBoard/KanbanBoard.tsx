@@ -1062,7 +1062,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {/* Add New Stack */}
           {isReadOnly ? null : (
-            <div className="w-full md:w-80 md:flex-shrink-0">
+            <div className="w-full md:w-80 md:shrink-0">
               {uiState.isCreateStack ? (
                 <button
                   onClick={handleCreateStackClick}
@@ -1078,7 +1078,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       <div className="p-1.5 border border-dashed rounded-xl flex items-center justify-between gap-2" ref={dropdownRef}>
                         <input
                           ref={stackNameInputRef}
-                          className="flex-1 p-2 border border-primary bg-[var(--color-alpha-white)] text-primary rounded-xl text-sm outline-none field-component-focus"
+                          className="flex-1 p-2 border border-primary bg-(--color-alpha-white) text-primary rounded-xl text-sm outline-none field-component-focus"
                           placeholder="Enter Stack Name"
                           value={uiState.newOption}
                           onChange={(e) => handleNewOptionChange(e.target.value)}

@@ -40,7 +40,7 @@ describe('SettingsTabs', () => {
       render(<SettingsTabs {...defaultProps} activeTab="workspace" />);
 
       const workspaceButton = screen.getByRole('button', { name: /workspace/i });
-      expect(workspaceButton.className).toContain('border-[var(--color-brand-700)]');
+      expect(workspaceButton.className).toContain('border-brand-700');
     });
 
     it('renders tab with upcoming flag without crashing', () => {

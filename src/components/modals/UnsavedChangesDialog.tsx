@@ -21,7 +21,7 @@ const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({ isOpen, onC
   // Portaled to body so the parent modal's backdrop-blur doesn't trap the fixed mask
   return createPortal(
     <div //NOSONAR
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0000004d]"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-[#0000004d]"
       onClick={(e) => {
         e.stopPropagation();
         if (e.target === e.currentTarget) onCancel();

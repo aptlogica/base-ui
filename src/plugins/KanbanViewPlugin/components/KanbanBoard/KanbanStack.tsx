@@ -269,12 +269,12 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
   const addHighlight = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    el.classList.add('ring-2', 'ring-[var(--color-brand-300)]', 'bg-[var(--color-brand-50)]', 'dark:bg-[var(--color-brand-900)]');
+    el.classList.add('ring-2', 'ring-brand-300', 'bg-(--color-brand-50)', 'dark:bg-brand-900');
   }, []);
   const removeHighlight = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    el.classList.remove('ring-2', 'ring-[var(--color-brand-300)]', 'bg-[var(--color-brand-50)]', 'dark:bg-[var(--color-brand-900)]');
+    el.classList.remove('ring-2', 'ring-brand-300', 'bg-(--color-brand-50)', 'dark:bg-brand-900');
   }, []);
 
   // Calculate drop position for visual indicator
@@ -533,10 +533,10 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           padding: 5,
           overflow: 'hidden'
         }}
-        className="select-none border p-2 space-y-1 animate-fade-in"
+        className="flex flex-col select-none border p-2 gap-y-1 animate-fade-in"
       >
         <button
-          className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+          className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors text-sm"
           onClick={handleCollapseClick}
         >
           {stack.isCollapsed ? (
@@ -549,7 +549,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           <>
             {onStackEdit && (
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors text-sm"
+                className="w-full flex items-center gap-2 px-4 py-2 text-gray-600 rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors text-sm"
                 onClick={handleStackEditClick}
               >
                 <PencilLineIcon className="w-5 h-5 text-gray-500" />
@@ -630,14 +630,14 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
 
   const renderCards = () => (
     <>
-      <div ref={cardsContainerRef} className="space-y-2 min-h-[80px] mb-2">
+      <div ref={cardsContainerRef} className="flex flex-col gap-y-2 min-h-[80px] mb-2">
         {cardsToRender.map((card, index) => {
           const isDraggedCard = draggedCardId === card._meta.id;
 
           return (
             <React.Fragment key={card._meta.id}>
               {dropIndicatorPosition === index && !isDraggedCard && (
-                <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+                <div className="h-1 bg-brand-600 rounded-full -my-1 z-50 opacity-80"
                   style={dropIndicatorStyle}
                 />
               )}
@@ -663,7 +663,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
           );
         })}
         {dropIndicatorPosition === cardsToRender.length && (
-          <div className="h-1 bg-[var(--color-brand-600)] rounded-full -my-1 z-50 opacity-80"
+          <div className="h-1 bg-brand-600 rounded-full -my-1 z-50 opacity-80"
             style={dropIndicatorStyle}
           />
         )}
@@ -673,7 +673,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
         <div className="flex justify-center mt-2 mb-2">
           <button
             onClick={loadNextPage}
-            className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-[var(--color-bg-secondary-subtle)] hover:bg-[var(--color-bg-brand-primary)] rounded-xl transition-colors"
+            className="px-4 py-2 text-xs font-medium text-primary-brand hover:text-hover-primary-dark bg-(--color-bg-secondary-subtle) hover:bg-(--color-bg-brand-primary) rounded-xl transition-colors"
             aria-label="Load more cards"
           >
             Load more ({formatCompactNumber(visibleCards.length - paginatedCards.length)} remaining)
@@ -758,7 +758,7 @@ const KanbanStack = memo<KanbanStackProps>((props) => {
     <ContainerTag
       ref={containerRef}
       data-stack-id={stack.id}
-      className={`kanban-stack bg-[var(--color-bg-secondary-subtle)] rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${stack.isCollapsed ? '' : 'pb-12'}`}
+      className={`kanban-stack bg-(--color-bg-secondary-subtle) rounded-xl w-full md:w-96 transition-all duration-200 ${stack.isCollapsed ? 'self-start' : ''} border border-primary relative overflow-hidden ${stack.isCollapsed ? '' : 'pb-12'}`}
       aria-label={onCardMove === undefined ? undefined : `Drop zone for ${stack.name} stack`}
       onDragEnter={onCardMove === undefined ? undefined : handleDragEnter}
       onDragOver={onCardMove === undefined ? undefined : handleDragOver}

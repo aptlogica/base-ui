@@ -118,7 +118,7 @@ const ForgotPasswordPage: React.FC = () => {
             We've sent a password reset link to <strong>{email}</strong>. 
             Please check your email and click the link to reset your password.
           </p>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-y-4">
             <Link 
               to="/login" 
               className="w-full btn-primary py-2 rounded-md transition inline-block text-center"
@@ -157,7 +157,7 @@ const ForgotPasswordPage: React.FC = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-y-4">
           <div className="relative">
             <label htmlFor="forgot-password-email" className="field-component-label">
               Email Address <span className="field-component-required">*</span>
@@ -176,7 +176,7 @@ const ForgotPasswordPage: React.FC = () => {
                 else {setEmailError("Please enter a valid email address");}
               }}
               placeholder="Enter your email address"
-              className={`field-component field-component-border field-component-focus placeholder-[var(--color-text-placeholder)] ${emailError ? "border-destructive bg-red-50" : ""} shadow-[var(--shadow-xs)]`}
+              className={`field-component field-component-border field-component-focus placeholder-(--color-text-placeholder) ${emailError ? "border-destructive bg-red-50" : ""} shadow-(--shadow-xs)`}
               style={{ boxShadow: "var(--shadow-xs)" }}
             />
             {emailError && <div className="mt-1.5 text-red-500 text-sm">{emailError}</div>}

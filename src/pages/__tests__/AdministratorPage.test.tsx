@@ -628,7 +628,7 @@ describe('AdministratorPage', () => {
 
     it('should apply correct classes to tabs section', () => {
       const { container } = renderAdministratorPage();
-      const tabsSection = container.querySelector('.flex-shrink-0.bg-alpha-white.border-b.px-6');
+      const tabsSection = container.querySelector('.shrink-0.bg-alpha-white.border-b.px-6');
       expect(tabsSection).toBeInTheDocument();
     });
 

@@ -194,7 +194,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
         return (
           <div
             key={pos}
-            className={`fixed z-[10000] ${vertical} ${horizontal} flex flex-col`}
+            className={`fixed z-10000 ${vertical} ${horizontal} flex flex-col`}
           >
             {list.map(renderToast)}
           </div>

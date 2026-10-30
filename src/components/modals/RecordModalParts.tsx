@@ -169,7 +169,7 @@ export const RecordMenuPanel: React.FC<{ children: React.ReactNode }> = ({ child
             padding: 5,
             overflow: 'hidden'
         }}
-        className="select-none border p-2 space-y-1 animate-fade-in"
+        className="flex flex-col select-none border p-2 gap-y-1 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
     >
@@ -196,8 +196,8 @@ export const RecordMenuButton: React.FC<{ onToggle: () => void; icon: React.Reac
 // Table chip + title shown at the left of the record popup header
 export const RecordTitle: React.FC<{ tableTitle?: string; title: string }> = ({ tableTitle, title }) => (
     <div className="flex items-center gap-3 min-w-0">
-        <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] flex-shrink-0">
-            <Table2 className="w-4 h-4 flex-shrink-0" />
+        <span className="inline-flex items-center gap-2 text-2xl font-medium bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg max-w-[200px] shrink-0">
+            <Table2 className="w-4 h-4 shrink-0" />
             <span className="truncate">{tableTitle}</span>
         </span>
         <h2 className="text-2xl font-semibold truncate">{title}</h2>

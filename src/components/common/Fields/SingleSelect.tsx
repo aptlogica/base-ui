@@ -138,7 +138,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
               <span className="text-gray-500 text-sm text-left truncate overflow-hidden whitespace-nowrap flex-1">{placeholder}</span>
             )}
           </div>
-          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+          <div className="flex items-center gap-1 ml-2 shrink-0">
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         </button>
@@ -147,7 +147,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
             ref={clearButtonRef}
             type="button"
             onClick={handleClear}
-            className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded flex-shrink-0"
+            className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded shrink-0"
             tabIndex={-1}
             style={{ zIndex: 2 }}
           >
@@ -159,7 +159,7 @@ export const SingleSelect: React.FC<SingleSelectProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-xl shadow-lg max-h-48 overflow-y-auto"
+            className="flex flex-col fixed z-9999 p-1.5 gap-y-1.5 border bg-background rounded-xl shadow-lg max-h-48 overflow-y-auto"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),

@@ -112,12 +112,12 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
             onClick={onClose}
             className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
         {/* Options List */}
-        <div className="space-y-1 border rounded-xl">
+        <div className="flex flex-col gap-y-1 border rounded-xl">
           {IMPORT_OPTIONS.map((option) => {
             const isDisabled = isOptionDisabled(option.id);
             return (
@@ -149,7 +149,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                   )}
                 </div>
                 {!isDisabled && (
-                  <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
+                  <ChevronRight className="h-5 w-5 text-(--text-color-tertiary) group-hover:text-primary" />
                 )}
               </button>
             );
@@ -189,7 +189,7 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
                       )}
                     </div>
                     {!isDisabled && (
-                      <ChevronRight className="h-5 w-5 text-[var(--text-color-tertiary)] group-hover:text-primary" />
+                      <ChevronRight className="h-5 w-5 text-(--text-color-tertiary) group-hover:text-primary" />
                     )}
                   </button>
                 );

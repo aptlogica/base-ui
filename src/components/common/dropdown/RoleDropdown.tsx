@@ -168,13 +168,13 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
           }}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          className="w-full text-xs px-3 py-2.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-gray-700 flex items-center justify-between transition-all min-w-0"
+          className="w-full text-xs px-3 py-2.5 border rounded-xl gap-1 bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-(--ring-color-primary) text-gray-700 flex items-center justify-between transition-all min-w-0"
           data-dropdown-trigger="true"
         >
           <span className="truncate flex-1 min-w-0 text-left" title={selectedOption ? selectedOption.label : placeholder}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
-          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
@@ -186,7 +186,7 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
           role="menu"
           tabIndex={-1}
           onKeyDown={(e) => handleKeyDown(e)}
-          className="fixed z-[9999] bg-card border rounded-xl shadow-lg overflow-hidden focus:outline-none"
+          className="fixed z-9999 bg-card border rounded-xl shadow-lg overflow-hidden focus:outline-none"
           style={{
             ...(dropdownPosition.top !== undefined && { top: `${dropdownPosition.top}px` }),
             ...(dropdownPosition.bottom !== undefined && { bottom: `${dropdownPosition.bottom}px` }),
@@ -196,7 +196,7 @@ export const RoleDropdown: React.FC<RoleDropdownProps> = ({
           onClick={(e) => e.stopPropagation()}
           aria-label="Role selection menu"
         >
-          <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+          <div className="flex flex-col p-2 gap-y-1 max-h-64 overflow-y-auto">
             {options.map((option) => {
               const isSelected = value === option.value;
               return (

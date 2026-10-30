@@ -119,8 +119,8 @@ export function useGanttTimeline({ filteredTasks, columns, fieldConfig }: UseGan
   const getTooltipClasses = useCallback(() => {
     // Allow long content (URLs, attachments) to wrap instead of overflowing
     const baseClasses =
-      "absolute z-[99999] bg-card text-primary text-xs rounded-xl p-3 shadow-2xl " +
-      "max-w-xl whitespace-normal break-words pointer-events-none";
+      "absolute z-99999 bg-card text-primary text-xs rounded-xl p-3 shadow-2xl " +
+      "max-w-xl whitespace-normal wrap-break-word pointer-events-none";
 
     switch (tooltipPosition) {
       case 'top':

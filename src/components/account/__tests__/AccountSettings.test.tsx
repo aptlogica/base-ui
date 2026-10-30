@@ -60,12 +60,12 @@ describe('AccountSettings', () => {
       const profileTab = screen.getByText('Profile');
       const securityTab = screen.getByText('Security');
       
-      expect(profileTab.className).toContain('border-[var(--color-brand-600)]');
+      expect(profileTab.className).toContain('border-brand-600');
       expect(securityTab.className).toContain('border-transparent');
       
       fireEvent.click(securityTab);
       
-      expect(securityTab.className).toContain('border-[var(--color-brand-600)]');
+      expect(securityTab.className).toContain('border-brand-600');
       expect(profileTab.className).toContain('border-transparent');
     });
   });

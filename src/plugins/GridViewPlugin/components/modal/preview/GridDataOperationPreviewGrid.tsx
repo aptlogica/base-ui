@@ -100,7 +100,7 @@ const renderCellContent = (
 
   if (beforeAfter && typeof beforeAfter === 'object') {
     return (
-      <div className="min-w-0 space-y-0.5">
+      <div className="flex flex-col min-w-0 gap-y-0.5">
         <div className="max-w-[180px] truncate text-[12px] text-secondary line-through" title={stringifyCellValue(row.original[columnId])}>
           {beforeAfter.beforeText}
         </div>
@@ -174,7 +174,7 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
   const canGoNext = page < totalPages - 1;
 
   return (
-    <div className="flex min-h-0 max-h-[calc(100vh-20vh)] flex-col overflow-hidden bg-card">
+    <div className="flex min-h-0 max-h-[80vh] flex-col overflow-hidden bg-card">
       {scanProgress && preview.actionId === 'fuzzy_deduplication' && (
         <div className="mb-3 flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50/90 px-4 py-2.5 text-xs text-emerald-900 shadow-2xs dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
           <div className="flex items-center gap-2 font-medium">
@@ -233,12 +233,12 @@ export const GridDataOperationPreviewGrid: React.FC<GridDataOperationPreviewGrid
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-background p-4 space-y-4">
+      <div className="flex flex-col min-h-0 flex-1 overflow-auto rounded-xl border bg-background p-4 gap-y-4">
         {isFuzzy && displayedGroups ? (
           displayedGroups.map((group, groupIdx) => {
             const keeper = group.find((r) => r.rowState === 'kept') || group[0];
             return (
-              <div key={keeper.id} className="border rounded-xl p-4 bg-background shadow-sm border-border/80">
+              <div key={keeper.id} className="border rounded-xl p-4 bg-background shadow-sm border-border">
                 <div className="flex items-center justify-between border-b pb-2 mb-3">
                   <span className="text-sm font-semibold text-primary">
                     Similarity Group {page * GROUPS_PAGE_SIZE + groupIdx + 1}

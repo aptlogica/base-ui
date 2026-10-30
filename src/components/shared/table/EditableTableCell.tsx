@@ -509,7 +509,7 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
 
   return (
     <div
-      className={`flex-shrink-0 h-10 flex items-center px-0 bg-background ${isLast ? 'border-r' : 'border-r border-border/20'} border-b border-border/20`}
+      className={`shrink-0 h-10 flex items-center px-0 bg-background ${isLast ? 'border-r' : 'border-r border-secondary'} border-b border-secondary`}
       style={{ width: `${width}px`, height: '40px', minHeight: '40px', maxHeight: '40px' }}
     >
       <div className="w-full min-w-0">

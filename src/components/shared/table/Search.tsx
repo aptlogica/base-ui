@@ -199,7 +199,7 @@ export const Search: React.FC<SearchProps> = ({
 
   return (
     <div className={`relative ${className} ${columns.length === 0 ? "opacity-[0.5] pointer-events-none" : ""}`}>
-      <div className="flex items-center bg-gray-50 border rounded-xl px-2 !py-0.5 focus-within:outline-none focus-within:ring-1 focus-within:ring-[var(--color-focus-ring)] outline-none transition-all">
+      <div className="flex items-center bg-gray-50 border rounded-xl px-2 py-0.5! focus-within:outline-none focus-within:ring-1 focus-within:ring-(--color-focus-ring) outline-none transition-all">
         <SearchIcon className="w-4 h-4 text-gray-400 mr-2" />
 
         <button
@@ -207,16 +207,16 @@ export const Search: React.FC<SearchProps> = ({
           type="button"
           onClick={handleDropdownToggle}
           disabled={disabled}
-          className="flex items-center gap-3 px-2 py-1 btn-primary !rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed max-w-[200px]"
+          className="flex items-center gap-3 px-2 py-1 btn-primary rounded-lg! transition-colors disabled:opacity-50 disabled:cursor-not-allowed max-w-[200px]"
         >
           <span className='flex items-center gap-1 text-sm flex-1 min-w-0 overflow-hidden'>
-            <span className="flex-shrink-0">{getFieldIcon(selectedField?.type || '')}</span>
+            <span className="shrink-0">{getFieldIcon(selectedField?.type || '')}</span>
             <span className="truncate">{selectedField?.title}</span>
           </span>
           {isDropdownOpen ? (
-            <ChevronUp className="w-4 h-4 transition-transform flex-shrink-0" />
+            <ChevronUp className="w-4 h-4 transition-transform shrink-0" />
           ):(
-            <ChevronDown className="w-4 h-4 transition-transform flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 transition-transform shrink-0" />
           )}
         </button>
 
@@ -253,7 +253,7 @@ export const Search: React.FC<SearchProps> = ({
           </div>
 
           {/* Fields List */}
-          <div className="p-2 max-h-60 space-y-1 overflow-y-auto">
+          <div className="flex flex-col p-2 max-h-60 gap-y-1 overflow-y-auto">
             {filteredFields.length === 0 ? (
               <div className="px-3 py-2 text-sm text-gray-500">
                 No fields found
@@ -266,11 +266,11 @@ export const Search: React.FC<SearchProps> = ({
                     key={field.key}
                     type="button"
                     onClick={() => handleFieldSelect(field)}
-                    className={`w-full px-3 py-2 text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-semibold ' : ''
+                    className={`w-full px-3 py-2 text-left hover:bg-(--color-bg-brand-primary) hover:text-black rounded-xl flex items-center gap-2 ${selectedField?.key === field.key ? 'bg-(--color-bg-brand-secondary) text-black font-semibold ' : ''
                       }`}
                   >
                     <span className='flex items-center gap-2 flex-1 min-w-0 overflow-hidden'>
-                      <span className='text-gray-500 h-4 w-4 flex-shrink-0'>{getFieldIcon(field.type)}</span>
+                      <span className='text-gray-500 h-4 w-4 shrink-0'>{getFieldIcon(field.type)}</span>
                       <span className="truncate">{field.title}</span>
                     </span>
                   </button>

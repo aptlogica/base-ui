@@ -160,7 +160,7 @@ export const LookupJsonValue: React.FC<{ items: any[] }> = ({ items }) => {
         </button>
       </div>
       {open && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center">
           <button type="button" className="absolute inset-0 backdrop-blur-sm bg-opacity-40" aria-label="Close modal" tabIndex={-1} onClick={() => setOpen(false)} />
           <div className="relative bg-card border rounded-xl shadow-xl w-full max-w-4xl h-[80vh] p-5 flex flex-col z-10">
             <div className="flex items-center mb-3">

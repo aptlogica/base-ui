@@ -535,7 +535,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
   const submitBusyLabel = isEditMode ? 'Updating...' : 'Adding...';
 
   return (
-    <div className="bg-modal-backdrop relative">
+    <div className="bg-modal-backdrop">
       <button
         type="button"
         aria-label="Close modal"
@@ -543,12 +543,12 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         onClick={onClose}
       />
       <div
-        className="bg-modal !max-w-7xl !p-0 flex flex-col h-[90vh] max-h-[90vh] relative"
+        className="bg-modal max-w-7xl! p-0! flex flex-col h-[90vh] max-h-[90vh] relative"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
               <UserPlus className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -577,7 +577,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
           <div className="p-0 h-full">
             <div className={`grid gap-6 h-full ${showWorkspaceBasePanel ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* Left Column - User Details */}
-              <div className="space-y-4 bg-card p-4 lg:p-6">
+              <div className="flex flex-col gap-y-4 bg-card p-4 lg:p-6">
                 {/* First Name and Last Name - Side by Side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* First Name */}
@@ -681,7 +681,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
                   {avatarPreview ? (
                     <div className="flex gap-4">
                       {/* Avatar Preview - Left Side */}
-                      <div className="relative flex-shrink-0">
+                      <div className="relative shrink-0">
                         <div className="w-32 h-32 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden">
                           <img
                             src={getSafeImageSrc(avatarPreview) || ''}
@@ -759,7 +759,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                 {/* Co-owner Toggle */}
                 {showCoOwnerToggle && (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-y-2">
                     <div className="flex items-center justify-start gap-3">
                       <button
                         type="button"
@@ -785,10 +785,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
               {/* Right Column - Workspace/Base Selection */}
               {showWorkspaceBasePanel && (
                 <div className="flex flex-col h-full min-h-0 bg-gray-50 p-4 lg:p-6">
-                  <h3 className="text-sm font-semibold text-primary flex-shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
+                  <h3 className="text-sm font-semibold text-primary shrink-0 mb-4">Select Workspace(s) & Base(s)</h3>
 
                   {/* Search Bar */}
-                  <div className="relative flex-shrink-0 mb-4">
+                  <div className="relative shrink-0 mb-4">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
@@ -801,7 +801,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
 
                   {/* Workspaces List - Scrollable */}
                   <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-y-3">
                       {workspacesListContent}
                     </div>
                   </div>
@@ -812,7 +812,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, edi
         </form>
 
         {/* Footer - Fixed at Bottom */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

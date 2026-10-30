@@ -26,7 +26,7 @@ const WeekDayHeaders = ({
   isToday: (date: Date) => boolean;
   isWeekend: (date: Date) => boolean;
 }) => (
-  <div className={`grid ${showTimeColumn ? 'grid-cols-8' : 'grid-cols-7'} border-b ${showTimeColumn ? '' : 'border-gray-200'} flex-shrink-0`}>
+  <div className={`grid ${showTimeColumn ? 'grid-cols-8' : 'grid-cols-7'} border-b ${showTimeColumn ? '' : 'border-gray-200'} shrink-0`}>
     {showTimeColumn && (
       <div className="p-2 text-center text-sm font-medium text-gray-500 bg-gray-50 border-r">
         Time
@@ -39,7 +39,7 @@ const WeekDayHeaders = ({
       let dayHeaderClass = 'bg-gray-50 text-gray-500';
 
       if (isTodayDate) {
-        dayHeaderClass = 'bg-[var(--color-bg-brand-primary)] text-black';
+        dayHeaderClass = 'bg-(--color-bg-brand-primary) text-black';
       } else if (isWeekendDay) {
         dayHeaderClass = 'bg-gray-100 text-gray-600';
       }
@@ -207,7 +207,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                     }`}
                 >
                   {/* Events */}
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-y-1">
                     {dayEvents.map((event) => (
                       <EventChip
                         key={event.id}

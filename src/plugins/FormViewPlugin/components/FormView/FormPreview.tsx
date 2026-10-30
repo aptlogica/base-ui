@@ -64,11 +64,11 @@ const computeAppearanceStyles = (appearance: FormConfig['appearance']): Appearan
   const appearanceConfig = appearance || {};
 
   const containerWidth = {
-    narrow: 'max-w-[42rem]',
-    medium: 'max-w-[57.5rem]',
-    wide: 'max-w-[72rem]',
+    narrow: 'max-w-2xl',
+    medium: 'max-w-230',
+    wide: 'max-w-6xl',
     full: 'max-w-full'
-  }[appearanceConfig.layoutWidth as string] || 'max-w-[57.5rem]';
+  }[appearanceConfig.layoutWidth as string] || 'max-w-230';
 
   const cardStyle = appearanceConfig.cardStyle === 'elevated' ? 'shadow-lg' : 'shadow-sm';
 
@@ -144,7 +144,7 @@ const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
         onChange={(e) => onEditChange(e.target.value)}
         onBlur={onSave}
         onKeyDown={(e) => handleTitleKeyDown(e, onSave, onCancel)}
-        className="mb-2 [text-align:inherit] -mx-2 w-[calc(100%+1rem)] text-xl font-semibold focus:outline-none bg-[var(--color-hover-bg)] text-[var(--color-text-primary)] border-none px-2 py-1 rounded-lg"
+        className="mb-2 [text-align:inherit] -mx-2 w-[calc(100%+1rem)] text-xl font-semibold focus:outline-none bg-(--color-hover-bg) text-(--color-text-primary) border-none px-2 py-1 rounded-lg"
         style={getTextStyle(textColor)}
         ref={focusOnMount}
       />
@@ -155,7 +155,7 @@ const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
     return (
       <button
         type="button"
-        className="mb-2 -mx-2 px-2 py-1 [text-align:inherit] text-[1.25rem] text-[var(--color-text-primary)] font-semibold [overflow-wrap:anywhere] rounded-lg cursor-pointer hover:bg-[var(--color-hover-bg)] transition-colors w-[calc(100%+1rem)]"
+        className="mb-2 -mx-2 px-2 py-1 [text-align:inherit] text-[1.25rem] text-(--color-text-primary) font-semibold wrap-anywhere rounded-lg cursor-pointer hover:bg-(--color-hover-bg) transition-colors w-[calc(100%+1rem)]"
         style={getTextStyle(textColor)}
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
@@ -168,7 +168,7 @@ const EditableTitle: React.FC<Readonly<EditableTitleProps>> = ({
 
   return (
     <h1
-      className="mb-2 text-xl font-semibold py-1 [overflow-wrap:anywhere] text-[var(--color-text-primary)]"
+      className="mb-2 text-xl font-semibold py-1 wrap-anywhere text-(--color-text-primary)"
       style={getTextStyle(textColor)}
     >
       {title}
@@ -191,13 +191,13 @@ const handleDescriptionKeyDown = (e: React.KeyboardEvent, onCancel: () => void) 
 const renderDescriptionContent = (description: string | null | undefined, textColor?: string) => {
   if (description) {
     return (
-      <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] text-[var(--color-gray-600)]" style={getTextStyle(textColor)}>
+      <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-anywhere text-(--color-gray-600)" style={getTextStyle(textColor)}>
         {description}
       </p>
     );
   }
   return (
-    <p className="text-[0.875rem] font-medium leading-relaxed text-[var(--color-gray-500)]" style={getTextStyle(textColor)}>
+    <p className="text-[0.875rem] font-medium leading-relaxed text-(--color-gray-500)" style={getTextStyle(textColor)}>
       Add form description
     </p>
   );
@@ -224,7 +224,7 @@ const EditableDescription: React.FC<Readonly<EditableDescriptionProps>> = ({
         onKeyDown={(e) => handleDescriptionKeyDown(e, onCancel)}
         placeholder="Add form description"
         rows={2}
-        className="-mx-2 w-[calc(100%+1rem)] text-sm leading-relaxed focus:outline-none resize-none bg-[var(--color-hover-bg)] text-[var(--color-text-primary)] border-none px-2 py-1 rounded-lg"
+        className="-mx-2 w-[calc(100%+1rem)] text-sm leading-relaxed focus:outline-none resize-none bg-(--color-hover-bg) text-(--color-text-primary) border-none px-2 py-1 rounded-lg"
         style={getTextStyle(textColor)}
         ref={focusOnMount}
       />
@@ -235,7 +235,7 @@ const EditableDescription: React.FC<Readonly<EditableDescriptionProps>> = ({
     return (
       <button
         type="button"
-        className="-mx-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--color-hover-bg)] transition-colors w-[calc(100%+1rem)] text-left"
+        className="-mx-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-(--color-hover-bg) transition-colors w-[calc(100%+1rem)] text-left"
         onClick={onStartEdit}
         onKeyDown={(e) => handleViewKeyDown(e, onStartEdit)}
         aria-label="Click to edit description"
@@ -469,7 +469,7 @@ const FormHeader: React.FC<Readonly<FormHeaderProps>> = ({
 
       {formError && (
         <div
-          className="mb-4 p-3 rounded-xl border bg-[var(--color-bg-error-primary)] text-[var(--color-text-error-primary)]">
+          className="mb-4 p-3 rounded-xl border bg-(--color-bg-error-primary) text-(--color-text-error-primary)">
           {formError}
         </div>
       )}
@@ -515,7 +515,7 @@ const FormActions: React.FC<Readonly<FormActionsProps>> = ({ onSubmit, onClear, 
         <button
           type="button"
           disabled={isSubmitting}
-          className="rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-card)] px-4 h-10 text-sm font-semibold text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg border border-(--color-border-secondary) bg-(--color-card) px-4 h-10 text-sm font-semibold text-(--color-text-secondary) shadow-sm transition-colors hover:bg-(--color-hover-bg) disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onClear}
         >
           Clear
@@ -534,10 +534,10 @@ const FormActions: React.FC<Readonly<FormActionsProps>> = ({ onSubmit, onClear, 
 };
 
 const FormBranding: React.FC = () => (
-  <div className="mt-6 pt-6 border-t border-[var(--color-border-secondary)] flex items-center justify-center gap-2">
-    <img src="/assets/sereni-logo.svg" alt="Sereni Base" className="w-[1.625rem] h-[1.625rem]" />
-    <p className="text-xs text-[var(--color-text-tertiary)]">
-      Powered by <span className="font-semibold text-[var(--color-text-primary)]">Sereni Base</span>
+  <div className="mt-6 pt-6 border-t border-(--color-border-secondary) flex items-center justify-center gap-2">
+    <img src="/assets/sereni-logo.svg" alt="Sereni Base" className="w-6.5 h-6.5" />
+    <p className="text-xs text-(--color-text-tertiary)">
+      Powered by <span className="font-semibold text-(--color-text-primary)">Sereni Base</span>
     </p>
   </div>
 );
@@ -650,20 +650,20 @@ const FormBanner: React.FC<Readonly<FormBannerProps>> = ({ bannerUrl, canEdit, o
             aria-label="Change banner"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
-            className={`flex p-2.5 justify-center items-center rounded-lg bg-[var(--color-card)] hover:bg-[var(--color-hover-bg)] ${imageButtonShadow}`}
+            className={`flex p-2.5 justify-center items-center rounded-lg bg-(--color-card) hover:bg-(--color-hover-bg) ${imageButtonShadow}`}
           >
             {uploading
-              ? <div className="w-5 h-5 border-2 border-[var(--color-gray-300)] border-t-[var(--color-gray-600)] rounded-full animate-spin" />
-              : <ImagePlus className="w-5 h-5 text-[var(--color-gray-600)]" />}
+              ? <div className="w-5 h-5 border-2 border-gray-300 border-t-(--color-gray-600) rounded-full animate-spin" />
+              : <ImagePlus className="w-5 h-5 text-(--color-gray-600)" />}
           </button>
           <button
             type="button"
             aria-label="Remove banner"
             disabled={uploading}
             onClick={onRemove}
-            className={`flex p-2.5 justify-center items-center rounded-lg bg-[var(--color-card)] hover:bg-[var(--color-hover-bg)] ${imageButtonShadow}`}
+            className={`flex p-2.5 justify-center items-center rounded-lg bg-(--color-card) hover:bg-(--color-hover-bg) ${imageButtonShadow}`}
           >
-            <Trash2 className="w-5 h-5 text-[var(--color-error-600)]" />
+            <Trash2 className="w-5 h-5 text-(--color-error-600)" />
           </button>
         </div>
       </div>
@@ -674,7 +674,7 @@ const FormBanner: React.FC<Readonly<FormBannerProps>> = ({ bannerUrl, canEdit, o
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 py-12 px-6 border-b transition-colors ${isDragOver ? 'bg-[var(--color-gray-100)]' : 'bg-[var(--color-gray-50)]'}`}
+      className={`flex flex-col items-center justify-center gap-3 py-12 px-6 border-b transition-colors ${isDragOver ? 'bg-(--color-gray-100)' : 'bg-(--color-gray-50)'}`}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => {
@@ -695,24 +695,24 @@ const FormBanner: React.FC<Readonly<FormBannerProps>> = ({ bannerUrl, canEdit, o
         aria-label="Upload banner"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
-        className={`flex p-2.5 justify-center items-center rounded-lg bg-[var(--color-card)] border ${imageButtonShadow}`}
+        className={`flex p-2.5 justify-center items-center rounded-lg bg-(--color-card) border ${imageButtonShadow}`}
       >
         {uploading
-          ? <div className="w-5 h-5 border-2 border-[var(--color-gray-300)] border-t-[var(--color-gray-600)] rounded-full animate-spin" />
-          : <ImagePlus className="w-5 h-5 text-[var(--color-gray-600)]" />}
+          ? <div className="w-5 h-5 border-2 border-gray-300 border-t-(--color-gray-600) rounded-full animate-spin" />
+          : <ImagePlus className="w-5 h-5 text-(--color-gray-600)" />}
       </button>
       <div className="flex flex-col items-center gap-1 text-center">
-        <p className="text-[0.875rem] font-normal text-[var(--color-text-tertiary)]">
+        <p className="text-[0.875rem] font-normal text-(--color-text-tertiary)">
           <button
             type="button"
-            className="font-semibold text-[var(--color-brand-600)] hover:underline text-sm"
+            className="font-semibold text-brand-600 hover:underline text-sm"
             onClick={() => inputRef.current?.click()}
           >
             Click to add
           </button>{' '}
           a banner or drag and drop
         </p>
-        <p className="text-[0.75rem] text-[var(--color-text-tertiary)] font-normal">SVG, PNG, JPG or GIF (max. 800 × 400px)</p>
+        <p className="text-[0.75rem] text-(--color-text-tertiary) font-normal">SVG, PNG, JPG or GIF (max. 800 × 400px)</p>
       </div>
     </div>
   );
@@ -747,7 +747,7 @@ const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlap
   if (!logoUrl && !canEdit) return null;
 
   const positionClass = overlapBanner
-    ? 'absolute top-0 -translate-y-1/2 left-6 md:left-[5.75rem]'
+    ? 'absolute top-0 -translate-y-1/2 left-6 md:left-23'
     : 'mb-6 flex';
 
   return (
@@ -755,7 +755,7 @@ const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlap
       {logoUrl ? (
         <div
           data-testid="form-logo-frame"
-          className="relative group shrink-0 overflow-hidden rounded-lg bg-[var(--color-card)] border border-[var(--color-border-primary)] p-1 shadow-xs"
+          className="relative group shrink-0 overflow-hidden rounded-lg bg-(--color-card) border border-(--color-border-primary) p-1 shadow-xs"
           style={{ width: frameWidth, height: LOGO_HEIGHT }}
         >
           <img
@@ -770,9 +770,9 @@ const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlap
                 type="button"
                 aria-label="Remove logo"
                 onClick={onRemove}
-                className={`flex p-2 justify-center items-center rounded-lg bg-[var(--color-card)] hover:bg-[var(--color-hover-bg)] ${imageButtonShadow}`}
+                className={`flex p-2 justify-center items-center rounded-lg bg-(--color-card) hover:bg-(--color-hover-bg) ${imageButtonShadow}`}
               >
-                <Trash2 className="w-4 h-4 text-[var(--color-error-600)]" />
+                <Trash2 className="w-4 h-4 text-(--color-error-600)" />
               </button>
             </div>
           )}
@@ -790,12 +790,12 @@ const FormLogo: React.FC<Readonly<FormLogoProps>> = ({ logoUrl, canEdit, overlap
             type="button"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
-            className={`flex items-center gap-2 h-9 px-3 rounded-lg bg-[var(--color-card)] text-sm font-semibold text-[var(--color-gray-700)] hover:bg-[var(--color-hover-bg)] border ${imageButtonShadow}`}
+            className={`flex items-center gap-2 h-9 px-3 rounded-lg bg-(--color-card) text-sm font-semibold text-(--color-gray-700) hover:bg-(--color-hover-bg) border ${imageButtonShadow}`}
           >
             {uploading
-              ? <div className="w-4 h-4 border-2 border-[var(--color-gray-300)] border-t-[var(--color-gray-600)] rounded-full animate-spin" />
-              : <ImagePlus className="w-4 h-4 text-[var(--color-gray-500)]" />}
-            <span className='text-[0.875rem] font-semibold text-[var(--color-text-primary)]'>Add a logo</span>
+              ? <div className="w-4 h-4 border-2 border-gray-300 border-t-(--color-gray-600) rounded-full animate-spin" />
+              : <ImagePlus className="w-4 h-4 text-(--color-gray-500)" />}
+            <span className='text-[0.875rem] font-semibold text-(--color-text-primary)'>Add a logo</span>
           </button>
         </>
       )}
@@ -891,7 +891,7 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
   return (
     <div className="min-h-screen" style={{ backgroundColor: appearance.backgroundColor || undefined }}>
       <div className="flex w-full py-6 px-4 flex-col items-center">
-        <div className={`w-full ${styles.containerWidth} ${styles.rounded} border border-[var(--color-border-primary)] bg-[var(--color-card)] overflow-hidden ${styles.cardStyle}`}>
+        <div className={`w-full ${styles.containerWidth} ${styles.rounded} border border-(--color-border-primary) bg-(--color-card) overflow-hidden ${styles.cardStyle}`}>
           {!appearance.hideBanner && (
             <FormBanner
               bannerUrl={appearance.bannerUrl}
@@ -901,7 +901,7 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
             />
           )}
 
-          <div className={`relative px-6 md:px-[5.75rem] pb-10 ${logoOnBanner ? 'pt-12' : 'pt-8'}`}>
+          <div className={`relative px-6 md:px-23 pb-10 ${logoOnBanner ? 'pt-12' : 'pt-8'}`}>
             <FormLogo
               logoUrl={appearance.logoUrl}
               canEdit={canEdit && !isReadOnly}
@@ -933,7 +933,7 @@ export const FormPreview: React.FC<Readonly<FormPreviewProps>> = ({
             />
 
             <form
-              className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-2'}
+              className={isGridLayout ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'flex flex-col gap-y-2'}
               onSubmit={onSubmit ?? ((e: React.SyntheticEvent<HTMLFormElement>) => {
                 e.preventDefault();
               })}

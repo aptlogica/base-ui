@@ -10,8 +10,8 @@ const getRelationButtonClass = (isEditing: boolean, isSelected: boolean) =>
     ? 'opacity-50 cursor-not-allowed'
     : 'hover:bg-gray-50'
   } ${isSelected
-    ? 'text-[var(--color-text-primary)] rounded-xl border-[var(--color-border-brand)]'
-    : 'text-[var(--color-text-primary)] border'
+    ? 'text-(--color-text-primary) rounded-xl border-(--color-border-brand)'
+    : 'text-(--color-text-primary) border'
   }`;
 
 export function renderRelationsConfigStep(props: any) {
@@ -54,7 +54,7 @@ export function renderRelationsConfigStep(props: any) {
           <div className="mb-4">
             <div className="mb-2">
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Relation Type</span>
+                <span className="text-sm font-medium text-(--color-text-tertiary)">Relation Type</span>
               </div>
               <div className="text-xs text-gray-500 bg-gray-50 border rounded-xl p-2 mb-2">
                 <span className="font-medium text-gray-700">What is a Link?</span> A link creates a relationship between tables to reference related records.
@@ -117,7 +117,7 @@ export function renderRelationsConfigStep(props: any) {
           </div>
 
           <div className="mb-4">
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Target Table</div>
+            <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Target Table</div>
             <AdvancedDropdown
               options={Array.isArray(tables) ? tables.map(table => {
                 const tableLabel = table.title || table.alias || `Table ${table.id}`;
@@ -163,7 +163,7 @@ export function renderRelationsConfigStep(props: any) {
 
           {selectedTableId && !isLinksFieldEditing && !isSelfLink && (
             <div className="mb-4">
-              <label htmlFor="inverseTitle" className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <label htmlFor="inverseTitle" className="block text-sm font-medium text-(--color-text-tertiary) mb-2">
                 Field name in linked table
               </label>
               <input
@@ -172,7 +172,7 @@ export function renderRelationsConfigStep(props: any) {
                 value={inverseTitle}
                 onChange={(e) => setInverseTitle(e.target.value)}
                 placeholder="Defaults to this table's name"
-                className="w-full px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
+                className="w-full px-3 py-2 border border-gray-300 bg-(--color-alpha-white) text-(--color-gray-900) rounded-xl text-sm outline-none field-component-focus"
               />
               <div className="mt-1 text-xs text-gray-500">
                 The linked table gets a field that shows the records linked back to this table.
@@ -182,7 +182,7 @@ export function renderRelationsConfigStep(props: any) {
 
           {selectedTableId && (
             <div className="mb-4">
-              <label htmlFor="displayColumn" className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <label htmlFor="displayColumn" className="block text-sm font-medium text-(--color-text-tertiary) mb-2">
                 Display column
               </label>
               <AdvancedDropdown
@@ -208,7 +208,7 @@ export function renderRelationsConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -237,7 +237,7 @@ export function renderRelationsConfigStep(props: any) {
         <>
           <div className="flex flex-col md:flex-row gap-3">
             <div className="mb-4 w-full min-w-0">
-              <label htmlFor='linkField' className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <label htmlFor='linkField' className="block text-sm font-medium text-(--color-text-tertiary) mb-2">
                 Link Field
               </label>
               <AdvancedDropdown
@@ -260,7 +260,7 @@ export function renderRelationsConfigStep(props: any) {
             </div>
 
             <div className="mb-4 w-full min-w-0">
-              <label htmlFor='lookupField' className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-2">
+              <label htmlFor='lookupField' className="block text-sm font-medium text-(--color-text-tertiary) mb-2">
                 Lookup Field
               </label>
               <AdvancedDropdown
@@ -302,7 +302,7 @@ export function renderRelationsConfigStep(props: any) {
               setShowDescription,
               description,
               setDescription,
-              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
               wrapperClassName: 'relative',
             })
           }

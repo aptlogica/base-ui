@@ -30,7 +30,7 @@ function renderDescriptionToggle({
   setShowDescription,
   description,
   setDescription,
-  buttonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+  buttonClassName = 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
   wrapperClassName = 'relative',
   clearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-red-500',
 }: {
@@ -76,7 +76,7 @@ function renderDescriptionToggle({
   );
 }
 
-const descriptionButtonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2';
+const descriptionButtonClassName = 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2';
 const descriptionWrapperClassName = 'relative';
 const descriptionClearButtonClassName = 'absolute right-2 top-2 text-gray-400 hover:text-red-500';
 
@@ -238,11 +238,11 @@ function renderBooleanConfig({
     <>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
+          <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Icon</div>
           <div className="relative icon-dropdown">
             <button
               type="button"
-              className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
+              className="w-full px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) flex items-center justify-between"
               onClick={() => setShowIconDropdown((v: boolean) => !v)}
             >
               <div className="flex items-center gap-2">
@@ -254,12 +254,12 @@ function renderBooleanConfig({
             </button>
 
             {showIconDropdown && (
-              <div className="absolute p-2 space-y-1 top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div className="flex flex-col absolute p-2 gap-y-1 top-full left-0 right-0 mt-1 bg-(--color-alpha-white) text-(--color-text-secondary) border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
                 {iconOptions.map((option) => (
                   <button
                     key={option.key}
                     type="button"
-                    className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                    className={`w-full px-3 py-2 rounded-xl text-left hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary) flex items-center gap-2 ${checkboxIcon === option.key ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''
                       }`}
                     onClick={() => {
                       setCheckboxIcon(option.key);
@@ -280,11 +280,11 @@ function renderBooleanConfig({
         </div>
 
         <div>
-          <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
+          <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Colour</div>
           <div className="relative color-dropdown">
             <button
               type="button"
-              className="w-full px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)] flex items-center justify-between"
+              className="w-full px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring) flex items-center justify-between"
               onClick={() => setShowColorDropdown((v: boolean) => !v)}
             >
               <div className="flex items-center gap-2">
@@ -295,12 +295,12 @@ function renderBooleanConfig({
             </button>
 
             {showColorDropdown && (
-              <div className="absolute p-2 space-y-1 rounded-xl top-full left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div className="flex flex-col absolute p-2 gap-y-1 rounded-xl top-full left-0 right-0 mt-1 bg-(--color-alpha-white) text-(--color-text-secondary) border shadow-lg z-50 max-h-60 overflow-y-auto">
                 {colorOptions.map((colorOption) => (
                   <button
                     key={colorOption.key}
                     type="button"
-                    className={`w-full px-3 py-2 rounded-xl text-left hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${checkboxColor === colorOption.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                    className={`w-full px-3 py-2 rounded-xl text-left hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary) flex items-center gap-2 ${checkboxColor === colorOption.key ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''
                       }`}
                     onClick={() => {
                       setCheckboxColor(colorOption.key);
@@ -321,13 +321,13 @@ function renderBooleanConfig({
       </div>
 
       <div className="mb-4">
-        <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Default value</div>
+        <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Default value</div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-              ? 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
-              : 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
+            className={`px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) flex items-center gap-2 ${checkboxDefault
+              ? 'border-(--color-focus-ring) bg-(--color-gray-100) text-(--color-gray-100)'
+              : 'border-gray-300 hover:border-gray-400'
               }`}
             onClick={() => setCheckboxDefault(true)}
           >
@@ -336,9 +336,9 @@ function renderBooleanConfig({
           </button>
           <button
             type="button"
-            className={`px-3 py-2 border rounded-xl text-sm text-[var(--color-text-tertiary)] flex items-center gap-2 ${checkboxDefault
-              ? 'border-[var(--color-gray-300)] hover:border-[var(--color-gray-400)]'
-              : 'border-[var(--color-focus-ring)] bg-[var(--color-gray-100)] text-[var(--color-gray-100)]'
+            className={`px-3 py-2 border rounded-xl text-sm text-(--color-text-tertiary) flex items-center gap-2 ${checkboxDefault
+              ? 'border-gray-300 hover:border-gray-400'
+              : 'border-(--color-focus-ring) bg-(--color-gray-100) text-(--color-gray-100)'
               }`}
             onClick={() => setCheckboxDefault(false)}
           >
@@ -349,7 +349,7 @@ function renderBooleanConfig({
       </div>
 
       <div className="relative">
-        <div className="text-sm font-medium text-[var(--color-text-tertiary)] my-3 space-y-2">Description</div>
+        <div className="flex flex-col text-sm font-medium text-(--color-text-tertiary) my-3 gap-y-2">Description</div>
         <MultiLineText
           placeholder="Enter field description..."
           value={description}
@@ -492,10 +492,10 @@ function renderMultiSelectConfig({
 
   return (
     <>
-      <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Options</div>
+      <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Options</div>
       <div className="flex gap-2 mb-3">
         <input
-          className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
+          className="flex-1 px-3 py-2 border border-gray-300 bg-(--color-alpha-white) text-(--color-gray-900) rounded-xl text-sm outline-none field-component-focus"
           placeholder="Add option"
           value={newOption}
           onChange={handleInputChange}
@@ -534,7 +534,7 @@ function renderMultiSelectConfig({
           <span className='text-primary'>Select Default Value</span>
           <div className="flex flex-col gap-1 my-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
             {selectOptions.map((opt: any, idx: number) => (
-              <div key={`multi-${opt.option}-${opt.color || 'none'}`} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
+              <div key={`multi-${opt.option}-${opt.color || 'none'}`} className="relative flex items-center gap-2 min-w-0 hover:bg-(--color-hover-bg) rounded-xl px-1">
                 <input
                   type="checkbox"
                   checked={multiDefault.includes(opt.option)}
@@ -554,7 +554,7 @@ function renderMultiSelectConfig({
                 {editingOptionIndex === idx ? (
                   <input
                     ref={editInputRef}
-                    className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] bg-[--color-alpha-white] border border-[var(--color-gray-300)] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
+                    className='flex-1 px-2 py-2.5 rounded-xl text-(--color-text-secondary) bg-(--color-alpha-white) border border-gray-300 text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)'
                     value={editingOptionValue}
                     onChange={(event) => setEditingOptionValue(event.target.value)}
                     onBlur={() => handleEditBlur(idx, opt.option)}
@@ -563,7 +563,7 @@ function renderMultiSelectConfig({
                   />
                 ) : (
                   <span //NOSONAR
-                    className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
+                    className="flex-1 px-2 py-2.5 rounded-xl text-(--color-text-secondary) text-xs truncate min-w-0 cursor-pointer"
                     onClick={() => handleEditStart(idx, opt.option)}
                   >
                     {opt.option}
@@ -571,13 +571,13 @@ function renderMultiSelectConfig({
                 )}
                 <button
                   type="button"
-                  className="h-8 w-8 rounded flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(event) => {
                     event.stopPropagation();
                     handleRemoveOption(opt.option, idx);
                   }}
                 >
-                  <Trash2 className='w-5 h-5 text-[var(--color-error-400)]' />
+                  <Trash2 className='w-5 h-5 text-(--color-error-400)' />
                 </button>
               </div>
             ))}
@@ -681,7 +681,7 @@ function renderSelectConfig({
     <>
       <div className="flex gap-2 mb-3 w-full">
         <input
-          className="flex-1 px-3 py-2 border border-[var(--color-gray-300)] bg-[var(--color-alpha-white)] text-[var(--color-gray-900)] rounded-xl text-sm outline-none field-component-focus"
+          className="flex-1 px-3 py-2 border border-gray-300 bg-(--color-alpha-white) text-(--color-gray-900) rounded-xl text-sm outline-none field-component-focus"
           placeholder="Add option"
           value={newOption}
           onChange={handleInputChange}
@@ -707,13 +707,13 @@ function renderSelectConfig({
       {optionError && <div className="text-red-500 text-xs mt-1">{optionError}</div>}
       {selectOptions.length > 0 && (
         <>
-          <div className="m-2 text-sm font-medium text-[var(--color-text-tertiary)]">Select Default value</div>
+          <div className="m-2 text-sm font-medium text-(--color-text-tertiary)">Select Default value</div>
           <div className="flex flex-col gap-1 mb-2 max-w-full border border-primary rounded-xl p-2 group max-h-48 overflow-auto">
             {selectOptions.map((opt: any, idx: number) => (
-              <div key={`single-${opt.option}-${opt.color || 'none'}`} className="relative flex items-center gap-2 min-w-0 hover:bg-[var(--color-hover-bg)] rounded-xl px-1">
+              <div key={`single-${opt.option}-${opt.color || 'none'}`} className="relative flex items-center gap-2 min-w-0 hover:bg-(--color-hover-bg) rounded-xl px-1">
                 <input
                   type="radio"
-                  className="flex-shrink-0 checkbox-primary-brand"
+                  className="shrink-0 checkbox-primary-brand"
                   checked={singleDefault === opt.option}
                   onChange={() => { }}
                   onClick={() => {
@@ -735,7 +735,7 @@ function renderSelectConfig({
                 {editingOptionIndex === idx ? (
                   <input
                     ref={editInputRef}
-                    className='flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] border border-[var(--color-gray-300)] bg-[--color-alpha-white] text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus-ring)]'
+                    className='flex-1 px-2 py-2.5 rounded-xl text-(--color-text-secondary) border border-gray-300 bg-(--color-alpha-white) text-xs min-w-0 focus:outline-none focus:ring-1 focus:ring-(--color-focus-ring)'
                     value={editingOptionValue}
                     onChange={(event) => setEditingOptionValue(event.target.value)}
                     onBlur={() => handleEditBlur(idx, opt.option)}
@@ -744,7 +744,7 @@ function renderSelectConfig({
                   />
                 ) : (
                   <span //NOSONAR
-                    className="flex-1 px-2 py-2.5 rounded-xl text-[var(--color-text-secondary)] text-xs truncate min-w-0 cursor-pointer"
+                    className="flex-1 px-2 py-2.5 rounded-xl text-(--color-text-secondary) text-xs truncate min-w-0 cursor-pointer"
                     onClick={() => handleEditStart(idx, opt.option)}
                   >
                     {opt.option}
@@ -752,13 +752,13 @@ function renderSelectConfig({
                 )}
                 <button
                   type="button"
-                  className=" h-8 w-8 rounded flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className=" h-8 w-8 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(event) => {
                     event.stopPropagation();
                     handleRemoveOption(opt.option, idx);
                   }}
                 >
-                  <Trash2 className='w-4 h-4 text-[var(--color-error-400)]' />
+                  <Trash2 className='w-4 h-4 text-(--color-error-400)' />
                 </button>
               </div>
             ))}
@@ -867,11 +867,11 @@ function renderRatingConfig({
     <>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Icon</div>
+          <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Icon</div>
           <div className="relative rating-icon-dropdown">
             <button
               type="button"
-              className="w-full px-3 py-2 border text-[var(--color-text-tertiary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] flex items-center justify-between"
+              className="w-full px-3 py-2 border text-(--color-text-tertiary) rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-brand-600 flex items-center justify-between"
               onClick={() => setShowRatingIconDropdown((v: boolean) => !v)}
             >
               <div className="flex items-center gap-2">
@@ -882,12 +882,12 @@ function renderRatingConfig({
             </button>
 
             {showRatingIconDropdown && (
-              <div className="absolute top-full p-2 space-y-1 left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div className="flex flex-col absolute top-full p-2 gap-y-1 left-0 right-0 mt-1 bg-(--color-alpha-white) text-(--color-text-secondary) border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
                 {ratingIconOptions.map((option) => (
                   <button
                     key={option.key}
                     type="button"
-                    className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingIcon === option.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                    className={`w-full px-3 py-2 text-left rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary) flex items-center gap-2 ${ratingIcon === option.key ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''}`}
                     onClick={() => {
                       setRatingIcon(option.key);
                       setShowRatingIconDropdown(false);
@@ -906,11 +906,11 @@ function renderRatingConfig({
         </div>
 
         <div>
-          <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Colour</div>
+          <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Colour</div>
           <div className="relative rating-color-dropdown">
             <button
               type="button"
-              className="w-full px-3 py-2 border text-[var(--color-text-tertiary)] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-600)] flex items-center justify-between"
+              className="w-full px-3 py-2 border text-(--color-text-tertiary) rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-brand-600 flex items-center justify-between"
               onClick={() => setShowRatingColorDropdown((v: boolean) => !v)}
             >
               <div className="flex items-center gap-2">
@@ -921,12 +921,12 @@ function renderRatingConfig({
             </button>
 
             {showRatingColorDropdown && (
-              <div className="absolute top-full p-2 space-y-1 left-0 right-0 mt-1 bg-[var(--color-alpha-white)] text-[var(--color-text-secondary)] border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div className="flex flex-col absolute top-full p-2 gap-y-1 left-0 right-0 mt-1 bg-(--color-alpha-white) text-(--color-text-secondary) border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
                 {ratingColorOptions.map((color) => (
                   <button
                     key={color.key}
                     type="button"
-                    className={`w-full px-3 py-2 text-left rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black focus:bg-[var(--color-bg-brand-secondary)] flex items-center gap-2 ${ratingColor === color.key ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''
+                    className={`w-full px-3 py-2 text-left rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black focus:bg-(--color-bg-brand-secondary) flex items-center gap-2 ${ratingColor === color.key ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''
                       }`}
                     onClick={() => {
                       setRatingColor(color.key);
@@ -947,7 +947,7 @@ function renderRatingConfig({
       </div>
 
       <div className="mb-4">
-        <div className="text-sm font-medium text-[var(--color-text-tertiary)] mb-2">Max rating</div>
+        <div className="text-sm font-medium text-(--color-text-tertiary) mb-2">Max rating</div>
         <Dropdown
           options={[1, 2, 3, 4, 5, 6, 7].map(n => ({ label: n.toString(), value: n.toString() }))}
           value={ratingMax.toString()}
@@ -957,7 +957,7 @@ function renderRatingConfig({
       </div>
 
       <div className="mb-3">
-        <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-1" onClick={() => setShowRatingDefault((v: boolean) => !v)}>
+        <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-1" onClick={() => setShowRatingDefault((v: boolean) => !v)}>
           <Plus className="w-5 h-5" />
           Set default value
         </button>
@@ -1202,7 +1202,7 @@ export function renderNewColumnConfigStep(props: any) {
     setShow,
     children,
     label = 'Set default value',
-    buttonClassName = 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+    buttonClassName = 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
     wrapperClassName = '',
   }: {
     show: boolean;
@@ -1407,15 +1407,15 @@ export function renderNewColumnConfigStep(props: any) {
                   onChange={e => setDisplayAsProgress(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-(--color-focus-ring) rounded-full peer peer-checked:bg-primary transition-colors" />
                 <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
-                <span className="text-sm font-medium text-[var(--color-text-tertiary)]">Display as progress</span>
+                <span className="text-sm font-medium text-(--color-text-tertiary)">Display as progress</span>
               </label>
             </div>
 
             {displayAsProgress && (
               <>
-                <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Progress color</div>
+                <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Progress color</div>
                 <AdvancedDropdown
                   options={progressColorOptions}
                   value={progressColor}
@@ -1424,7 +1424,7 @@ export function renderNewColumnConfigStep(props: any) {
                 />
               </>
             )}
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowPercentDefault((v: boolean) => !v)}>
+            <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowPercentDefault((v: boolean) => !v)}>
               <Plus className="w-5 h-5" />
               Set default value
             </button>
@@ -1446,7 +1446,7 @@ export function renderNewColumnConfigStep(props: any) {
               />
             )}
             <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
+              <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
                 <Plus className="w-5 h-5" />
                 Add description
               </button>
@@ -1478,7 +1478,7 @@ export function renderNewColumnConfigStep(props: any) {
               currencyType={currencyType}
               onCurrencyTypeChange={setCurrencyType}
             />
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Precision</div>
+            <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Precision</div>
             <AdvancedDropdown
               options={precisionOptions}
               value={precision}
@@ -1486,7 +1486,7 @@ export function renderNewColumnConfigStep(props: any) {
               placeholder="Select precision"
               clearable
             />
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowCurrencyDefault((v: boolean)  => !v)}>
+            <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowCurrencyDefault((v: boolean)  => !v)}>
               <Plus className="w-5 h-5" />
               Set default value
             </button>
@@ -1506,7 +1506,7 @@ export function renderNewColumnConfigStep(props: any) {
               />
             )}
             <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
+              <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
                 <Plus className="w-5 h-5" />
                 Add description
               </button>
@@ -1532,14 +1532,14 @@ export function renderNewColumnConfigStep(props: any) {
       case 'duration':
         return (
           <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Format</div>
+            <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Format</div>
             <AdvancedDropdown
               options={durationFormatOptions}
               value={durationFormat}
               onChange={(val) => setDurationFormat(val as string)}
             />
 
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDurationDefault((v: boolean) => !v)}>
+            <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowDurationDefault((v: boolean) => !v)}>
               <Plus className="w-5 h-5" />
               Set default value
             </button>
@@ -1556,7 +1556,7 @@ export function renderNewColumnConfigStep(props: any) {
             )}
 
             <div className="relative">
-              <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
+              <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2" onClick={() => setShowDescription((v: boolean) => !v)}>
                 <Plus className="w-5 h-5" />
                 Add description
               </button>
@@ -1625,7 +1625,7 @@ export function renderNewColumnConfigStep(props: any) {
               renderDefaultValueToggle({
                 show: showDateTimeDefault,
                 setShow: setShowDateTimeDefault,
-                buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]',
+                buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800)',
                 wrapperClassName: 'mb-3',
                 children: (
                   <div className="mt-2">
@@ -1650,7 +1650,7 @@ export function renderNewColumnConfigStep(props: any) {
               setShowDescription,
               description,
               setDescription,
-              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
               wrapperClassName: 'relative',
             })}
           </>
@@ -1658,7 +1658,7 @@ export function renderNewColumnConfigStep(props: any) {
       case 'user':
         return (
           <>
-            <div className="mb-2 text-sm font-medium text-[var(--color-text-tertiary)]">Multiple users</div>
+            <div className="mb-2 text-sm font-medium text-(--color-text-tertiary)">Multiple users</div>
             <div className="flex items-center gap-2 mb-3">
               <label className="relative inline-flex gap-3 items-center cursor-pointer">
                 <input
@@ -1668,7 +1668,7 @@ export function renderNewColumnConfigStep(props: any) {
                   onChange={e => setAllowMultipleUsers(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-[var(--color-focus-ring)] rounded-full peer peer-checked:bg-primary transition-colors" />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-1 peer-focus:ring-(--color-focus-ring) rounded-full peer peer-checked:bg-primary transition-colors" />
                 <div className="absolute left-0.5 top-1 w-4 h-4 bg-card rounded-full shadow transform transition-transform peer-checked:translate-x-4" />
                 <span className="text-sm text-gray-600">When enabled, users can select multiple users</span>
               </label>
@@ -1695,7 +1695,7 @@ export function renderNewColumnConfigStep(props: any) {
               setShowDescription,
               description,
               setDescription,
-              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+              buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
               wrapperClassName: 'relative',
             })}
           </>
@@ -1707,7 +1707,7 @@ export function renderNewColumnConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'mb-3 relative',
           })
         );
@@ -1715,7 +1715,7 @@ export function renderNewColumnConfigStep(props: any) {
         return (
           <>
             <div className="mb-3">
-              {/* <label className="block text-sm font-medium text-[var(--color-text-tertiary)] mb-1">Default JSON</label> */}
+              {/* <label className="block text-sm font-medium text-(--color-text-tertiary) mb-1">Default JSON</label> */}
               {renderDefaultValueToggle({
                 show: showJsonDefault,
                 setShow: setShowJsonDefault,
@@ -1734,7 +1734,7 @@ export function renderNewColumnConfigStep(props: any) {
               setShowDescription,
               description,
               setDescription,
-              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+              buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
               wrapperClassName: 'relative',
             })}
           </>
@@ -1747,7 +1747,7 @@ export function renderNewColumnConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
             wrapperClassName: 'relative',
           })
         );
@@ -1784,7 +1784,7 @@ export function renderNewColumnConfigStep(props: any) {
               setShowDescription,
               description,
               setDescription,
-              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3',
+              buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3',
               wrapperClassName: 'relative mt-3',
             })}
           </>

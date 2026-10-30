@@ -210,8 +210,8 @@ const EventChip: React.FC<EventChipProps> = ({
   // Memoize tooltip classes to avoid recalculation
   const tooltipClasses = useMemo(() => {
     const base =
-      "fixed z-[9999] bg-card text-secondary text-sm rounded-xl p-3 shadow-2xl border " +
-      "max-w-xl whitespace-normal break-words";
+      "fixed z-9999 bg-card text-secondary text-sm rounded-xl p-3 shadow-2xl border " +
+      "max-w-xl whitespace-normal wrap-break-word";
 
     const positionClassMap: Record<string, string> = {
       top: "mb-2",
@@ -250,8 +250,8 @@ const EventChip: React.FC<EventChipProps> = ({
         className={`py-0 bg-background border rounded-xl rounded-tl-lg rounded-bl-lg transition-colors group ${onClick ? 'hover:bg-gray-50 cursor-pointer' : ''} ${className}`}
       >
         <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2 flex-1 min-w-0">
-            <div className="w-1 h-8 bg-gray-300 rounded-tl-xl rounded-bl-xl flex-shrink-0"></div>
+          <div className="flex items-center gap-x-2 flex-1 min-w-0">
+            <div className="w-1 h-8 bg-gray-300 rounded-tl-xl rounded-bl-xl shrink-0"></div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {displayTime && `${displayTime} `}{event.title}
@@ -273,7 +273,7 @@ const EventChip: React.FC<EventChipProps> = ({
             visibility: tooltipCoords ? 'visible' : 'hidden'
           }}
         >
-          <div className="space-y-1">
+          <div className="flex flex-col gap-y-1">
             {tooltipLines.map((line, index) => (
               <div key={`${index}-${line}`} className={index === 0 ? "font-semibold text-primary text-sm" : "text-secondary text-xs"}>
                 {line}

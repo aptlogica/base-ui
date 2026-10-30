@@ -113,7 +113,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
     <div //NOSONAR
     className="bg-modal-backdrop" onClick={onClose}>
       <div //NOSONAR
-        className="bg-modal rounded-xl shadow-2xl p-6 w-full !max-w-lg relative"
+        className="bg-modal rounded-xl shadow-2xl p-6 w-full max-w-lg! relative"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -123,7 +123,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
         }}  
       >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-shrink-0">
+      <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h2 className="text-xl font-semibold text-primary">
             Export Calendar
@@ -149,7 +149,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
               <button
                 key={option.id}
                 onClick={option.onClick}
-                className="group relative flex flex-col items-center justify-center p-5 rounded-xl border hover:border-[var(--color-bg-brand-primary)] transition-all hover:shadow-md bg-card"
+                className="group relative flex flex-col items-center justify-center p-5 rounded-xl border hover:border-(--color-bg-brand-primary) transition-all hover:shadow-md bg-card"
               >
                 <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center mb-3 group-hover:scale-110 transition-transform p-2">
                   <img
@@ -171,7 +171,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="mt-6 pt-4 border-t flex-shrink-0">
+      <div className="mt-6 pt-4 border-t shrink-0">
         <div className="text-sm text-primary text-center">
           {events.length} event{events.length === 1 ? '' : 's'} available for export
         </div>

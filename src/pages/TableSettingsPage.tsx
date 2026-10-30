@@ -76,16 +76,16 @@ const TableSettingsPage: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen min-w-0 bg-card">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b flex-shrink-0">
+      <div className="flex items-center gap-3 p-4 border-b shrink-0">
         <button
           type="button"
           onClick={goBack}
-          className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+          className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
           aria-label="Back to table"
         >
-          <ArrowLeft className="text-[var(--text-color-tertiary)] h-5 w-5" />
+          <ArrowLeft className="text-(--text-color-tertiary) h-5 w-5" />
         </button>
-        <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
           <Settings className="text-green-600 h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -96,7 +96,7 @@ const TableSettingsPage: React.FC = () => {
 
       <div className="flex-1 min-h-0 flex">
         {/* Left menu: sections */}
-        <nav className="w-[220px] flex-shrink-0 border-r bg-gray-50 p-2 space-y-1 overflow-y-auto" aria-label="Settings sections">
+        <nav className="flex flex-col w-[220px] shrink-0 border-r bg-gray-50 p-2 gap-y-1 overflow-y-auto" aria-label="Settings sections">
           {SECTIONS.map(({ key, label, icon: Icon }) => {
             const isActive = section === key;
             return (
@@ -108,7 +108,7 @@ const TableSettingsPage: React.FC = () => {
                 className={`relative w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left transition-colors duration-200 ${isActive ? 'bg-card shadow-xs font-medium text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
               >
                 {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-green-600" />}
-                <Icon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <Icon className="w-4 h-4 text-gray-500 shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
               </button>
             );

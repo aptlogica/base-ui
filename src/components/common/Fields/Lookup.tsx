@@ -316,7 +316,7 @@ export const Lookup: React.FC<LookupProps> = ({
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm border rounded-xl text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] bg-[--color-alpha-white] outline-none transition-all duration-200"
+                className="w-full pl-8 pr-3 py-2 text-sm border rounded-xl text-(--color-text-primary) placeholder:text-(--color-text-placeholder) bg-(--color-alpha-white) outline-none transition-all duration-200"
                 ref={searchInputRef}
               />
             </div>

@@ -67,12 +67,12 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
               </h3>
               {/* Status Badges */}
               {isOverdue && (
-                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full shrink-0">
                   OVERDUE
                 </span>
               )}
               {isCompleted && (
-                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full shrink-0">
                   DONE
                 </span>
               )}
@@ -80,7 +80,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
 
             {/* Date Range */}
             <div className="flex items-center gap-1.5 mb-2 text-xs text-gray-600">
-              <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <span className="font-medium">
                 {task.startDate.toLocaleDateString('en-US', {
                   month: 'short',
@@ -110,7 +110,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
                       }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-gray-600 min-w-[2.5rem]">
+                  <span className="text-xs font-semibold text-gray-600 min-w-10">
                     {task.progress}%
                   </span>
                 </div>
@@ -121,7 +121,7 @@ const TaskCard = React.memo(({ task, onEdit, onDelete }: { task: GanttTask; onEd
           {/* Delete Button */}
           {onDelete && (
             <button
-              className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 ml-1"
+              className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md shrink-0 ml-1"
               onClick={onDelete}
               title="Delete Record"
             >
@@ -213,12 +213,12 @@ const ChartTask = React.memo(({
               </h3>
               {/* Status Badges */}
               {isOverdue && (
-                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-semibold rounded-full shrink-0">
                   OVERDUE
                 </span>
               )}
               {isCompleted && (
-                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full flex-shrink-0">
+                <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-semibold rounded-full shrink-0">
                   DONE
                 </span>
               )}
@@ -226,7 +226,7 @@ const ChartTask = React.memo(({
 
             {/* Progress indicator */}
             {task.progress > 0 && (
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-300"
@@ -236,7 +236,7 @@ const ChartTask = React.memo(({
                     }}
                   />
                 </div>
-                <span className="text-xs font-semibold text-gray-600 min-w-[2rem]">
+                <span className="text-xs font-semibold text-gray-600 min-w-8">
                   {task.progress}%
                 </span>
               </div>
@@ -248,7 +248,7 @@ const ChartTask = React.memo(({
       {/* Tooltip */}
       {showTooltip && tooltipTask?.id === task.id && tooltipLines.length > 0 && (
         <div ref={tooltipRef} className={getTooltipClasses()}>
-          <div className="space-y-1">
+          <div className="flex flex-col gap-y-1">
             {tooltipLines.map((line, idx) => {
               // Use line content + index as key since lines might not be unique
               const lineKey = `${line}-${idx}`;
@@ -600,7 +600,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       return (
         <div
           key={`${day.getTime()}-${index}`}
-          className={`border-r bg-card border-b p-2 text-center ${isWeekend ? 'bg-gray-50' : ''} ${isToday ? 'bg-[var(--color-bg-brand-primary)]/10' : ''}`}
+          className={`border-r bg-card border-b p-2 text-center ${isWeekend ? 'bg-gray-50' : ''} ${isToday ? 'bg-(--color-bg-brand-primary)/10' : ''}`}
           style={{ width: dayWidth }}
         >
           <div className={`text-xs ${isWeekend ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -611,7 +611,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           </div>
           {isToday && (
             <div
-              className="mt-1 mx-auto h-1 w-8 rounded-full bg-[var(--color-brand-500)]"
+              className="mt-1 mx-auto h-1 w-8 rounded-full bg-(--color-brand-500)"
               data-testid="gantt-today-marker"
             />
           )}
@@ -627,7 +627,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       return (
         <div
           key={`bg-${day.getTime()}-${index}`}
-          className={`${isWeekend ? 'bg-gray-50' : 'bg-transparent'} ${isToday ? 'bg-[var(--color-bg-brand-primary)]/10' : ''}`}
+          className={`${isWeekend ? 'bg-gray-50' : 'bg-transparent'} ${isToday ? 'bg-(--color-bg-brand-primary)/10' : ''}`}
           style={{ width: dayWidth, height: '100%' }}
         />
       );
@@ -790,7 +790,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Task List - Modernized Design */}
-        <div className="w-80 bg-[var(--color-selected-bg)] border-r flex flex-col shadow-sm">
+        <div className="w-80 bg-(--color-selected-bg) border-r flex flex-col shadow-sm">
           {/* Header */}
           <div className="px-4 py-2 border-b bg-card flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-2">
@@ -812,7 +812,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
           {/* Task List */}
           <div
             ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto p-3 space-y-2"
+            className="flex flex-col flex-1 overflow-y-auto p-3 gap-y-2"
             onScroll={handleTaskListScroll}
           >
             {totalItems === 0 ? (
@@ -825,7 +825,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ tableData, viewId, onRef
               </div>
             ) : (
               <>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-y-2">
                   {paginatedTasks.map((task) => (
                     <TaskCard
                       key={task.id}

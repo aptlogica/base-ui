@@ -105,7 +105,7 @@ const AdministratorPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Fixed Tabs */}
-      <div className="flex-shrink-0 bg-alpha-white border-b px-6">
+      <div className="shrink-0 bg-alpha-white border-b px-6">
         <SettingsTabs
           tabs={tabs}
           activeTab={activeTab}

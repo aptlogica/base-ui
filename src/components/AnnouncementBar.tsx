@@ -32,7 +32,7 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
   }[type];
 
   return (
-    <div className={`fixed top-0 left-0 right-0 w-screen px-4 py-2 flex items-center justify-between ${typeColor} border-b border-gray-200 z-[9999]`}>
+    <div className={`fixed top-0 left-0 right-0 w-screen px-4 py-2 flex items-center justify-between ${typeColor} border-b border-gray-200 z-9999`}>
       <div>{message}</div>
       <div className="flex gap-2">
         {buttons.map((btn) => {

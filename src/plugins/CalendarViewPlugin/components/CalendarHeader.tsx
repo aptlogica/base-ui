@@ -296,8 +296,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     selectWeek(week.start);
                   }}
                   className={`w-full p-2 text-left text-sm rounded-xl mb-1 transition-colors ${isCurrentWeek
-                    ? 'bg-[var(--color-bg-brand-primary)] text-black font-semibold'
-                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                    ? 'bg-(--color-bg-brand-primary) text-black font-semibold'
+                    : 'text-(--color-text-primary) hover:bg-(--color-bg-brand-primary) hover:text-black'
                     }`}
                 >
                   {formatDate(week.start)} - {formatDate(week.end)}
@@ -369,9 +369,9 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 const isToday = date.toDateString() === new Date().toDateString();
                 const isSelected = date.toDateString() === currentDate.toDateString();
                 const hasEvents = hasEventsForDate(date);
-                const isSelectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : '';
-                const isTodayClass = isToday ? 'text-[var(--color-bg-brand-primary)]' : '';
-                const isCurrentMonthClass = isCurrentMonth ? 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : '';
+                const isSelectedClass = isSelected ? 'bg-(--color-bg-brand-primary) text-black' : '';
+                const isTodayClass = isToday ? 'text-(--color-bg-brand-primary)' : '';
+                const isCurrentMonthClass = isCurrentMonth ? 'text-(--color-text-primary) hover:bg-(--color-bg-brand-primary) hover:text-black' : '';
                 const defaultClass = 'text-gray-400 hover:bg-gray-50';
                 const dateButtonClass = isSelectedClass || isTodayClass || isCurrentMonthClass || defaultClass;
 
@@ -388,7 +388,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     {/* Event indicator - show dot if date has events */}
                     {hasEvents && (
                       <div className="absolute top-0.5 right-0.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-bg-brand-primary)]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-(--color-bg-brand-primary)" />
                       </div>
                     )}
                     <span className="text-xs">{date.getDate()}</span>
@@ -448,8 +448,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     setShowDatePicker(false);
                   }}
                   className={`p-2 text-sm font-medium rounded-xl transition-colors ${year === currentYear
-                    ? 'bg-[var(--color-bg-brand-primary)] text-black'
-                    : 'text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black'
+                    ? 'bg-(--color-bg-brand-primary) text-black'
+                    : 'text-(--color-text-primary) rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black'
                     }`}
                 >
                   {year}
@@ -501,7 +501,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                     selectMonth(index);
                   }}
                   className={`p-2 text-sm font-medium rounded-xl transition-colors ${index === currentDate.getMonth()
-                    ? 'bg-[var(--color-bg-brand-primary)] text-black'
+                    ? 'bg-(--color-bg-brand-primary) text-black'
                     : 'text-gray-700 hover:bg-gray-100'
                     }`}
                 >
@@ -521,12 +521,12 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         {/* Desktop Layout - Hidden on mobile */}
         <div className="hidden md:flex items-center justify-between">
           {/* Left Section - Date Navigation */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-x-4">
             {/* Date/Week Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
+                className="flex items-center gap-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
                 aria-label="Select date"
               >
                 <span>{getCurrentDisplayText()}</span>
@@ -554,7 +554,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             </button>
 
             {/* Navigation Arrows */}
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center gap-x-1">
               <button
                 onClick={() => {
                   if (currentView === 'week') navigateWeek('prev');
@@ -592,14 +592,14 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <div className="relative" ref={viewDropdownRef}>
               <button
                 onClick={() => setShowViewDropdown(!showViewDropdown)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
+                className="flex items-center gap-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border rounded-xl hover:bg-gray-50 focus:outline-none"
               >
                 <span>{views.find(v => v.key === currentView)?.label || 'Month'}</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
               {showViewDropdown && (
                 <div //NOSONAR
-                  className="absolute top-full left-0 mt-1 space-y-1 p-1.5 w-32 bg-card border rounded-xl shadow-lg z-50"
+                  className="flex flex-col absolute top-full left-0 mt-1 gap-y-1 p-1.5 w-32 bg-card border rounded-xl shadow-lg z-50"
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
@@ -612,7 +612,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                         setShowViewDropdown(false);
                       }}
                       className={`w-full text-left px-4 py-2 text-sm font-medium rounded-xl transition-colors ${currentView === view.key
-                        ? 'bg-[var(--color-bg-brand-primary)] text-black'
+                        ? 'bg-(--color-bg-brand-primary) text-black'
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
@@ -630,7 +630,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               )}
             </div>
           ) : (
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-xl p-1" ref={viewTabsRef}>
+            <div className="flex items-center gap-x-1 bg-gray-100 rounded-xl p-1" ref={viewTabsRef}>
               {views.map((view) => (
                 <button
                   key={view.key}
@@ -647,7 +647,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           )}
 
           {/* Right Section - Actions */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-x-2">
             {/* Date Field Selector */}
             {onGroupByChange && (
               <CalendarFieldConfiguration
@@ -682,7 +682,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             {/* Export */}
             <button
               onClick={onExport}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+              className="flex items-center gap-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
               aria-label="Export"
             >
               <ExternalLink className="w-5 h-5" />
@@ -704,12 +704,12 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <div className="flex md:hidden flex-col gap-3">
           {/* Top row: Date navigation and create button */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-x-2">
               {/* Date/Week Dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none"
+                  className="flex items-center gap-x-2 px-3 py-2 text-sm font-medium text-gray-900 bg-card border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none"
                   aria-label="Select date"
                 >
                   <span>{getCurrentDisplayText()}</span>
@@ -741,7 +741,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
           {/* Second row: View tabs and navigation */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-xl p-1">
+            <div className="flex items-center gap-x-1 bg-gray-100 rounded-xl p-1">
               {views.map((view) => (
                 <button
                   key={view.key}
@@ -756,7 +756,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               ))}
             </div>
 
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center gap-x-1">
               {/* Navigation Arrows */}
               <button
                 onClick={() => {
@@ -786,7 +786,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               {/* Export */}
               <button
                 onClick={onExport}
-                className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+                className="flex items-center gap-x-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
                 aria-label="Export"
               >
                 <ExternalLink className="w-5 h-5" />

@@ -355,7 +355,7 @@ describe('CheckConstraintFormModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Name is required');
     expect(name).toHaveAttribute('aria-invalid', 'true');
-    expect(name.className).toContain('!border-red-500');
+    expect(name.className).toContain('border-red-500!');
 
     // Typing clears the highlight; a name that is taken (any letter case) is refused
     await userEvent.type(name, 'age · maximum');

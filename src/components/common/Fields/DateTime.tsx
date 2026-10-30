@@ -786,14 +786,14 @@ export const DateTime: React.FC<DateTimeProps> = ({
               className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month - 1, 1))}
             >
-              <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
+              <ChevronLeft className="w-4 h-4 text-(--color-text-primary)" />
             </button>
 
             <div className="flex items-center gap-1">
               {/* Month dropdown */}
               <div className="relative" data-month-picker>
                 <button
-                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-(--color-text-primary) rounded-md transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowMonthPicker(!showMonthPicker);
@@ -802,7 +802,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                   }}
                 >
                   {months[month]}
-                  <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showMonthPicker ? 'rotate-90' : '-rotate-90'}`} />
+                  <ChevronLeft className={`w-3 h-3 text-(--color-text-primary) transition-transform ${showMonthPicker ? 'rotate-90' : '-rotate-90'}`} />
                 </button>
                 {showMonthPicker && (
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
@@ -812,9 +812,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         onClick={goPrevMonthYear}
                         className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
-                        <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
+                        <ChevronLeft className="w-4 h-4 text-(--color-text-primary)" />
                       </button>
-                      <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <div className="text-sm font-medium text-(--color-text-primary)">
                         {calendarMonth.getFullYear()}
                       </div>
                       <button
@@ -822,7 +822,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         onClick={goNextMonthYear}
                         className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100 transition-colors"
                       >
-                        <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
+                        <ChevronRight className="w-4 h-4 text-(--color-text-primary)" />
                       </button>
                     </div>
 
@@ -832,9 +832,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
                           key={monthName + index}
                           className={[
                             "w-full py-2 rounded-xl text-sm text-center transition-colors",
-                            "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)] hover:text-black",
+                            "text-(--color-text-primary) hover:bg-(--color-bg-brand-primary) hover:text-black",
                             index === month
-                              ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
+                              ? "bg-(--color-bg-brand-secondary) text-black font-semibold"
                               : ""
                           ].join(" ")}
                           onClick={(e) => {
@@ -853,7 +853,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
               {/* Year dropdown */}
               <div className="relative" data-year-picker>
                 <button
-                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-[var(--color-text-primary)] rounded-md transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm font-medium hover:bg-gray-100 text-(--color-text-primary) rounded-md transition-colors flex items-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowYearPicker(!showYearPicker);
@@ -862,7 +862,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                   }}
                 >
                   {year}
-                  <ChevronLeft className={`w-3 h-3 text-[var(--color-text-primary)] transition-transform ${showYearPicker ? 'rotate-90' : '-rotate-90'}`} />
+                  <ChevronLeft className={`w-3 h-3 text-(--color-text-primary) transition-transform ${showYearPicker ? 'rotate-90' : '-rotate-90'}`} />
                 </button>
                 {showYearPicker && (
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 w-64 rounded-xl border bg-background shadow-lg z-50">
@@ -872,9 +872,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         onClick={goPrev}
                         className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
-                        <ChevronLeft className="w-4 h-4 text-[var(--color-text-primary)]" />
+                        <ChevronLeft className="w-4 h-4 text-(--color-text-primary)" />
                       </button>
-                      <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <div className="text-sm font-medium text-(--color-text-primary)">
                         {currentYear}
                       </div>
                       <button
@@ -882,7 +882,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                         onClick={goNext}
                         className="h-8 w-8 grid place-items-center rounded-xl hover:bg-gray-100"
                       >
-                        <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
+                        <ChevronRight className="w-4 h-4 text-(--color-text-primary)" />
                       </button>
                     </div>
 
@@ -893,9 +893,9 @@ export const DateTime: React.FC<DateTimeProps> = ({
                           key={yearOption}
                           className={[
                             "w-full py-2 rounded-md text-sm text-center transition-colors",
-                            "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-secondary)] hover:text-black",
+                            "text-(--color-text-primary) hover:bg-(--color-bg-brand-secondary) hover:text-black",
                             yearOption === year
-                              ? "bg-[var(--color-bg-brand-secondary)] text-black font-semibold"
+                              ? "bg-(--color-bg-brand-secondary) text-black font-semibold"
                               : ""
                           ].join(" ")}
                           onClick={(e) => {
@@ -917,7 +917,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
               className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
               onClick={() => setCalendarMonth(new Date(year, month + 1, 1))}
             >
-              <ChevronRight className="w-4 h-4 text-[var(--color-text-primary)]" />
+              <ChevronRight className="w-4 h-4 text-(--color-text-primary)" />
             </button>
           </div>
         </div>
@@ -932,20 +932,20 @@ export const DateTime: React.FC<DateTimeProps> = ({
         <div className="grid grid-cols-7 gap-1">
           {weeks.flat().map((day, idx) => {
             let dayStateClass =
-              'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-brand-primary)]';
+              'text-(--color-text-primary) hover:bg-(--color-bg-brand-primary)';
 
             if (day === date) {
               dayStateClass =
-                'bg-[var(--color-bg-brand-primary)] text-black font-bold';
+                'bg-(--color-bg-brand-primary) text-black font-bold';
             } else if (day === todayISO) {
               dayStateClass =
-                'text-[var(--color-bg-brand-primary)]';
+                'text-(--color-bg-brand-primary)';
             }
 
             return (
               <button
                 key={day || `empty-${idx}`}
-                className={`w-8 h-8 rounded-xl text-center text-sm font-medium hover:bg-[var(--color-bg-brand-primary)] hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
+                className={`w-8 h-8 rounded-xl text-center text-sm font-medium hover:bg-(--color-bg-brand-primary) hover:text-black transition-colors ${dayStateClass} ${day ? '' : 'opacity-0 pointer-events-none'
                   }`}
                 onClick={() => day && !readOnly && handleDateSelect(day)}
                 disabled={!day || readOnly}
@@ -960,7 +960,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
         {/* Footer with Today button */}
         <div className="flex justify-center mt-4 pt-3 border-t border-gray-100">
           <button
-            className="px-4 py-2 rounded-xl bg-[var(--color-bg-brand-primary)] text-black hover:bg-[var(--color-bg-brand-secondary)] text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-xl bg-(--color-bg-brand-primary) text-black hover:bg-(--color-bg-brand-secondary) text-sm font-medium transition-colors"
             onClick={() => !readOnly && handleDateSelect(todayISO)}
             disabled={readOnly}
           >
@@ -1055,7 +1055,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {dateOpen && dateCalculatedPosition && createPortal(
             <div
               ref={dateDropdownRef}
-              className="fixed z-[9999] border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
+              className="fixed z-9999 border rounded-xl shadow-lg w-80 animate-fade-in bg-background"
               style={{
                 ...(dateCalculatedPosition.top !== undefined && { top: `${dateCalculatedPosition.top}px` }),
                 ...(dateCalculatedPosition.bottom !== undefined && { bottom: `${dateCalculatedPosition.bottom}px` }),
@@ -1088,7 +1088,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
           {timeOpen && timeCalculatedPosition && createPortal(
             <div
               ref={timeDropdownRef}
-              className="fixed z-[9999] border bg-background rounded-xl shadow-lg w-36 animate-fade-in"
+              className="fixed z-9999 border bg-background rounded-xl shadow-lg w-36 animate-fade-in"
               style={{
                 ...(timeCalculatedPosition.top !== undefined && { top: `${timeCalculatedPosition.top}px` }),
                 ...(timeCalculatedPosition.bottom !== undefined && { bottom: `${timeCalculatedPosition.bottom}px` }),
@@ -1098,15 +1098,15 @@ export const DateTime: React.FC<DateTimeProps> = ({
             >
               <div className="flex flex-col">
                 {/* Scrollable time options */}
-                <div className="flex-1 max-h-64 overflow-y-auto p-1.5 space-y-1">
+                <div className="flex flex-col flex-1 max-h-64 overflow-y-auto p-1.5 gap-y-1">
                   {timeOptions.map(option => (
                     <button
                       key={option}
                       type="button"
-                      className={`w-full px-4 py-2 text-sm text-[var(--color-text-primary)] rounded-xl text-left 
-              hover:bg-[var(--color-bg-brand-primary)] hover:text-black 
-              focus:bg-[var(--color-bg-brand-secondary)] transition-colors 
-              ${displayTime === option ? 'bg-[var(--color-bg-brand-secondary)] text-black font-bold' : ''}`}
+                      className={`w-full px-4 py-2 text-sm text-(--color-text-primary) rounded-xl text-left 
+              hover:bg-(--color-bg-brand-primary) hover:text-black 
+              focus:bg-(--color-bg-brand-secondary) transition-colors 
+              ${displayTime === option ? 'bg-(--color-bg-brand-secondary) text-black font-bold' : ''}`}
                       onClick={() => !readOnly && handleTimeSelect(option)}
                       disabled={readOnly}
                     >
@@ -1119,7 +1119,7 @@ export const DateTime: React.FC<DateTimeProps> = ({
                 <div className="border-t border-gray-100 px-2 py-2 flex justify-center bg-background">
                   <button
                     type="button"
-                    className="px-3 py-1 rounded-xl bg-[var(--color-bg-brand-primary)] text-black  hover:bg-[var(--color-bg-brand-secondary)] text-xs font-medium"
+                    className="px-3 py-1 rounded-xl bg-(--color-bg-brand-primary) text-black  hover:bg-(--color-bg-brand-secondary) text-xs font-medium"
                     onClick={() =>
                       handleNowUtc()
                     }

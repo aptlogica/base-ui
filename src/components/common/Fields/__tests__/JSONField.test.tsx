@@ -919,7 +919,7 @@ describe('JSONField Component', () => {
       });
       
       const treeButton = screen.getByText('Tree');
-      expect(treeButton.className).toContain('bg-[var(--color-brand-600)]');
+      expect(treeButton.className).toContain('bg-brand-600');
     });
 
     it('should switch back to tree mode from text mode', async () => {

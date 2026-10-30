@@ -49,7 +49,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   };
 
   return (
-    <div ref={menuRef} style={style} className="select-none border p-2 space-y-1 animate-fade-in">
+    <div ref={menuRef} style={style} className="flex flex-col select-none border p-2 gap-y-1 animate-fade-in">
       {/* Delete record - only show if user can delete */}
       {/* Edit record - only show if user can edit */}
       {canEditRecord && (

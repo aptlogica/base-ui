@@ -393,7 +393,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
 
   return (
     <div // NOSONAR
-      className="bg-modal-backdrop relative"
+      className="bg-modal-backdrop"
       onKeyDown={handleKeyDown}
     >
       <button
@@ -403,14 +403,14 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         onClick={onClose}
       />
       <div // NOSONAR
-        className="bg-modal !max-w-2xl !p-0 flex flex-col relative overflow-hidden"
+        className="bg-modal max-w-2xl! p-0! flex flex-col relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center flex-shrink-0`}>
+            <div className={`w-10 h-10 icon-primary rounded-xl flex items-center justify-center shrink-0`}>
               <IconComponent size={20} className="icon-primary" />
             </div>
             <div className="min-w-0">
@@ -422,17 +422,17 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+            <X className="text-(--text-color-tertiary) h-5 w-5" />
           </button>
         </div>
 
         {/* Scrollable Content Area */}
         <form id="create-view-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <div className="p-4 space-y-2">
-            <div className="space-y-1">
+          <div className="flex flex-col p-4 gap-y-2">
+            <div className="flex flex-col gap-y-1">
               <label htmlFor="viewName" className="block text-sm font-medium text-primary mb-1">
                 View Name <span className="text-xs text-gray-500">(optional)</span>
               </label>
@@ -462,7 +462,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
                     })()}
                     <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                       <h4 className="mb-2 text-primary">View name info:</h4>
-                      <ul className="space-y-1 text-gray-600">
+                      <ul className="flex flex-col gap-y-1 text-gray-600">
                         <li>• Optional - leave empty for auto-generated name</li>
                         <li className={`${name.trim().length >= 3 || name.trim().length === 0 ? 'text-green-600' : 'text-gray-600'}`}>
                           • If provided, minimum 3 characters
@@ -477,7 +477,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               {/* Validation Error */}
               {(error || validationError) && (
                 <div className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{validationError || error}</span>
                 </div>
               )}
@@ -518,7 +518,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
               if (viewType === 'gantt' || viewType === 'ganttChart') {
                 // Gantt Chart: Dual field selection for start and end dates
                 return (
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-y-4">
                     <AdvancedDropdown
                       label="Start Date Field"
                       options={fieldDropdownOptions}
@@ -571,7 +571,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             {/* Field Error Display */}
             {fieldError && (
               <div className="text-sm text-red-600 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{fieldError}</span>
               </div>
             )}
@@ -586,7 +586,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
             />
 
             {/* View Type Info */}
-            <div className="border bg-[var(--color-utility-bg)] rounded-xl p-3">
+            <div className="border bg-utility-bg rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <IconComponent size={24} className='icon-primary p-1.5 rounded-xl bg-primary/10' />
                 <span className="text-sm font-medium text-primary">
@@ -607,7 +607,7 @@ export const CreateViewModal: React.FC<CreateViewModalProps> = ({
         </form>
 
         {/* Footer - Fixed at Bottom */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button
             type="button"
             onClick={onClose}

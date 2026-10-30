@@ -42,8 +42,8 @@ export function renderBasicConfigStep(props: any) {
     case 'text':
       return (
         <>
-          <div className="mb-3 space-y-2 " >
-            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)]"
+          <div className="flex flex-col mb-3 gap-y-2 " >
+            <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800)"
               onClick={() => setShowTextDefault((v: boolean) => !v)}>
               <Plus className="w-5 h-5" />
               Set default value
@@ -62,7 +62,7 @@ export function renderBasicConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -72,9 +72,9 @@ export function renderBasicConfigStep(props: any) {
         <>
           <div className="mb-3 flex items-center gap-2">
             <input type="checkbox" className="checkbox-primary-brand" id="richText" checked={richText} onChange={e => setRichText(e.target.checked)} />
-            <label htmlFor="richText" className="text-sm text-[var(--text-color-secondary)]">Enable rich text</label>
+            <label htmlFor="richText" className="text-sm text-(--text-color-secondary)">Enable rich text</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
+          <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-5 h-5" />
             Set default value
           </button>
@@ -93,7 +93,7 @@ export function renderBasicConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -103,9 +103,9 @@ export function renderBasicConfigStep(props: any) {
         <>
           <div className="mb-3 flex items-center gap-2">
             <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
-            <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]" >Show thousands separator</label>
+            <label htmlFor="showThousands" className="text-sm text-(--text-color-secondary)" >Show thousands separator</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
+          <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-5 h-5" />
             Set default value
           </button>
@@ -124,7 +124,7 @@ export function renderBasicConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>
@@ -132,7 +132,7 @@ export function renderBasicConfigStep(props: any) {
     case 'decimal':
       return (
         <>
-          <div className="mb-2 text-sm font-medium text-[var(--color-gray-700)]">Precision</div>
+          <div className="mb-2 text-sm font-medium text-(--color-gray-700)">Precision</div>
           <AdvancedDropdown
             options={precisionOptions}
             value={precision}
@@ -141,9 +141,9 @@ export function renderBasicConfigStep(props: any) {
 
           <div className="my-3 flex items-center gap-2">
             <input type="checkbox" className="checkbox-primary-brand" id="showThousands" checked={showThousands} onChange={e => setShowThousands(e.target.checked)} />
-            <label htmlFor="showThousands" className="text-sm text-[var(--text-color-secondary)]">Show thousands separator</label>
+            <label htmlFor="showThousands" className="text-sm text-(--text-color-secondary)">Show thousands separator</label>
           </div>
-          <button className="flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] mb-3 space-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
+          <button className="flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) mb-3 gap-y-2" onClick={() => setShowTextDefault((v: boolean) => !v)}>
             <Plus className="w-5 h-5" />
             Set default value
           </button>
@@ -177,7 +177,7 @@ export function renderBasicConfigStep(props: any) {
             setShowDescription,
             description,
             setDescription,
-            buttonClassName: 'flex items-center gap-2 text-primary-brand text-sm font-medium hover:text-[var(--color-brand-800)] my-3 space-y-2',
+            buttonClassName: 'flex flex-col items-center gap-2 text-primary-brand text-sm font-medium hover:text-(--color-brand-800) my-3 gap-y-2',
             wrapperClassName: 'relative',
           })}
         </>

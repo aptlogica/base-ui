@@ -145,7 +145,7 @@ describe('YearView', () => {
         />
       );
 
-      const todayCell = container.querySelector(String.raw`.bg-\[var\(--color-bg-brand-primary\)\]`);
+      const todayCell = container.querySelector(String.raw`.bg-\(--color-bg-brand-primary\)`);
       expect(todayCell).toBeInTheDocument();
     });
 

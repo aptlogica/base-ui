@@ -200,7 +200,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   return (
                     <div
                       key={`${index}-${item}`}
-                      className={`min-w-8 h-6 max-w-32 inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap flex-shrink-0 ${cls}`}
+                      className={`min-w-8 h-6 max-w-32 inline-flex items-center justify-center gap-0.5 p-1 px-2 rounded-xl truncate overflow-hidden whitespace-nowrap shrink-0 ${cls}`}
                       style={style}
                       title={item}
                     >
@@ -208,7 +208,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                       {!disabled && !readOnly && (
                         <span //NOSONAR
                           onClick={(e) => handleRemoveOption(item, e)}
-                          className="transition-colors p-0.5 cursor-pointer flex-shrink-0"
+                          className="transition-colors p-0.5 cursor-pointer shrink-0"
                           style={{ lineHeight: 1, color: opt.color ? getReadableTextColor(opt.color) : undefined }}
                         >
                           <X className="w-3 h-3" />
@@ -219,7 +219,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 })
               )}
             </div>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ml-2 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ml-2 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         </button>
 
@@ -227,7 +227,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         {isOpen && calculatedPosition && createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] p-1.5 space-y-1.5 border bg-background rounded-xl shadow-lg max-h-56 overflow-y-auto"
+            className="flex flex-col fixed z-9999 p-1.5 gap-y-1.5 border bg-background rounded-xl shadow-lg max-h-56 overflow-y-auto"
             style={{
               ...(calculatedPosition.top !== undefined && { top: `${calculatedPosition.top}px` }),
               ...(calculatedPosition.bottom !== undefined && { bottom: `${calculatedPosition.bottom}px` }),

@@ -640,7 +640,7 @@ describe('FormPreview', () => {
 
     it('applies width, rounded corners and elevated card style', () => {
       const { container } = renderWith({ layoutWidth: 'wide', rounded: 'xl', cardStyle: 'elevated' });
-      const card = container.querySelector('.max-w-\\[72rem\\]');
+      const card = container.querySelector('.max-w-6xl');
       expect(card).toHaveClass('rounded-[1.75rem]', 'shadow-lg');
     });
 
@@ -799,9 +799,9 @@ describe('FormPreview', () => {
       const zone = screen.getByText(/a banner or drag and drop/).closest('div.border-b') as HTMLElement;
 
       fireEvent.dragOver(zone);
-      expect(zone).toHaveClass('bg-[var(--color-gray-100)]');
+      expect(zone).toHaveClass('bg-(--color-gray-100)');
       fireEvent.dragLeave(zone);
-      expect(zone).toHaveClass('bg-[var(--color-gray-50)]');
+      expect(zone).toHaveClass('bg-(--color-gray-50)');
 
       fireEvent.drop(zone, { dataTransfer: { files: [image] } });
       await waitFor(() => {

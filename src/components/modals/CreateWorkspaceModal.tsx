@@ -334,7 +334,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const getTabButtonClassName = (tab: 'information' | 'dangerzone') => {
     if (tab === 'information') {
       return activeTab === 'information'
-        ? 'border-[var(--color-brand-600)] text-[var(--color-brand-600)]'
+        ? 'border-brand-600 text-brand-600'
         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
     }
 
@@ -348,7 +348,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   return (
     <>
       <div //NOSONAR
-        className="bg-modal-backdrop relative"
+        className="bg-modal-backdrop"
         onKeyDown={handleKeyDown}
       >
         <button
@@ -358,14 +358,14 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           onClick={onClose}
         />
         <div //NOSONAR
-          className="bg-modal !max-w-3xl min-h-[80vh] !p-0 flex flex-col relative overflow-hidden"
+          className="bg-modal max-w-3xl! min-h-[80vh] p-0! flex flex-col relative overflow-hidden"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <div className="flex items-center justify-between p-4 border-b shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-(--color-bg-brand-primary) rounded-full flex items-center justify-center shrink-0">
                 <Plus className="text-green-600 h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -375,17 +375,17 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0"
               aria-label="Close"
             >
-              <X className="text-[var(--text-color-tertiary)] h-5 w-5" />
+              <X className="text-(--text-color-tertiary) h-5 w-5" />
             </button>
           </div>
 
           {/* Tabs - Only show in edit mode */}
           {isEditMode && (
-            <div className="flex-shrink-0 bg-alpha-white border-b px-6">
-              <nav className="flex space-x-8" aria-label="Workspace sections">
+            <div className="shrink-0 bg-alpha-white border-b px-6">
+              <nav className="flex gap-x-8" aria-label="Workspace sections">
                 <button
                   type="button"
                   onClick={() => setActiveTab('information')}
@@ -415,8 +415,8 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           {/* Scrollable Content Area */}
           {showInformationTab ? (
             <form id="create-workspace-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-              <div className="p-4 space-y-4">
-                <div className="space-y-1">
+              <div className="flex flex-col p-4 gap-y-4">
+                <div className="flex flex-col gap-y-1">
                   <label htmlFor="workspaceName" className="block text-sm font-medium text-primary mb-1">
                     Workspace Name <span className="field-component-required">*</span>
                   </label>
@@ -438,7 +438,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                         <HelpCircle className={`w-4 h-4 ${getHelpIconColorClass()} cursor-help`} />
                         <div className="invisible group-hover:visible absolute right-0 mt-1 mr-2 w-64 bg-card border rounded-xl shadow-lg p-3 text-sm z-50">
                           <h4 className="font-medium text-primary mb-2">Workspace name requirements:</h4>
-                          <ul className="space-y-1">
+                          <ul className="flex flex-col gap-y-1">
                             <li className={`flex items-center ${getListItemColorClass()}`}>
                               * Minimum 3 characters
                             </li>
@@ -476,7 +476,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           ) : (
             /* Danger Tab Content */
             <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-              <div className="p-6 space-y-6">
+              <div className="flex flex-col p-6 gap-y-6">
                 <h2 className="text-lg text-gray-900 mb-4">Danger Zone</h2>
                 {canDelete && (
                   <div className="flex items-center justify-between p-4 rounded-xl border border-red-400">
@@ -500,7 +500,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
 
           {/* Footer - Fixed at Bottom */}
           {showInformationTab ? (
-            <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+            <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
               <button
                 type="button"
                 onClick={onClose}
@@ -520,7 +520,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-end gap-3 p-4 border-t flex-shrink-0">
+            <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
               <button
                 type="button"
                 onClick={onClose}

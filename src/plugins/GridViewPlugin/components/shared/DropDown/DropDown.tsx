@@ -94,10 +94,10 @@ const Dropdown: React.FC<DropdownProps> = ({
     <div className="relative w-full mb-3" ref={rootRef}>
       {/* Trigger box (same look as <select> tag) */}
       <div //NOSONAR
-        className="w-full px-3 py-2 bg-[var(--color-alpha-white)] text-[var(--text-color-secondary)] 
+        className="w-full px-3 py-2 bg-(--color-alpha-white) text-(--text-color-secondary) 
                    border rounded-xl text-sm cursor-pointer 
                    flex justify-between items-center focus:outline-none 
-                   focus:ring-1 focus:ring-[var(--ring-color-brand)]"
+                   focus:ring-1 focus:ring-(--ring-color-brand)"
         onClick={() => setOpen(!open)}
       >
         <span>
@@ -110,7 +110,7 @@ const Dropdown: React.FC<DropdownProps> = ({
       {open && (
           <ul
               ref={menuRef}
-              className={`absolute w-full border space-y-1 p-2 rounded-xl bg-[var(--color-alpha-white)] shadow-lg z-10 max-h-48 overflow-auto text-sm ${
+              className={`flex flex-col absolute w-full border gap-y-1 p-2 rounded-xl bg-(--color-alpha-white) shadow-lg z-10 max-h-48 overflow-auto text-sm ${
                 position === 'above' ? 'bottom-full mb-1' : 'top-full mt-1'
               }`}
             >
@@ -118,9 +118,9 @@ const Dropdown: React.FC<DropdownProps> = ({
             <li //NOSONAR
               key={option.value}
               onClick={() => handleSelect(option.value)}
-              className={`px-3 py-2 space-y-1 cursor-pointer rounded-xl hover:bg-[var(--color-bg-brand-primary)] hover:text-black ${isSelected(option.value)
-                ? "bg-[var(--color-bg-brand-secondary)] text-black font-bold"
-                : "text-[var(--text-color-secondary)]"
+              className={`flex flex-col px-3 py-2 gap-y-1 cursor-pointer rounded-xl hover:bg-(--color-bg-brand-primary) hover:text-black ${isSelected(option.value)
+                ? "bg-(--color-bg-brand-secondary) text-black font-bold"
+                : "text-(--text-color-secondary)"
                 }`}
             >
               {option.label}

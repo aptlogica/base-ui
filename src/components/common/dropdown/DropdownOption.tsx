@@ -25,11 +25,11 @@ export function DropdownOption<T>({
     transition-all duration-150 ease-in-out relative
   `;
 
-  const selectedClass = isSelected ? 'bg-[var(--color-bg-brand-primary)] text-black' : 'text-[var(--color-text-primary)]';
+  const selectedClass = isSelected ? 'bg-(--color-bg-brand-primary) text-black' : 'text-(--color-text-primary)';
   const stateClasses = `
-    ${isFocused ? 'bg-[var(--color-bg-brand-primary)] border-l-4 border-l-gray-400' : ''}
+    ${isFocused ? 'bg-(--color-bg-brand-primary) border-l-4 border-l-gray-400' : ''}
     ${selectedClass}
-    ${!isSelected && !isFocused ? 'hover:bg-[var(--color-bg-brand-primary)] hover:text-black' : ''}
+    ${!isSelected && !isFocused ? 'hover:bg-(--color-bg-brand-primary) hover:text-black' : ''}
     ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}
   `;
 
@@ -44,7 +44,7 @@ export function DropdownOption<T>({
   const renderIcon = () => {
     if (!option.icon) return null;
     return (
-      <div className="flex-shrink-0 w-4 h-4 text-gray-500">
+      <div className="shrink-0 w-4 h-4 text-gray-500">
         {option.icon}
       </div>
     );
@@ -74,14 +74,14 @@ export function DropdownOption<T>({
     if (multiple) {
       return (
         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-          ? 'bg-[var(--color-bg-brand-primary)] border-[var(--color-bg-brand-primary)]'
+          ? 'bg-(--color-bg-brand-primary) border-(--color-bg-brand-primary)'
           : 'border bg-black'
           }`}>
           <Check className="w-3 h-3 text-black" />
         </div>
       );
     }
-    return <Check className="w-4 h-4 text-[var(--color-bg-brand-primary)]" />;
+    return <Check className="w-4 h-4 text-(--color-bg-brand-primary)" />;
   };
 
   return (
@@ -93,7 +93,7 @@ export function DropdownOption<T>({
       aria-disabled={option.disabled}
       tabIndex={option.disabled ? -1 : 0}
     >
-      <div className="flex items-center space-x-3 flex-1 min-w-0">
+      <div className="flex items-center gap-x-3 flex-1 min-w-0">
         {renderIcon()}
         <div className="flex-1 min-w-0">
           <div className={`font-medium truncate ${isSelected && !multiple ? 'text-black' : ''}`}>
@@ -104,13 +104,13 @@ export function DropdownOption<T>({
       </div>
 
       {option.rightLabel && (
-        <div className="flex-shrink-0 ml-2 text-sm text-gray-500">
+        <div className="shrink-0 ml-2 text-sm text-gray-500">
           {option.rightLabel}
         </div>
       )}
 
       {isSelected && (
-        <div className="flex-shrink-0 ml-2">
+        <div className="shrink-0 ml-2">
           {renderSelectedIndicator()}
         </div>
       )}

@@ -103,11 +103,11 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-y-6">
       {/* Card 1: Organization Information */}
       <div className="bg-card rounded-xl border p-6">
         <h2 className="text-lg font-semibold text-primary mb-4">Organization Information</h2>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-y-4">
           <div>
             <label htmlFor='company-name' className="block text-sm font-medium text-primary mb-2">
               Company Name <span className="field-component-required">*</span>
@@ -145,7 +145,7 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
           <button
             onClick={handleSave}
             disabled={updateOrganizationMutation.isPending || !hasChanges || !organizationName.trim()}
-            className="px-6 py-2.5 bg-[var(--color-brand-600)] text-black rounded-xl hover:bg-[var(--color-brand-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="px-6 py-2.5 bg-brand-600 text-black rounded-xl hover:bg-(--color-brand-700) transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {updateOrganizationMutation.isPending ? 'Saving...' : 'Save changes'}
           </button>
@@ -168,10 +168,10 @@ export const TenantSettingsTab: React.FC<TenantSettingsTabProps> = ({ workspaceI
                 <img
                   src={owner.logo}
                   alt={owner.name}
-                  className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                  className="w-12 h-12 rounded-full object-cover shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0">
                   {owner.initials}
                 </div>
               )}

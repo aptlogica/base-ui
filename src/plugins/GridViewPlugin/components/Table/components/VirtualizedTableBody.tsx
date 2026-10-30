@@ -284,7 +284,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
     return (
       <div
         key={`group-cell-${groupId}-${columnIdentity}-${columnIndex}`}
-        className="border-r border-b border-border/30 flex items-center px-3 min-w-0"
+        className="border-r border-b border-border flex items-center px-3 min-w-0"
         style={{
           position: isPinned ? 'sticky' : 'relative',
           left: isPinned ? `${pinnedColumnOffsets[columnIdentity] ?? 48}px` : undefined,
@@ -295,7 +295,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         {isGroupedColumn && (
           <div className="flex items-center gap-1.5 min-w-0 w-full" style={{ paddingLeft: `${8 + level * 20}px` }}>
             <div
-              className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
+              className="shrink-0 flex items-center justify-center w-5 h-5 rounded-md transition-all duration-200"
               style={{
                 backgroundColor: groupToggleBackgroundColor
               }}
@@ -383,7 +383,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
         aria-label={`Toggle group ${columnTitle}: ${group.groupValue}`}
       >
         <div
-          className="flex-shrink-0 border-r border-b border-border/30"
+          className="shrink-0 border-r border-b border-border"
           style={{
             position: 'sticky',
             left: 0,
@@ -406,7 +406,7 @@ export const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
           lastPinnedColumnId,
         }))}
 
-        <div className="border-b border-border/30" />
+        <div className="border-b border-border" />
       </div>
       </div>
     );
