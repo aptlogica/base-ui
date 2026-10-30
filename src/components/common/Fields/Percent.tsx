@@ -28,40 +28,20 @@ interface PercentProps {
 }
 
 // Utility functions
-const getInitialValue = (value: number | null, defaultValue?: string | number): string => {
+const getInitialValue = (value: number | null): string => {
   if (value !== null && value !== undefined) return value.toString();
-  if (defaultValue !== null && defaultValue !== undefined) {
-    if (typeof defaultValue === 'number') {
-      return defaultValue.toString();
-    }
-    if (typeof defaultValue === 'string' && defaultValue.trim()) {
-      return defaultValue.trim();
-    }
-  }
   return '';
 };
 
-const getDisplayValue = (val: number | null, defaultVal: string | number | undefined): string => {
+const getDisplayValue = (val: number | null): string => {
   if (val !== null && val !== undefined) {
     return val.toString();
   }
-  if (defaultVal !== null && defaultVal !== undefined) {
-    return defaultVal.toString();
-  }
   return '';
 };
 
-const getPercentValue = (value: number | null, defaultValue?: string | number): number => {
+const getPercentValue = (value: number | null): number => {
   if (typeof value === 'number' && !Number.isNaN(value)) return value;
-  if (defaultValue !== null && defaultValue !== undefined) {
-    if (typeof defaultValue === 'number') {
-      return defaultValue;
-    }
-    if (typeof defaultValue === 'string' && defaultValue.trim()) {
-      const parsed = Number.parseFloat(defaultValue);
-      if (!Number.isNaN(parsed)) return parsed;
-    }
-  }
   return 0;
 };
 
@@ -106,7 +86,6 @@ const getDisplayClassName = (localValue: string, disabled: boolean, readOnly: bo
 
 interface UsePercentStateProps {
   value: number | null;
-  defaultValue?: string | number;
   onChange: (value: number | null) => void;
   required: boolean;
   disabled: boolean;
@@ -116,26 +95,25 @@ interface UsePercentStateProps {
 
 const usePercentState = ({
   value,
-  defaultValue,
   onChange,
   required,
   disabled,
   allowEdit,
   readOnly,
 }: UsePercentStateProps) => {
-  const [localValue, setLocalValue] = useState(() => getInitialValue(value, defaultValue));
+  const [localValue, setLocalValue] = useState(() => getInitialValue(value));
   const [isEditing, setIsEditing] = useState(false);
   const [showError, setShowError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevValueRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const displayValue = getDisplayValue(value, defaultValue);
+    const displayValue = getDisplayValue(value);
     setLocalValue(displayValue);
 
     const parsed = Number.parseFloat(displayValue);
     prevValueRef.current = Number.isNaN(parsed) ? null : parsed;
-  }, [value, defaultValue]);
+  }, [value]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -239,7 +217,7 @@ export const Percent: React.FC<PercentProps> = ({
   helperText,
   className = '',
 }) => {
-  const { displayAsProgress = false, defaultValue, progressColor = 'blue' } = config;
+  const { displayAsProgress = false, progressColor = 'blue' } = config;
 
   const {
     localValue,
@@ -254,7 +232,6 @@ export const Percent: React.FC<PercentProps> = ({
     handleKeyDown,
   } = usePercentState({
     value,
-    defaultValue,
     onChange,
     required,
     disabled,
@@ -269,7 +246,7 @@ export const Percent: React.FC<PercentProps> = ({
     }
   };
 
-  const percentValue = getPercentValue(value, defaultValue);
+  const percentValue = getPercentValue(value);
   // For progress display: clamp to 0-100 (values >100 show full bar, negative values show empty bar)
   const progress = Math.max(0, Math.min(100, percentValue));
   const inputClassName = getInputClassName(error, showError, disabled, readOnly);

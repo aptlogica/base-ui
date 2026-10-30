@@ -427,7 +427,7 @@ describe('MultiSelect Component', () => {
   });
 
   describe('Config Props', () => {
-    it('should use defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       render(
         <MultiSelect
           value={[]}
@@ -436,8 +436,8 @@ describe('MultiSelect Component', () => {
           config={{ defaultValue: ['Option 1', 'Option 2'] }}
         />
       );
-      expect(screen.getByText('Option 1')).toBeInTheDocument();
-      expect(screen.getByText('Option 2')).toBeInTheDocument();
+      expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
+      expect(screen.queryByText('Option 2')).not.toBeInTheDocument();
     });
 
     it('should use options from config', async () => {

@@ -230,7 +230,7 @@ describe("SingleLineText Component", () => {
   });
 
   describe("Config behavior", () => {
-    it("should use defaultValue from config", () => {
+    it("should not show defaultValue from config for an empty cell", () => {
       render(
         <SingleLineText
           onChange={mockOnChange}
@@ -238,7 +238,7 @@ describe("SingleLineText Component", () => {
         />
       );
 
-      expect(screen.getByText("Default")).toBeInTheDocument();
+      expect(screen.queryByText("Default")).not.toBeInTheDocument();
     });
 
     it("should use placeholder from config", () => {

@@ -189,7 +189,7 @@ describe('User Component', () => {
       expect(document.body).toBeInTheDocument();
     });
 
-    it('should use defaultUser when value is empty', () => {
+    it('should not show defaultUser when value is empty', () => {
       renderWithProviders(
         <User
           value={null}
@@ -198,7 +198,7 @@ describe('User Component', () => {
         />
       );
 
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
     });
 
     it('should show loading placeholder when users are loading', () => {

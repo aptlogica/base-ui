@@ -232,7 +232,32 @@ describe('NewColumnModal', () => {
     it('blocks saving a default on a column of a unique key whose columns all have defaults', () => {
       const onSave = renderEdit({ defaultValue: 'abc' }, { defaultValue: 'x' });
       expect(onSave).not.toHaveBeenCalled();
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('This column has a UNIQUE constraint'));
+      expect(screen.getByRole('alert')).toHaveTextContent('This column has a UNIQUE constraint');
+    });
+
+    it('blocks saving a default on a column of a check constraint', () => {
+      mockUseTableConstraints.mockImplementation((_tableId: string, type: string) => ({ data: type === 'check' ? [KEY] : [] }));
+      const onSave = renderEdit({ defaultValue: 'abc' }, { defaultValue: 'x' });
+      expect(onSave).not.toHaveBeenCalled();
+      expect(screen.getByRole('alert')).toHaveTextContent('This column has a CHECK constraint. Its default value may fail the check rule.');
+    });
+
+    it('shows the server message and frees the button when the save is rejected', async () => {
+      const onSave = vi.fn().mockRejectedValue({ code: 'TCN_1014', message: 'Rejected by the server' });
+      render(
+        <NewColumnModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={onSave}
+          currentTableId="t1"
+          fields={[{ id: 'c1', title: 'Code', meta: {} }]}
+          initialValues={{ id: 'c1', title: 'Code', type: 'text', meta: { defaultValue: 'abc' } }}
+        />
+      );
+      mockUseTableConstraints.mockReturnValue({ data: [] });
+      fireEvent.click(screen.getByText('Save Field'));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Rejected by the server');
+      expect(screen.getByText('Save Field')).toBeInTheDocument();
     });
 
     it('saves when another column of the key has no default', () => {

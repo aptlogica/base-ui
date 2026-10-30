@@ -38,17 +38,17 @@ export const Email: React.FC<EmailProps> = ({
   helperText,
   config = {},
 }) => {
-  const { emailValid = true, defaultValue = "" } = config;
+  const { emailValid = true } = config;
 
-  const [localValue, setLocalValue] = useState(value || defaultValue || "");
-  const [committedValue, setCommittedValue] = useState(value || defaultValue || "");
+  const [localValue, setLocalValue] = useState(value || "");
+  const [committedValue, setCommittedValue] = useState(value || "");
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const displayValue = value || defaultValue || "";
+    const displayValue = value || "";
     setLocalValue(displayValue);
     setCommittedValue(displayValue);
-  }, [value, defaultValue]);
+  }, [value]);
 
   // Exit edit mode if readOnly becomes true
   useEffect(() => {

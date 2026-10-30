@@ -65,18 +65,12 @@ export const User: React.FC<UserProps> = ({
   readOnly = false,
   isBorder = false
 }) => {
-  const { allowMultiple = false, defaultUser, defaultValue } = config;
+  const { allowMultiple = false } = config;
 
-  // Initialize with value, then defaultValue, then defaultUser, then null
+  // Initialize with the stored value only; defaults are applied by the database to new records
   const getInitialValue = () => {
     if (value !== null && value !== undefined) {
       return value;
-    }
-    if (defaultValue?.trim()) {
-      return defaultValue;
-    }
-    if (defaultUser?.trim()) {
-      return defaultUser;
     }
     return null;
   };
@@ -149,21 +143,17 @@ export const User: React.FC<UserProps> = ({
     }
   }, [readOnly, isOpen]);
 
-  // Update selected value when value or defaultValue changes
+  // Update selected value when value changes
   // Handle both array format and comma-separated string format (for allowMultiple)
   useEffect(() => {
     let processedValue: UserValue = null;
 
     if (value !== null && value !== undefined) {
       processedValue = processValueForMultiple(value, allowMultiple);
-    } else if (defaultValue?.trim()) {
-      processedValue = processValueForMultiple(defaultValue, allowMultiple);
-    } else if (defaultUser?.trim()) {
-      processedValue = defaultUser;
     }
 
     setSelectedValue(processedValue);
-  }, [value, defaultValue, defaultUser, allowMultiple]);
+  }, [value, allowMultiple]);
 
   // Transform ALL tenant users to UserOption format (for displaying selected users, including deactivated)
   const allUsers: UserOption[] = useMemo(() => {

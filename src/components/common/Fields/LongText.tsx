@@ -75,7 +75,7 @@ export const LongText: React.FC<LongTextProps> = ({
   inline = false,
   config = {}
 }) => {
-  const { defaultValue = '', placeholder: configPlaceholder = placeholder, richText: richTextConfig = false, hideMaximizeButton = false } = config;
+  const { placeholder: configPlaceholder = placeholder, richText: richTextConfig = false, hideMaximizeButton = false } = config;
   const richText = richTextConfig;
   // Last HTML emitted by the inline editor, so echoing it back through `value` doesn't reset the cursor
   const lastInlineValueRef = useRef<string | null>(null);
@@ -154,8 +154,7 @@ export const LongText: React.FC<LongTextProps> = ({
   };
 
   useEffect(() => {
-    // Use default value if value is empty/undefined/null and default value is provided
-    let displayValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+    let displayValue = value ?? '';
 
     // For rich text, show plain text preview (strip HTML tags)
     if (richText && displayValue) {
@@ -163,7 +162,7 @@ export const LongText: React.FC<LongTextProps> = ({
     }
 
     setLocalValue(displayValue);
-  }, [value, defaultValue, richText]);
+  }, [value, richText]);
 
   // Helper to ensure all links have title attributes and are properly configured
   const enhanceLinks = (container: HTMLElement) => {
@@ -234,7 +233,7 @@ export const LongText: React.FC<LongTextProps> = ({
   // Load the value into the inline editor, unless it is the value the editor just emitted
   useEffect(() => {
     if (!inline || !richTextEditorRef.current) return;
-    const currentValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+    const currentValue = value ?? '';
     if (currentValue === lastInlineValueRef.current) return;
     const safeValue = sanitizeRichTextHtml(toEditorHtml(currentValue));
     if (richTextEditorRef.current.innerHTML !== safeValue) {
@@ -242,7 +241,7 @@ export const LongText: React.FC<LongTextProps> = ({
       enhanceLinks(richTextEditorRef.current);
     }
     lastInlineValueRef.current = currentValue;
-  }, [inline, value, defaultValue]);
+  }, [inline, value]);
 
   const validate = (val: string) => {
     // For rich text, validate the text content length (without HTML tags)
@@ -349,7 +348,7 @@ export const LongText: React.FC<LongTextProps> = ({
   };
 
   // Plain (non rich text) inline editor
-  const inlineTextValue = (value !== null && value !== undefined && value !== '') ? value : (defaultValue || '');
+  const inlineTextValue = value ?? '';
 
   const handleInlineTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;

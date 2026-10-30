@@ -199,7 +199,7 @@ describe('Checkbox Component', () => {
       expect(container.querySelector('.w-5')).toBeInTheDocument();
     });
 
-    it('should normalize string values using defaultValue', () => {
+    it('should treat a false-like string as unchecked, ignoring defaultValue', () => {
       const { container } = render(
         <Checkbox
           value={('0' as unknown) as boolean}
@@ -211,7 +211,7 @@ describe('Checkbox Component', () => {
 
       fireEvent.click(button!);
 
-      expect(mockOnChange).toHaveBeenCalledWith(false);
+      expect(mockOnChange).toHaveBeenCalledWith(true);
     });
   });
 

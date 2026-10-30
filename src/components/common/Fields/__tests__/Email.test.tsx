@@ -146,7 +146,7 @@ describe('Email Component', () => {
   });
 
   describe('Config', () => {
-    it('should use defaultValue from config', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       render(
         <Email
           value=""
@@ -154,7 +154,7 @@ describe('Email Component', () => {
           config={{ defaultValue: 'default@example.com' }}
         />
       );
-      expect(screen.getByText('default@example.com')).toBeInTheDocument();
+      expect(screen.queryByText('default@example.com')).not.toBeInTheDocument();
     });
   });
 

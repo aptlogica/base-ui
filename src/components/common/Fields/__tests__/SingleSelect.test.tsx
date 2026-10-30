@@ -667,7 +667,7 @@ describe('SingleSelect Component', () => {
   });
 
   describe('Config Props', () => {
-    it('should use defaultValue from config when value is empty', () => {
+    it('should not show defaultValue from config for an empty cell', () => {
       render(
         <SingleSelect
           value=""
@@ -676,7 +676,7 @@ describe('SingleSelect Component', () => {
           config={{ defaultValue: 'Option 2' }}
         />
       );
-      expect(screen.getByText('Option 2')).toBeInTheDocument();
+      expect(screen.queryByText('Option 2')).not.toBeInTheDocument();
     });
 
     it('should prioritize value over defaultValue', () => {

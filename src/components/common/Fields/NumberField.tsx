@@ -40,15 +40,12 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   readOnly = false,
   helperText,
 }) => {
-  const { defaultValue = null, showThousands = false } = config;
+  const { showThousands = false } = config;
 
   const MAX_DIGITS = 10; // Maximum 10 digits allowed
 
   const getInitialValue = () => {
     if (value !== null && value !== undefined && value !== "") return value;
-    if (defaultValue !== null && defaultValue !== undefined) {
-      return defaultValue.toString();
-    }
     return "";
   };
 
@@ -60,11 +57,9 @@ export const NumberField: React.FC<NumberFieldProps> = ({
     let displayValue = "";
     if (value !== null && value !== undefined && value !== "") {
       displayValue = value;
-    } else if (defaultValue !== null && defaultValue !== undefined) {
-      displayValue = defaultValue.toString();
     }
     setLocalValue(displayValue);
-  }, [value, defaultValue, showThousands]);
+  }, [value, showThousands]);
 
   // Exit edit mode if readOnly becomes true
   useEffect(() => {

@@ -281,7 +281,7 @@ describe('Percent Component', () => {
             });
         });
 
-        it('should use defaultValue if value is null', () => {
+        it('should not use defaultValue if value is null', () => {
             render(
                 <Percent
                     value={null}
@@ -289,7 +289,7 @@ describe('Percent Component', () => {
                     config={{ defaultValue: 42 }}
                 />
             );
-            expect(screen.getByText('42%')).toBeInTheDocument();
+            expect(screen.queryByText('42%')).not.toBeInTheDocument();
         });
     });
 

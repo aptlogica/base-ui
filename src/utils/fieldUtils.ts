@@ -132,14 +132,14 @@ export const mapFieldConfig = (field: BaseField) => {
       meta = {
         ...meta,
         options: field.options || meta.options || [],
-        defaultValue: field.multiDefault || meta.multiDefault || meta.defaultValue || [],
+        defaultValue: field.multiDefault ?? meta.multiDefault ?? meta.defaultValue ?? [],
       };
       break;
     case 'select':
       meta = {
         ...meta,
         options: field.options || meta.options || [],
-        defaultValue: field.singleDefault || meta.singleDefault || meta.defaultValue || '',
+        defaultValue: field.singleDefault ?? meta.singleDefault ?? meta.defaultValue ?? '',
       };
       break;
     default:

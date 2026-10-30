@@ -78,7 +78,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   color = 'green',
   config = {}
 }) => {
-  const { defaultValue = false, icon: configIcon = icon, color: configColor = color } = config;
+  const { icon: configIcon = icon, color: configColor = color } = config;
 
   const getColorClass = (color: string) => {
     const colorMap: { [key: string]: string } = {
@@ -140,15 +140,15 @@ export const Checkbox: React.FC<CheckboxProps> = ({
 
   // Normalize value to boolean - handles old text values when field type was changed
   const normalizeToBoolean = (val: any): boolean => {
-    if (val === null || val === undefined) return defaultValue;
+    if (val === null || val === undefined) return false;
     if (typeof val === 'boolean') return val;
     if (typeof val === 'string') {
-      // Only accept explicit boolean strings, treat everything else as invalid (use default)
+      // Only accept explicit boolean strings, treat everything else as invalid (unchecked)
       const trimmed = val.trim().toLowerCase();
       if (trimmed === 'true' || trimmed === '1') return true;
-      if (trimmed === 'false' || trimmed === '0' || trimmed === '' || trimmed === 'null') return defaultValue;
-      // For any other string (like old text values "xyz"), treat as invalid and use default
-      return defaultValue;
+      if (trimmed === 'false' || trimmed === '0' || trimmed === '' || trimmed === 'null') return false;
+      // For any other string (like old text values "xyz"), treat as invalid (unchecked)
+      return false;
     }
     if (typeof val === 'number') return val !== 0;
     // For other types, convert to boolean
