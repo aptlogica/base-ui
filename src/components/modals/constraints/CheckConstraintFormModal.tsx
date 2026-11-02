@@ -493,8 +493,8 @@ const CheckConstraintFormModal: React.FC<CheckConstraintFormModalProps> = ({ tab
           {body}
           {error && (
             <div className="px-5 pb-5">
-              <div className="text-sm flex items-center gap-1 text-red-600" role="alert">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="text-sm flex items-start gap-2 text-red-600" role="alert">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="wrap-break-word">{error}</span>
               </div>
             </div>

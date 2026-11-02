@@ -312,42 +312,50 @@ export function AdvancedDropdown<T extends string | number>({
     };
   }, [dropdownPosition]);
 
-  // Keep portal menu positioned on open/scroll/resize.
-  useEffect(() => {
-    if (!isOpen || !portal) return;
+  // Keep portal menu positioned on open/scroll/resize. A layout effect positions the menu before the
+  // first paint, so it never shows at a wrong spot and then jumps.
+  useLayoutEffect(() => {
+    if (!portal) return;
+    if (!isOpen) {
+      // Forget the last position so the next open does not flash it
+      setMenuStyle(null);
+      return;
+    }
 
-    const update = () => setMenuStyle(computePortalStyle());
+    const update = () => {
+      const base = computePortalStyle();
+      if (base && dropdownPosition === 'above' && menuRef.current && triggerRef.current) {
+        const menuH = menuRef.current.offsetHeight || 0;
+        base.top = Math.max(8, triggerRef.current.getBoundingClientRect().top - menuH - 4);
+      }
+      // Skip identical positions so the frame loop below does not re-render needlessly
+      setMenuStyle(prev =>
+        prev && base && prev.top === base.top && prev.left === base.left && prev.width === base.width ? prev : base
+      );
+    };
     update();
+
+    // A modal can still be animating (moving/scaling) when the menu opens, so the trigger's rect
+    // measured above is stale. Follow the trigger on every frame while the menu is open.
+    let frame = requestAnimationFrame(function track() {
+      update();
+      frame = requestAnimationFrame(track);
+    });
 
     // Capture scroll from any ancestor scroller.
     window.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
     };
-  }, [isOpen, portal, computePortalStyle]);
-
-  // After menu mounts, adjust "above" positioning based on measured height.
-  useLayoutEffect(() => {
-    if (!isOpen || !portal) return;
-    if (dropdownPosition !== 'above') return;
-    if (!menuRef.current || !triggerRef.current) return;
-
-    const rect = triggerRef.current.getBoundingClientRect();
-    const menuH = menuRef.current.offsetHeight || 0;
-    const top = Math.max(8, rect.top - menuH - 4);
-
-    setMenuStyle((prev) => {
-      const base = prev ?? computePortalStyle();
-      return base ? { ...base, top } : null;
-    });
   }, [isOpen, portal, dropdownPosition, computePortalStyle]);
 
   const menuNode = isOpen ? (
     <div
       ref={menuRef}
-      className={`bg-background border rounded-xl shadow-lg transition-all duration-200 ${portal ? '' : 'absolute z-40 w-full'} ${dropdownPosition === 'above'
+      className={`bg-background border rounded-xl shadow-lg ${portal ? '' : 'transition-all duration-200 absolute z-40 w-full'} ${dropdownPosition === 'above'
         ? portal ? '' : 'bottom-full mb-1' : portal ? '' : 'top-full mt-1'}`} //NOSONAR
       style={portal ? (menuStyle ?? undefined) : undefined}
     >

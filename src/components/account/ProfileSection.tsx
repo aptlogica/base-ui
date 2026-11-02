@@ -15,6 +15,8 @@ import { useFooterButtons } from './AccountSettings';
 import { DateField } from '../common/Fields/DateField';
 import { validateDOB, getYesterdayISO, convertDateToFormat } from '../../utils/dateValidation';
 
+const NAME_MAX_LENGTH = 100;
+
 type ProfileFormData = {
   first_name?: string;
   last_name?: string;
@@ -587,11 +589,17 @@ export const ProfileSection: React.FC = () => {
               <input
                 type="text"
                 value={isEditing ? (formData.first_name || '') : (userProfile.first_name || '')}
-                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                onChange={(e) => handleInputChange('first_name', e.target.value.slice(0, NAME_MAX_LENGTH))}
+                maxLength={NAME_MAX_LENGTH}
                 disabled={isEditing === false}
                 className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder="Enter first name"
               />
+              {isEditing && (
+                <span className="mt-1 block text-xs text-gray-500 text-right">
+                  {(formData.first_name || '').length}/{NAME_MAX_LENGTH}
+                </span>
+              )}
             </label>
           </div>
 
@@ -602,11 +610,17 @@ export const ProfileSection: React.FC = () => {
               <input
                 type="text"
                 value={isEditing ? (formData.last_name || '') : (userProfile.last_name || '')}
-                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                onChange={(e) => handleInputChange('last_name', e.target.value.slice(0, NAME_MAX_LENGTH))}
+                maxLength={NAME_MAX_LENGTH}
                 disabled={isEditing === false}
                 className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder="Enter last name"
               />
+              {isEditing && (
+                <span className="mt-1 block text-xs text-gray-500 text-right">
+                  {(formData.last_name || '').length}/{NAME_MAX_LENGTH}
+                </span>
+              )}
             </label>
           </div>
         </div>
@@ -618,11 +632,17 @@ export const ProfileSection: React.FC = () => {
             <input
               type="text"
               value={isEditing ? (formData.display_name || '') : (userProfile.display_name || '')}
-              onChange={(e) => handleInputChange('display_name', e.target.value)}
+              onChange={(e) => handleInputChange('display_name', e.target.value.slice(0, NAME_MAX_LENGTH))}
+              maxLength={NAME_MAX_LENGTH}
               disabled={isEditing === false}
               className="w-full px-4 py-3 border rounded-xl bg-alpha-white focus:outline-none focus:ring-1 focus:ring-brand-600 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               placeholder="Enter display name"
             />
+            {isEditing && (
+              <span className="mt-1 block text-xs text-gray-500 text-right">
+                {(formData.display_name || '').length}/{NAME_MAX_LENGTH}
+              </span>
+            )}
           </label>
         </div>
 
