@@ -1,0 +1,798 @@
+// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
+
+// Content of the workspace API docs page. Every example uses the same sample data: a base "CRM" with a
+// table "Orders" whose "Customer" field links to "Customers", with a lookup of the customer's "Email"
+// (returned inside the link's objects). Responses and messages are what the
+// server returns (internal/platform in the backend).
+
+export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+
+export interface DocExample {
+  title: string;
+  description?: string;
+  method: HttpMethod;
+  // Relative to the base URL, with the query string
+  path: string;
+  headers?: Record<string, string>;
+  body?: unknown;
+  status: number;
+  responseHeaders?: Record<string, string>;
+  response: unknown;
+}
+
+export interface DocParam {
+  name: string;
+  in: 'path' | 'query' | 'body' | 'header';
+  description: string;
+}
+
+export interface DocEndpoint {
+  id: string;
+  title: string;
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  params?: DocParam[];
+  notes?: string[];
+  examples: DocExample[];
+}
+
+export interface DocGroup {
+  id: string;
+  title: string;
+  endpoints: DocEndpoint[];
+}
+
+export const apiDocsPath = (workspaceId: string) => `/workspace/${workspaceId}/developer/api-docs`;
+
+// Used in the examples until the workspace's API is turned on
+export const SAMPLE_BASE_PATH = '/api/v1/ws_8f3k2m9qx7';
+
+// ---- Sample data ----
+
+const REQUEST_ID = 'req_6f1c2a9e4b7d4c3a8e5f1b2d9c7a4e6f';
+
+const IDS = {
+  crm: 'bse_4f2a9c1e7b3d4a5f8e6c2b1d9a7f3e5c',
+  crm2: 'bse_6a1d3f5b8c2e4b7aa9d03e5f7b9c1d2e',
+  marketing: 'bse_9b8e7d6c5a4f4e3d9c1b0a9f8e7d6c5b',
+  orders: 'tbl_7c1e0a4f9b2d4e6f8a3c5d7e9f1b2c4d',
+  customers: 'tbl_2d4f6a8c0e1b4d3f9a7c9e0b2d4f6a8c',
+  name: 'fld_1a2b3c4d5e6f47a8b9c0d1e2f3a4b5c6',
+  status: 'fld_2b3c4d5e6f704819a0b1c2d3e4f5a6b7',
+  price: 'fld_3c4d5e6f7081492081b2c3d4e5f6a7b8',
+  paid: 'fld_4d5e6f7081924a3192c3d4e5f6a7b8c9',
+  orderDate: 'fld_5e6f708192a34b42a3d4e5f6a7b8c9d0',
+  customer: 'fld_6f708192a3b44c53b4e5f6a7b8c9d0e1',
+  // "Email" of the Customers table, looked up through Customer
+  customersEmail: 'fld_708192a3b4c54d6485f6a7b8c9d0e1f2',
+};
+
+const CURSOR_PAGE_2 = 'eyJ2IjoxLCJvIjoyLCJoIjoiOWM0MWUwN2IifQ';
+const CURSOR_KEYS = 'eyJ2IjoxLCJvIjoxLCJoIjoiNTJhZDhmMTAifQ';
+
+const ok = (data: unknown) => ({ data, error: null, meta: { request_id: REQUEST_ID } });
+
+const page = (data: unknown[], nextCursor: string | null, limit = 50) => ({
+  data,
+  error: null,
+  meta: { request_id: REQUEST_ID, next_cursor: nextCursor, has_more: nextCursor !== null, limit },
+});
+
+const fail = (code: string, message: string, details?: Record<string, unknown>[]) => ({
+  data: null,
+  error: details ? { code, message, details } : { code, message },
+  meta: { request_id: REQUEST_ID },
+});
+
+interface OrderFields {
+  Name: string;
+  Status: string | null;
+  Price: number | null;
+  Paid: boolean;
+  'Order date': string | null;
+  Customer: { id: string; Email: string | null }[];
+}
+
+const record = (id: string, fields: Partial<OrderFields>, createdAt: string, updatedAt = createdAt) => ({
+  id,
+  fields: {
+    Name: null,
+    Status: null,
+    Price: null,
+    Paid: false,
+    'Order date': null,
+    Customer: [],
+    ...fields,
+  },
+  created_at: createdAt,
+  updated_at: updatedAt,
+});
+
+const ORDER_1042 = record('rec_1042', {
+  Name: 'Order 1042', Status: 'Active', Price: 499, Paid: true, 'Order date': '2026-11-03',
+  Customer: [{ id: 'rec_12', Email: 'asha@example.com' }],
+}, '2026-11-03T10:15:00Z');
+
+const ORDER_1043 = record('rec_1043', {
+  Name: 'Order 1043', Status: 'Paused', Price: 120, Paid: false, 'Order date': '2026-11-04',
+  Customer: [{ id: 'rec_15', Email: 'ravi@example.com' }],
+}, '2026-11-04T08:40:00Z');
+
+const ORDER_1044 = record('rec_1044', { Name: 'Order 1044', Price: 75 }, '2026-11-04T09:05:00Z');
+
+const ORDERS_TABLE = {
+  id: IDS.orders,
+  name: 'Orders',
+  base_id: IDS.crm,
+  fields: [
+    { id: IDS.name, name: 'Name', type: 'text', read_only: false },
+    { id: IDS.status, name: 'Status', type: 'single_select', read_only: false, options: ['Active', 'Paused', 'Closed'] },
+    { id: IDS.price, name: 'Price', type: 'currency', read_only: false },
+    { id: IDS.paid, name: 'Paid', type: 'checkbox', read_only: false },
+    { id: IDS.orderDate, name: 'Order date', type: 'date', read_only: false },
+    {
+      id: IDS.customer,
+      name: 'Customer',
+      type: 'links',
+      read_only: false,
+      linked_table_id: IDS.customers,
+      multiple: false,
+      lookups: [{ key: 'Email', id: IDS.customersEmail, name: 'Email', type: 'email' }],
+    },
+  ],
+};
+
+const RECORDS = '/bases/CRM/tables/Orders/records';
+
+// ---- Endpoints ----
+
+const LIST_BASES: DocEndpoint = {
+  id: 'list-bases',
+  title: 'List bases',
+  method: 'GET',
+  path: '/bases',
+  summary: 'Returns every base in the workspace with its ID and name.',
+  examples: [
+    {
+      title: 'All bases in the workspace',
+      method: 'GET',
+      path: '/bases',
+      status: 200,
+      response: ok([
+        { id: IDS.crm, name: 'CRM' },
+        { id: IDS.marketing, name: 'Marketing' },
+      ]),
+    },
+    {
+      title: 'Wrong workspace ID, or the API is turned off',
+      description: 'Every endpoint answers this way when the ws_ part of the URL is wrong or the workspace API is off.',
+      method: 'GET',
+      path: '/bases',
+      status: 404,
+      response: fail('not_found', 'No workspace with ID "ws_8f3k2m9qx7", or its API is turned off.'),
+    },
+  ],
+};
+
+const LIST_TABLES: DocEndpoint = {
+  id: 'list-tables',
+  title: 'List tables',
+  method: 'GET',
+  path: '/bases/{base}/tables',
+  summary: 'Returns the tables of one base.',
+  params: [{ name: 'base', in: 'path', description: 'The base name (for example CRM) or its ID (bse_…).' }],
+  examples: [
+    {
+      title: 'Tables of a base, by name',
+      method: 'GET',
+      path: '/bases/CRM/tables',
+      status: 200,
+      response: ok([
+        { id: IDS.orders, name: 'Orders' },
+        { id: IDS.customers, name: 'Customers' },
+      ]),
+    },
+    {
+      title: 'Tables of a base, by ID',
+      description: 'IDs keep working after a rename, so apps that must not break should store them.',
+      method: 'GET',
+      path: `/bases/${IDS.crm}/tables`,
+      status: 200,
+      response: ok([
+        { id: IDS.orders, name: 'Orders' },
+        { id: IDS.customers, name: 'Customers' },
+      ]),
+    },
+    {
+      title: 'The base does not exist',
+      method: 'GET',
+      path: '/bases/Sales/tables',
+      status: 404,
+      response: fail('not_found', 'No base named "Sales".'),
+    },
+    {
+      title: 'Two bases have the same name',
+      description: 'Use one of the IDs listed in details instead of the name.',
+      method: 'GET',
+      path: '/bases/CRM/tables',
+      status: 409,
+      response: fail('ambiguous_name', '2 bases are named "CRM". Use one of their IDs instead.', [
+        { id: IDS.crm },
+        { id: IDS.crm2 },
+      ]),
+    },
+  ],
+};
+
+const GET_TABLE: DocEndpoint = {
+  id: 'get-table',
+  title: 'Get a table and its fields',
+  method: 'GET',
+  path: '/bases/{base}/tables/{table}',
+  summary:
+    'Returns the table with its fields: each field\'s ID, name, type and whether it is read-only. Select fields also list their options. Link fields list the table they link to, whether they hold several records, and in lookups the keys their objects carry; lookup fields are listed there, not as fields of their own.',
+  params: [
+    { name: 'base', in: 'path', description: 'Base name or ID (bse_…).' },
+    { name: 'table', in: 'path', description: 'Table name or ID (tbl_…).' },
+  ],
+  examples: [
+    {
+      title: 'A table with its fields',
+      method: 'GET',
+      path: '/bases/CRM/tables/Orders',
+      status: 200,
+      response: ok(ORDERS_TABLE),
+    },
+    {
+      title: 'A name with spaces or special characters',
+      description: 'Encode names in the URL: a space is %20 and a slash is %2F.',
+      method: 'GET',
+      path: '/bases/CRM/tables/Sales%20Team',
+      status: 200,
+      response: ok({ id: 'tbl_8e2c4a6f1b3d4f5a9c7e0b2d4f6a8c1e', name: 'Sales Team', base_id: IDS.crm, fields: [] }),
+    },
+    {
+      title: 'The table does not exist',
+      method: 'GET',
+      path: '/bases/CRM/tables/Order',
+      status: 404,
+      response: fail('not_found', 'No table named "Order".'),
+    },
+  ],
+};
+
+const LIST_RECORDS: DocEndpoint = {
+  id: 'list-records',
+  title: 'List records',
+  method: 'GET',
+  path: '/bases/{base}/tables/{table}/records',
+  summary:
+    'Returns one page of records. Without sort, records come oldest first. Use filter, sort and select to choose which records and fields come back.',
+  params: [
+    { name: 'limit', in: 'query', description: 'Records per page, 1 to 200. Default 50.' },
+    { name: 'cursor', in: 'query', description: 'meta.next_cursor from the previous page. Send the same filter and sort with it.' },
+    { name: 'filter[Field]', in: 'query', description: 'Only records where the field equals the value.' },
+    { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
+    { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price,Name. Also created_at, updated_at and id.' },
+    { name: 'select', in: 'query', description: 'Comma-separated fields to return. id, created_at and updated_at always come back.' },
+    { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
+  ],
+  notes: [
+    'Several filters are combined with AND: a record must match all of them.',
+    'Empty fields are null, or [] for lists (multi-select, links).',
+    'A link field is a list of objects, one per linked record: its id and the lookups through the link, keyed by the looked-up field\'s name. select=<lookup field> returns its link field with only that lookup.',
+    'In filter, sort and select, id, created_at and updated_at mean the record\'s own values. A field with one of these names, or with , [ or ] in its name, must be given by its ID.',
+  ],
+  examples: [
+    {
+      title: 'First page',
+      description: 'has_more is true, so there are more records. Pass next_cursor to get them.',
+      method: 'GET',
+      path: `${RECORDS}?limit=2`,
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], CURSOR_PAGE_2, 2),
+    },
+    {
+      title: 'Next page',
+      description: 'On the last page next_cursor is null and has_more is false.',
+      method: 'GET',
+      path: `${RECORDS}?limit=2&cursor=${CURSOR_PAGE_2}`,
+      status: 200,
+      response: page([ORDER_1044], null, 2),
+    },
+    {
+      title: 'Filter: a field equals a value',
+      method: 'GET',
+      path: `${RECORDS}?filter[Status]=Active`,
+      status: 200,
+      response: page([ORDER_1042], null),
+    },
+    {
+      title: 'Filter: several conditions, sorted',
+      description: 'Status is Active or Paused, and Price is 100 or more; the highest price first.',
+      method: 'GET',
+      path: `${RECORDS}?filter[Status][in]=Active,Paused&filter[Price][gte]=100&sort=-Price`,
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], null),
+    },
+    {
+      title: 'Filter: text contains (case-insensitive)',
+      method: 'GET',
+      path: `${RECORDS}?filter[Name][contains]=1043`,
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Filter: empty fields',
+      description: 'is_null=true finds records where the field is empty; is_null=false finds the rest.',
+      method: 'GET',
+      path: `${RECORDS}?filter[Status][is_null]=true`,
+      status: 200,
+      response: page([ORDER_1044], null),
+    },
+    {
+      title: 'Filter: a checkbox',
+      method: 'GET',
+      path: `${RECORDS}?filter[Paid]=true`,
+      status: 200,
+      response: page([ORDER_1042], null),
+    },
+    {
+      title: 'Filter: a date range',
+      description: 'A field name with a space is encoded as %20.',
+      method: 'GET',
+      path: `${RECORDS}?filter[Order%20date][gte]=2026-11-04&filter[Order%20date][lt]=2026-11-05`,
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Filter: records linked to a record',
+      description: 'Orders whose Customer is rec_12.',
+      method: 'GET',
+      path: `${RECORDS}?filter[Customer][contains]=rec_12`,
+      status: 200,
+      response: page([ORDER_1042], null),
+    },
+    {
+      title: 'Only some fields',
+      method: 'GET',
+      path: `${RECORDS}?select=Name,Price`,
+      status: 200,
+      response: page(
+        [ORDER_1042, ORDER_1043, ORDER_1044].map((r) => ({
+          ...r,
+          fields: { Name: r.fields.Name, Price: r.fields.Price },
+        })),
+        null
+      ),
+    },
+    {
+      title: 'Fields keyed by field ID',
+      description: 'Useful when field names may change.',
+      method: 'GET',
+      path: `${RECORDS}?keys=id&limit=1`,
+      status: 200,
+      response: page(
+        [{
+          ...ORDER_1042,
+          fields: {
+            [IDS.name]: 'Order 1042',
+            [IDS.status]: 'Active',
+            [IDS.price]: 499,
+            [IDS.paid]: true,
+            [IDS.orderDate]: '2026-11-03',
+            [IDS.customer]: [{ id: 'rec_12', [IDS.customersEmail]: 'asha@example.com' }],
+          },
+        }],
+        CURSOR_KEYS,
+        1
+      ),
+    },
+    {
+      title: 'An operator the field does not support',
+      method: 'GET',
+      path: `${RECORDS}?filter[Price][contains]=100`,
+      status: 400,
+      response: fail(
+        'bad_request',
+        'filter[Price][contains]: unknown operator. Use eq, neq, gt, gte, lt, lte, in, contains or is_null.'
+      ),
+    },
+    {
+      title: 'A cursor sent with a different filter',
+      method: 'GET',
+      path: `${RECORDS}?limit=2&cursor=${CURSOR_PAGE_2}&filter[Paid]=true`,
+      status: 400,
+      response: fail(
+        'bad_request',
+        'cursor was made for a different filter or sort. Send the same filter and sort as the first page, or start again without a cursor.'
+      ),
+    },
+  ],
+};
+
+const GET_RECORD: DocEndpoint = {
+  id: 'get-record',
+  title: 'Get a record',
+  method: 'GET',
+  path: '/bases/{base}/tables/{table}/records/{record}',
+  summary: 'Returns one record by its ID.',
+  params: [
+    { name: 'record', in: 'path', description: 'The record ID, e.g. rec_1042.' },
+    { name: 'keys', in: 'query', description: 'name (default) or id.' },
+  ],
+  examples: [
+    {
+      title: 'One record',
+      method: 'GET',
+      path: `${RECORDS}/rec_1042`,
+      status: 200,
+      response: ok(ORDER_1042),
+    },
+    {
+      title: 'The record does not exist',
+      method: 'GET',
+      path: `${RECORDS}/rec_9999`,
+      status: 404,
+      response: fail('not_found', 'No record with ID "rec_9999".'),
+    },
+  ],
+};
+
+const CREATE_RECORDS: DocEndpoint = {
+  id: 'create-records',
+  title: 'Create records',
+  method: 'POST',
+  path: '/bases/{base}/tables/{table}/records',
+  summary:
+    'Send {"fields": {...}} to create one record, or {"records": [{"fields": {...}}, ...]} to create up to 100 at once. Returns the created records with 201.',
+  params: [
+    { name: 'fields', in: 'body', description: 'Field values by name or ID. Fields you leave out stay empty.' },
+    { name: 'records', in: 'body', description: 'For many records: an array of {"fields": {...}}, at most 100.' },
+    { name: 'Idempotency-Key', in: 'header', description: 'Optional. Makes a retry safe; see Safe retries.' },
+  ],
+  notes: [
+    'All or nothing: if any record has a problem, nothing is saved and error.details lists every problem, with the record\'s index for bulk requests.',
+    'Unknown fields and read-only fields are rejected, not ignored, so typos show up.',
+    'Link fields take an array of record IDs and can be set only when creating one record.',
+  ],
+  examples: [
+    {
+      title: 'Create one record',
+      method: 'POST',
+      path: RECORDS,
+      body: {
+        fields: { Name: 'Order 1045', Status: 'Active', Price: 250, Paid: false, 'Order date': '2026-11-04', Customer: ['rec_12'] },
+      },
+      status: 201,
+      response: ok(record('rec_1045', {
+        Name: 'Order 1045', Status: 'Active', Price: 250, Paid: false, 'Order date': '2026-11-04',
+        Customer: [{ id: 'rec_12', Email: 'asha@example.com' }],
+      }, '2026-11-04T09:30:00Z')),
+    },
+    {
+      title: 'Create many records',
+      method: 'POST',
+      path: RECORDS,
+      body: {
+        records: [
+          { fields: { Name: 'Order 1046', Price: 90, Paid: false } },
+          { fields: { Name: 'Order 1047', Status: 'Paused', Price: 140, Paid: true } },
+        ],
+      },
+      status: 201,
+      response: ok([
+        record('rec_1046', { Name: 'Order 1046', Price: 90, Paid: false }, '2026-11-04T09:31:00Z'),
+        record('rec_1047', { Name: 'Order 1047', Status: 'Paused', Price: 140, Paid: true }, '2026-11-04T09:31:00Z'),
+      ]),
+    },
+    {
+      title: 'Invalid values',
+      description: 'Each problem is listed; nothing is saved.',
+      method: 'POST',
+      path: RECORDS,
+      body: { fields: { Status: 'Done', Price: 'cheap', Colour: 'Red' } },
+      status: 422,
+      response: fail('validation_failed', 'Some fields have invalid values. Nothing was saved.', [
+        { field: 'Colour', issue: 'unknown field' },
+        { field: 'Price', issue: 'must be a number' },
+        { field: 'Status', issue: '"Done" is not one of the field\'s options' },
+      ]),
+    },
+    {
+      title: 'A problem in one record of many',
+      description: 'index is the record\'s position in the records array, starting at 0.',
+      method: 'POST',
+      path: RECORDS,
+      body: {
+        records: [
+          { fields: { Name: 'Order 1048' } },
+          { fields: { Name: 'Order 1049', Paid: 'yes', Customer: ['rec_12'] } },
+        ],
+      },
+      status: 422,
+      response: fail('validation_failed', 'Some fields have invalid values. Nothing was saved.', [
+        { index: 1, field: 'Customer', issue: 'link fields can only be set when writing one record' },
+        { index: 1, field: 'Paid', issue: 'must be true or false' },
+      ]),
+    },
+    {
+      title: 'A link to a record that does not exist',
+      method: 'POST',
+      path: RECORDS,
+      body: { fields: { Name: 'Order 1050', Customer: ['rec_999'] } },
+      status: 422,
+      response: fail('validation_failed', 'Some fields have invalid values. Nothing was saved.', [
+        { field: 'Customer', id: 'rec_999', issue: 'no record with this ID in the linked table' },
+      ]),
+    },
+    {
+      title: 'Too many records in one request',
+      description: 'The request body is shortened here; it had 101 records.',
+      method: 'POST',
+      path: RECORDS,
+      body: { records: ['… 101 records …'] },
+      status: 413,
+      response: fail('payload_too_large', 'At most 100 records per request; this one has 101.'),
+    },
+  ],
+};
+
+const UPDATE_RECORDS: DocEndpoint = {
+  id: 'update-records',
+  title: 'Update records',
+  method: 'PATCH',
+  path: '/bases/{base}/tables/{table}/records/{record}',
+  summary:
+    'Changes only the fields you send; the others keep their values. PATCH one record at /records/{record}, or up to 100 at /records with {"records": [{"id": ..., "fields": {...}}]}. Returns the updated records.',
+  params: [
+    { name: 'record', in: 'path', description: 'The record ID, for a single update.' },
+    { name: 'fields', in: 'body', description: 'The values to change. null empties a field.' },
+    { name: 'records', in: 'body', description: 'For many records: an array of {"id", "fields"}, at most 100, each ID once.' },
+  ],
+  notes: [
+    'A link field takes record IDs (["rec_15"]) or the objects it returns ([{"id": "rec_15", ...}]). The new value replaces its links, and [] or null removes all links.',
+    'All or nothing: if any record is missing or invalid, no record is changed.',
+  ],
+  examples: [
+    {
+      title: 'Update one record',
+      method: 'PATCH',
+      path: `${RECORDS}/rec_1043`,
+      body: { fields: { Status: 'Active', Paid: true } },
+      status: 200,
+      response: ok({
+        ...ORDER_1043,
+        fields: { ...ORDER_1043.fields, Status: 'Active', Paid: true },
+        updated_at: '2026-11-04T10:02:00Z',
+      }),
+    },
+    {
+      title: 'Empty a field and change a link',
+      method: 'PATCH',
+      path: `${RECORDS}/rec_1042`,
+      body: { fields: { 'Order date': null, Customer: ['rec_15'] } },
+      status: 200,
+      response: ok({
+        ...ORDER_1042,
+        fields: { ...ORDER_1042.fields, 'Order date': null, Customer: [{ id: 'rec_15', Email: 'ravi@example.com' }] },
+        updated_at: '2026-11-04T10:05:00Z',
+      }),
+    },
+    {
+      title: 'Send a link value back as it was read',
+      description: 'Link objects are accepted as they come back; only their id is read.',
+      method: 'PATCH',
+      path: `${RECORDS}/rec_1043`,
+      body: { fields: { Customer: [{ id: 'rec_12', Email: 'asha@example.com' }] } },
+      status: 200,
+      response: ok({
+        ...ORDER_1043,
+        fields: { ...ORDER_1043.fields, Customer: [{ id: 'rec_12', Email: 'asha@example.com' }] },
+        updated_at: '2026-11-04T10:07:00Z',
+      }),
+    },
+    {
+      title: 'Update many records',
+      method: 'PATCH',
+      path: RECORDS,
+      body: {
+        records: [
+          { id: 'rec_1042', fields: { Price: 450 } },
+          { id: 'rec_1043', fields: { Price: 130 } },
+        ],
+      },
+      status: 200,
+      response: ok([
+        { ...ORDER_1042, fields: { ...ORDER_1042.fields, Price: 450 }, updated_at: '2026-11-04T10:10:00Z' },
+        { ...ORDER_1043, fields: { ...ORDER_1043.fields, Price: 130 }, updated_at: '2026-11-04T10:10:00Z' },
+      ]),
+    },
+    {
+      title: 'One of the records does not exist',
+      method: 'PATCH',
+      path: RECORDS,
+      body: {
+        records: [
+          { id: 'rec_1042', fields: { Price: 450 } },
+          { id: 'rec_9999', fields: { Price: 10 } },
+        ],
+      },
+      status: 404,
+      response: fail('not_found', 'Some records don\'t exist. Nothing was changed.', [
+        { index: 1, id: 'rec_9999', issue: 'no record with this ID' },
+      ]),
+    },
+  ],
+};
+
+const DELETE_RECORDS: DocEndpoint = {
+  id: 'delete-records',
+  title: 'Delete records',
+  method: 'DELETE',
+  path: '/bases/{base}/tables/{table}/records/{record}',
+  summary:
+    'Deletes one record with DELETE, or up to 100 with POST /records/delete and {"ids": [...]}. Deleting is permanent.',
+  params: [
+    { name: 'record', in: 'path', description: 'The record ID, for a single delete.' },
+    { name: 'ids', in: 'body', description: 'For many records (POST /records/delete): record IDs, at most 100.' },
+    { name: 'Idempotency-Key', in: 'header', description: 'Optional, on POST /records/delete.' },
+  ],
+  notes: ['All or nothing: if any ID does not exist, nothing is deleted.'],
+  examples: [
+    {
+      title: 'Delete one record',
+      method: 'DELETE',
+      path: `${RECORDS}/rec_1044`,
+      status: 200,
+      response: ok({ id: 'rec_1044', deleted: true }),
+    },
+    {
+      title: 'Delete many records',
+      method: 'POST',
+      path: `${RECORDS}/delete`,
+      body: { ids: ['rec_1046', 'rec_1047'] },
+      status: 200,
+      response: ok([
+        { id: 'rec_1046', deleted: true },
+        { id: 'rec_1047', deleted: true },
+      ]),
+    },
+    {
+      title: 'One of the records does not exist',
+      method: 'POST',
+      path: `${RECORDS}/delete`,
+      body: { ids: ['rec_1046', 'rec_9999'] },
+      status: 404,
+      response: fail('not_found', 'Some records don\'t exist. Nothing was deleted.', [
+        { id: 'rec_9999', issue: 'no record with this ID' },
+      ]),
+    },
+  ],
+};
+
+export const ENDPOINT_GROUPS: DocGroup[] = [
+  { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE] },
+  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
+];
+
+// ---- Reference ----
+
+export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string }[] = [
+  { method: 'GET', path: '/bases', does: 'List bases' },
+  { method: 'GET', path: '/bases/{base}/tables', does: 'List tables' },
+  { method: 'GET', path: '/bases/{base}/tables/{table}', does: 'Get a table and its fields' },
+  { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
+  { method: 'GET', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Get a record' },
+  { method: 'POST', path: '/bases/{base}/tables/{table}/records', does: 'Create one or many records' },
+  { method: 'PATCH', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Update a record' },
+  { method: 'PATCH', path: '/bases/{base}/tables/{table}/records', does: 'Update many records' },
+  { method: 'DELETE', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Delete a record' },
+  { method: 'POST', path: '/bases/{base}/tables/{table}/records/delete', does: 'Delete many records' },
+];
+
+export const ID_PREFIXES: { prefix: string; what: string; example: string }[] = [
+  { prefix: 'ws_', what: 'Workspace (part of the base URL)', example: 'ws_8f3k2m9qx7' },
+  { prefix: 'bse_', what: 'Base', example: IDS.crm },
+  { prefix: 'tbl_', what: 'Table', example: IDS.orders },
+  { prefix: 'fld_', what: 'Field', example: IDS.name },
+  { prefix: 'rec_', what: 'Record', example: 'rec_1042' },
+];
+
+const TEXT_FILTERS = 'eq, neq, gt, gte, lt, lte, in, contains, is_null';
+const VALUE_FILTERS = 'eq, neq, gt, gte, lt, lte, in, is_null';
+
+export const FIELD_VALUES: { type: string; write: string; example: string; filters: string }[] = [
+  { type: 'text, long_text', write: 'Text', example: '"Order 1042"', filters: TEXT_FILTERS },
+  { type: 'email', write: 'A valid email address', example: '"asha@example.com"', filters: TEXT_FILTERS },
+  { type: 'url', write: 'A web address', example: '"https://example.com"', filters: TEXT_FILTERS },
+  { type: 'phone_number', write: 'Digits, spaces and + ( ) - .', example: '"+91 98765 43210"', filters: TEXT_FILTERS },
+  { type: 'number', write: 'A whole number', example: '12', filters: VALUE_FILTERS },
+  { type: 'decimal, currency, percent', write: 'A number', example: '499.5', filters: VALUE_FILTERS },
+  { type: 'rating', write: 'A whole number from 0 to the field\'s maximum', example: '4', filters: VALUE_FILTERS },
+  { type: 'year', write: 'A whole number from 1 to 9999', example: '2026', filters: VALUE_FILTERS },
+  { type: 'duration', write: 'Whole minutes, 0 or more', example: '90', filters: VALUE_FILTERS },
+  { type: 'date', write: 'YYYY-MM-DD', example: '"2026-11-03"', filters: VALUE_FILTERS },
+  { type: 'date_time', write: 'RFC 3339 with a time zone; returned in UTC', example: '"2026-11-03T10:15:00Z"', filters: VALUE_FILTERS },
+  { type: 'time', write: 'HH:mm, 24-hour', example: '"10:15"', filters: TEXT_FILTERS },
+  { type: 'checkbox', write: 'true or false', example: 'true', filters: 'eq, neq, is_null' },
+  { type: 'single_select', write: 'The name of one of the field\'s options', example: '"Active"', filters: TEXT_FILTERS },
+  { type: 'multi_select', write: 'A list of option names', example: '["Urgent", "Gift"]', filters: 'contains (one option), is_null' },
+  { type: 'json', write: 'Any JSON value', example: '{"size": "M"}', filters: 'Can\'t be filtered' },
+  { type: 'uuid', write: 'A UUID (auto-generated UUID fields are read-only)', example: '"0b6f3c1e-…"', filters: TEXT_FILTERS },
+  { type: 'links', write: 'Record IDs, or the objects it returns (one-record writes only). Read back as objects: id plus the lookups through the link', example: '["rec_12"]', filters: 'contains (a record ID), is_null' },
+];
+
+export const READ_ONLY_VALUES: { type: string; read: string }[] = [
+  { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name' },
+  { type: 'formula', read: 'The computed value' },
+  { type: 'attachment', read: 'A list of {id, url, name, size, type}' },
+  { type: 'user', read: 'A user ID, or a list of user IDs' },
+  { type: 'created_time, last_modified_time', read: 'Date and time in UTC' },
+  { type: 'created_by, last_modified_by', read: 'A user ID' },
+];
+
+export const ERROR_CODES: { code: string; status: number; when: string }[] = [
+  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
+  { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
+  { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
+  { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running' },
+  { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request' },
+  { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key or failed check' },
+  { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
+  { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it' },
+];
+
+export const RESPONSE_EXAMPLES = {
+  one: ok({ id: 'rec_1042', fields: { Name: 'Order 1042' }, created_at: '2026-11-03T10:15:00Z', updated_at: '2026-11-03T10:15:00Z' }),
+  list: page([{ id: 'rec_1042', fields: { Name: 'Order 1042' }, created_at: '2026-11-03T10:15:00Z', updated_at: '2026-11-03T10:15:00Z' }], CURSOR_PAGE_2, 1),
+  error: fail('validation_failed', 'Some fields have invalid values. Nothing was saved.', [{ field: 'Price', issue: 'must be a number' }]),
+};
+
+const IDEMPOTENT_BODY = { fields: { Name: 'Order 1051', Price: 60, Paid: false } };
+const IDEMPOTENT_RECORD = ok(record('rec_1051', { Name: 'Order 1051', Price: 60, Paid: false }, '2026-11-04T11:00:00Z'));
+
+export const IDEMPOTENCY_EXAMPLES: DocExample[] = [
+  {
+    title: 'First request',
+    method: 'POST',
+    path: RECORDS,
+    headers: { 'Idempotency-Key': 'order-1051' },
+    body: IDEMPOTENT_BODY,
+    status: 201,
+    response: IDEMPOTENT_RECORD,
+  },
+  {
+    title: 'The same request sent again',
+    description: 'The first response comes back, with Idempotent-Replayed: true. No second record is created.',
+    method: 'POST',
+    path: RECORDS,
+    headers: { 'Idempotency-Key': 'order-1051' },
+    body: IDEMPOTENT_BODY,
+    status: 201,
+    responseHeaders: { 'Idempotent-Replayed': 'true' },
+    response: IDEMPOTENT_RECORD,
+  },
+  {
+    title: 'The same key with a different body',
+    method: 'POST',
+    path: RECORDS,
+    headers: { 'Idempotency-Key': 'order-1051' },
+    body: { fields: { Name: 'Order 1052' } },
+    status: 409,
+    response: fail('conflict', 'This Idempotency-Key was already used with a different request. Use a new key for a new request.'),
+  },
+];
+
+export const RATE_LIMIT_EXAMPLE: DocExample = {
+  title: 'Too many requests',
+  method: 'GET',
+  path: RECORDS,
+  status: 429,
+  responseHeaders: { 'Retry-After': '12' },
+  response: fail('rate_limited', 'Too many requests: this workspace allows 600 per minute. Try again after the time in Retry-After.'),
+};

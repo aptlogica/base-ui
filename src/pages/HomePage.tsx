@@ -15,6 +15,7 @@ import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
+import { WorkspaceApiCard } from '../components/platform/WorkspaceApiCard';
 
 const CreateTableModal = lazy(() =>
   import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
@@ -498,6 +499,8 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             </button>
+
+            <WorkspaceApiCard disabled={!canUseBaseActions} hasWorkspace={hasValidSelectedWorkspace} />
           </div>
         </div>
       </div>

@@ -34,6 +34,7 @@ import { Loader } from './components/ui/Loader';
 import AdministratorPage from './pages/AdministratorPage';
 import NotFoundPage from './pages/NotFoundPage';
 import TableSettingsPage from './pages/TableSettingsPage';
+import ApiDocsPage from './pages/ApiDocsPage';
 import { useClientHeaders } from './hooks/useClientHeaders';
 import { RouteContextProvider } from './contexts/RouteContext';
 import { NavigationResolver } from './components/NavigationResolver';
@@ -373,6 +374,8 @@ const AppRoutes = () => {
         path="/workspace/:workspaceId/base/:baseId/table/:tableId/settings/:section?"
         element={<PrivateRoute><TableSettingsPage /></PrivateRoute>}
       />
+      {/* Workspace API docs: a full page, opened from the Developer popup */}
+      <Route path="/workspace/:workspaceId/developer/api-docs" element={<PrivateRoute><ApiDocsPage /></PrivateRoute>} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/workspace" replace />} />
         <Route path="/workspace" element={<ExtensionPoint id="page:homepage" />} /> {/* Handles /workspace when no workspaceId - NavigationResolver will redirect to first workspace */}
