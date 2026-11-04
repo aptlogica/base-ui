@@ -135,6 +135,29 @@ describe('DeveloperOverview', () => {
     expect(onOpenDocs).toHaveBeenCalled();
   });
 
+  it('links to the live Swagger UI and ReDoc pages and the OpenAPI spec once enabled', async () => {
+    mockStatus({ workspace_id: 'ws-1', enabled: true, public_id: 'ws_8f3k2m9qx7', base_path: '/api/v1/ws_8f3k2m9qx7' });
+    renderOverview();
+
+    const swagger = screen.getByRole('link', { name: /Open Swagger UI/ });
+    expect(swagger).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_8f3k2m9qx7/docs');
+    expect(swagger).toHaveAttribute('target', '_blank');
+    expect(swagger).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByRole('link', { name: /Open ReDoc/ })).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_8f3k2m9qx7/redoc');
+
+    fireEvent.click(screen.getByRole('button', { name: /Copy OpenAPI spec/ }));
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://api.example.com/api/v1/ws_8f3k2m9qx7/openapi.json')
+    );
+  });
+
+  it('does not link to the live docs before the API is on', () => {
+    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    renderOverview();
+
+    expect(screen.queryByRole('link', { name: /Open Swagger UI/ })).not.toBeInTheDocument();
+  });
+
   it('shows an error with a retry when the status cannot be loaded', () => {
     mockStatus(undefined, { error: new Error('network down') });
     renderOverview();

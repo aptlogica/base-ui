@@ -9,6 +9,7 @@ import { apiErrorMessage } from '../../utils/apiErrors';
 import { formatDate } from '../../utils/dateUtils';
 import { getApiOrigin, type WorkspaceApiStatus } from '../../service/clientService';
 import { useEnableWorkspaceApi, useWorkspaceApi } from './useWorkspaceApi';
+import LiveDocsLinks, { liveDocsUrls } from './LiveDocsLinks';
 
 interface DeveloperOverviewProps {
   workspaceId: string | null;
@@ -57,37 +58,48 @@ const CopyField: React.FC<Readonly<{ label: string; value: string }>> = ({ label
   );
 };
 
-const EnabledApi: React.FC<Readonly<{ status: WorkspaceApiStatus; onOpenDocs?: () => void }>> = ({ status, onOpenDocs }) => (
-  <div className="p-6 space-y-5 max-w-3xl">
-    <div>
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-semibold text-primary">Base API</h3>
-        <span className="badge-brand rounded-full px-2 py-0.5 text-xs font-medium">Enabled</span>
+const EnabledApi: React.FC<Readonly<{ status: WorkspaceApiStatus; onOpenDocs?: () => void }>> = ({ status, onOpenDocs }) => {
+  const baseUrl = `${getApiOrigin()}${status.base_path ?? ''}`;
+  return (
+    <div className="p-6 space-y-5 max-w-3xl">
+      <div>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-primary">Base API</h3>
+          <span className="badge-brand rounded-full px-2 py-0.5 text-xs font-medium">Enabled</span>
+        </div>
+        <p className="mt-1 text-sm text-secondary">
+          Your workspace's API address. It stays the same, even if you rename the workspace.
+          {status.enabled_at && ` Enabled on ${formatDate(status.enabled_at)}.`}
+        </p>
       </div>
-      <p className="mt-1 text-sm text-secondary">
-        Your workspace's API address. It stays the same, even if you rename the workspace.
-        {status.enabled_at && ` Enabled on ${formatDate(status.enabled_at)}.`}
-      </p>
+      <CopyField label="Base URL" value={baseUrl} />
+      <CopyField label="Workspace API ID" value={status.public_id ?? ''} />
+      <CopyField label="Try it: list this workspace's bases" value={`curl ${baseUrl}/bases`} />
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-primary">Live docs for your tables</div>
+        <p className="text-sm text-secondary">
+          Built from this workspace's real tables and fields, and updated within seconds when they change.
+        </p>
+        <LiveDocsLinks baseUrl={baseUrl} />
+      </div>
+      <CopyField label="OpenAPI spec (for Postman or code generators)" value={liveDocsUrls(baseUrl).spec} />
+      {onOpenDocs && (
+        <button
+          type="button"
+          onClick={onOpenDocs}
+          className="flex items-center gap-2 text-sm font-medium text-green-700 hover:underline"
+        >
+          <BookOpen className="w-4 h-4" />
+          Read the API docs: every endpoint with request and response examples
+        </button>
+      )}
+      <div role="note" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+        Development only: there are no API keys yet, so anyone with this URL can read and change this workspace's
+        data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true.
+      </div>
     </div>
-    <CopyField label="Base URL" value={`${getApiOrigin()}${status.base_path ?? ''}`} />
-    <CopyField label="Workspace API ID" value={status.public_id ?? ''} />
-    <CopyField label="Try it: list this workspace's bases" value={`curl ${getApiOrigin()}${status.base_path ?? ''}/bases`} />
-    {onOpenDocs && (
-      <button
-        type="button"
-        onClick={onOpenDocs}
-        className="flex items-center gap-2 text-sm font-medium text-green-700 hover:underline"
-      >
-        <BookOpen className="w-4 h-4" />
-        Read the API docs: every endpoint with request and response examples
-      </button>
-    )}
-    <div role="note" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
-      Development only: there are no API keys yet, so anyone with this URL can read and change this workspace's
-      data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true.
-    </div>
-  </div>
-);
+  );
+};
 
 // Developer > Overview: asks to turn the workspace API on, then shows its base API address
 const DeveloperOverview: React.FC<DeveloperOverviewProps> = ({ workspaceId, workspaceName, canEnable, onCancel, onOpenDocs }) => {

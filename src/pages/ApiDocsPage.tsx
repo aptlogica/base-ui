@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { getApiOrigin } from '../service/clientService';
 import { useWorkspaceApi } from '../components/platform/useWorkspaceApi';
+import LiveDocsLinks, { liveDocsUrls } from '../components/platform/LiveDocsLinks';
 import {
   ENDPOINT_GROUPS,
   ENDPOINT_SUMMARY,
@@ -35,6 +36,7 @@ const NAV: { title: string; items: { id: string; label: string }[] }[] = [
     title: 'Getting started',
     items: [
       { id: 'introduction', label: 'Introduction' },
+      { id: 'live-docs', label: 'Live docs' },
       { id: 'responses', label: 'Responses' },
       { id: 'ids-and-names', label: 'IDs and names' },
     ],
@@ -91,6 +93,7 @@ const ApiDocsPage: React.FC = () => {
   // The examples use the workspace's own address once its API is on, and a sample one until then
   const enabled = Boolean(status?.enabled && status.base_path);
   const baseUrl = `${getApiOrigin()}${enabled ? status?.base_path : SAMPLE_BASE_PATH}`;
+  const liveDocs = liveDocsUrls(baseUrl);
 
   const goTo = (id: string) => {
     document.getElementById(`docs-${id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -212,6 +215,34 @@ const ApiDocsPage: React.FC = () => {
                   <li>The cURL examples are for macOS and Linux terminals. On Windows, run them in Git Bash or WSL, or use the JavaScript examples.</li>
                 </Bullets>
               </div>
+            </Section>
+
+            <Section id="live-docs" title="Live docs">
+              <p className="text-sm text-secondary">
+                This page explains the API with sample data. Your workspace also serves docs built from its own bases,
+                tables and fields: each table's real field names, types and select options, and what can be written.
+                They update within about 10 seconds when a table changes.
+              </p>
+              <DocTable
+                head={['Page', 'Address', 'Use it to']}
+                rows={[
+                  ['Swagger UI', <code key="a" className="font-mono text-xs break-all">{liveDocs.swagger}</code>, 'Try requests from the browser'],
+                  ['ReDoc', <code key="a" className="font-mono text-xs break-all">{liveDocs.redoc}</code>, 'Read the reference for every table'],
+                  ['OpenAPI spec', <code key="a" className="font-mono text-xs break-all">{liveDocs.spec}</code>, 'Import into Postman or Insomnia, or generate code'],
+                ]}
+              />
+              <Bullets>
+                <li>
+                  Add <InlineCode>?base=Sales</InlineCode> (a base name or <InlineCode>bse_…</InlineCode> ID) to any of them to show
+                  only one base. It helps when a workspace has many tables.
+                </li>
+                <li>Swagger UI's "Try it out" sends real requests: changes it makes are saved in your tables.</li>
+              </Bullets>
+              {enabled ? (
+                <LiveDocsLinks baseUrl={baseUrl} />
+              ) : (
+                <p className="text-xs text-secondary">The addresses above are samples. Turn the API on to open your workspace's live docs.</p>
+              )}
             </Section>
 
             <Section id="responses" title="Responses">

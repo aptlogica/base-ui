@@ -51,6 +51,25 @@ describe('ApiDocsPage', () => {
     expect(screen.getByText(/The API is not turned on for this workspace yet/)).toBeInTheDocument();
   });
 
+  it('explains the live docs and links to the workspace pages once the API is on', () => {
+    mockStatus(ENABLED);
+    renderPage();
+
+    expect(screen.getByRole('heading', { name: 'Live docs', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText('https://api.example.com/api/v1/ws_ab12cd34ef/openapi.json')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open Swagger UI/ })).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_ab12cd34ef/docs');
+    expect(screen.getByRole('link', { name: /Open ReDoc/ })).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_ab12cd34ef/redoc');
+  });
+
+  it('shows sample live docs addresses without links when the API is off', () => {
+    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    renderPage();
+
+    expect(screen.getByText('https://api.example.com/api/v1/ws_8f3k2m9qx7/docs')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Open Swagger UI/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Turn the API on to open your workspace's live docs/)).toBeInTheDocument();
+  });
+
   it('documents every supported endpoint', () => {
     mockStatus(ENABLED);
     renderPage();
