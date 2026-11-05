@@ -168,7 +168,9 @@ export const useGanttData = ({ tableId, viewId }: UseGanttDataOptions): UseGantt
       };
     }
 
-    const { columns, records, views } = tableData;
+    const { columns, views } = tableData;
+    // Backend sends records: null for an empty table
+    const records = tableData.records || [];
 
     // Filter out unwanted columns
     const filteredColumns = columns.filter(

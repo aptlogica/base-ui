@@ -92,6 +92,19 @@ describe('useGanttTaskProcessing', () => {
     expect(result.current.completionField).toBeUndefined();
   });
 
+  it('returns no tasks when records is null (empty table)', () => {
+    const startColumn = createColumn({ id: 'start', column_name: 'start_date', uidt: 'date' });
+    const endColumn = createColumn({ id: 'end', column_name: 'end_date', uidt: 'date' });
+    const view = createView({ type: 'ganttChart', meta: { start_date_field_id: 'start', end_date_field_id: 'end' } });
+    const tableData = createTableData([startColumn, endColumn], null as unknown as Record<string, unknown>[], [view]);
+
+    const { result } = renderHook(() => useGanttTaskProcessing({ tableData }));
+
+    expect(result.current.tasks).toEqual([]);
+    expect(result.current.startDateField?.id).toBe('start');
+    expect(result.current.endDateField?.id).toBe('end');
+  });
+
   it('filters out columns matching fieldsToFilter', () => {
     const filteredColumn = createColumn({ id: 'filtered', column_name: 'Filtered', uidt: 'filterMe' });
     const visibleColumn = createColumn({ id: 'visible', column_name: 'Visible', uidt: 'text' });

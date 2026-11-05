@@ -139,6 +139,23 @@ describe('useGanttData', () => {
     expect(result.current.endDateField).toBeUndefined();
   });
 
+  it('returns no tasks when records is null (empty table)', () => {
+    const startColumn = createColumn({ id: 'start', column_name: 'start_date', uidt: 'date' });
+    const endColumn = createColumn({ id: 'end', column_name: 'end_date', uidt: 'date' });
+    const view = createView({
+      id: 'view-1',
+      type: 'ganttChart',
+      meta: { start_date_field_id: 'start', end_date_field_id: 'end' },
+    });
+    arrangeTableData(createTableResponse([startColumn, endColumn], null as unknown as Record<string, unknown>[], [view]));
+
+    const { result } = renderHook(() => useGanttData({ tableId: 'tbl', viewId: 'view-1' }));
+
+    expect(result.current.tasks).toEqual([]);
+    expect(result.current.startDateField?.id).toBe('start');
+    expect(result.current.endDateField?.id).toBe('end');
+  });
+
   it('filters columns using fieldsToFilter and resolves view config', () => {
     const filteredColumn = createColumn({ id: 'filtered-column', column_name: 'Filtered', uidt: 'filtered' });
     const startColumn = createColumn({ id: 'start', column_name: 'start_date', uidt: 'date' });
