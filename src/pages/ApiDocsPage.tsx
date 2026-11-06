@@ -311,8 +311,9 @@ const ApiDocsPage: React.FC = () => {
                 rows={READ_ONLY_VALUES.map((f) => [<InlineCode key="t">{f.type}</InlineCode>, f.read])}
               />
               <Bullets>
-                <li>Records can be sorted by any field except multi_select, links, lookup, attachment and json fields.</li>
-                <li>Formula, user, created_by and last_modified_by fields can be filtered like text; created_time and last_modified_time like dates.</li>
+                <li>Records can be sorted by any field except multi_select, links, lookup, formula, attachment and json fields.</li>
+                <li>User, created_by and last_modified_by fields can be filtered like text; created_time and last_modified_time like dates.</li>
+                <li>Formula and lookup fields are calculated when a record is read, so they can&apos;t be used to filter or sort. Attachment and json fields can&apos;t be filtered either.</li>
               </Bullets>
             </Section>
 

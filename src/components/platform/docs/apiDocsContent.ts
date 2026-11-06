@@ -73,6 +73,7 @@ const IDS = {
 
 const CURSOR_PAGE_2 = 'eyJ2IjoxLCJvIjoyLCJoIjoiOWM0MWUwN2IifQ';
 const CURSOR_KEYS = 'eyJ2IjoxLCJvIjoxLCJoIjoiNTJhZDhmMTAifQ';
+const CURSOR_QUERY = 'eyJ2IjoxLCJvIjoxLCJoIjoiNWUwYjdkMmM0MWE5ZjM4NiJ9';
 
 const ok = (data: unknown) => ({ data, error: null, meta: { request_id: REQUEST_ID } });
 
@@ -277,12 +278,14 @@ const LIST_RECORDS: DocEndpoint = {
     { name: 'cursor', in: 'query', description: 'meta.next_cursor from the previous page. Send the same filter and sort with it.' },
     { name: 'filter[Field]', in: 'query', description: 'Only records where the field equals the value.' },
     { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
+    { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records.' },
     { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price,Name. Also created_at, updated_at and id.' },
     { name: 'select', in: 'query', description: 'Comma-separated fields to return. id, created_at and updated_at always come back.' },
     { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
   ],
   notes: [
-    'Several filters are combined with AND: a record must match all of them.',
+    'Several filters are combined with AND: a record must match all of them. For "or" and "not" filters, use Find records.',
+    'Formula and lookup fields are calculated when a record is read, so they can\'t be used to filter or sort.',
     'Empty fields are null, or [] for lists (multi-select, links).',
     'A link field is a list of objects, one per linked record: its id and the lookups through the link, keyed by the looked-up field\'s name. select=<lookup field> returns its link field with only that lookup.',
     'In filter, sort and select, id, created_at and updated_at mean the record\'s own values. A field with one of these names, or with , [ or ] in its name, must be given by its ID.',
@@ -399,7 +402,7 @@ const LIST_RECORDS: DocEndpoint = {
       status: 400,
       response: fail(
         'bad_request',
-        'filter[Price][contains]: unknown operator. Use eq, neq, gt, gte, lt, lte, in, contains or is_null.'
+        'filter[Price][contains]: "Price" is a currency field. You can use: eq, neq, gt, gte, lt, lte, in, is_null.'
       ),
     },
     {
@@ -411,6 +414,135 @@ const LIST_RECORDS: DocEndpoint = {
         'bad_request',
         'cursor was made for a different filter or sort. Send the same filter and sort as the first page, or start again without a cursor.'
       ),
+    },
+  ],
+};
+
+const ACTIVE_OR_PAUSED = {
+  match: 'any',
+  conditions: [
+    { field: 'Status', value: 'Active' },
+    { field: 'Status', value: 'Paused' },
+  ],
+};
+
+const QUERY_RECORDS: DocEndpoint = {
+  id: 'query-records',
+  title: 'Find records (or / not filters)',
+  method: 'POST',
+  path: '/bases/{base}/tables/{table}/records/query',
+  summary:
+    'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not": where is a group that matches all, any or none of its conditions, and groups can hold other groups. Nothing is changed; it only reads.',
+  params: [
+    { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works.' },
+    { name: 'conditions', in: 'body', description: 'Conditions or groups. A condition is {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
+    { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price", "Name"], or one comma-separated text.' },
+    { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text.' },
+    { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
+    { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where and sort with it.' },
+    { name: 'keys', in: 'body', description: 'name (default) or id.' },
+  ],
+  notes: [
+    'all: every condition must be true (AND). any: at least one (OR). none: not one of them (NOT).',
+    'none counts an empty field as not matching, so "none of Status is Active" also finds records with no Status.',
+    'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
+    'Groups can be nested up to 5 deep, with at most 50 conditions in all.',
+    'The same tree also works on GET /records as the URL-encoded where parameter, combined with any filter[...] using AND.',
+  ],
+  examples: [
+    {
+      title: 'Any of: Status is Active or Paused',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED },
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], null),
+    },
+    {
+      title: 'All, any and none together',
+      description: 'Price is 100 or more, Status is Active or Paused, and the order is not paid. The highest price first.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'all',
+          conditions: [
+            { field: 'Price', op: 'gte', value: 100 },
+            ACTIVE_OR_PAUSED,
+            { match: 'none', conditions: [{ field: 'Paid', value: true }] },
+          ],
+        },
+        sort: ['-Price'],
+      },
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'None of: empty fields are included',
+      description: 'Order 1044 has no Status, so it is not Active and comes back too.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { match: 'none', conditions: [{ field: 'Status', value: 'Active' }] } },
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
+    },
+    {
+      title: 'A list of values, and empty fields',
+      description: 'Status is Active or Paused, or Status is empty.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'any',
+          conditions: [
+            { field: 'Status', op: 'in', value: ['Active', 'Paused'] },
+            { field: 'Status', op: 'is_null' },
+          ],
+        },
+        select: ['Name', 'Status'],
+      },
+      status: 200,
+      response: page(
+        [ORDER_1042, ORDER_1043, ORDER_1044].map((r) => ({ ...r, fields: { Name: r.fields.Name, Status: r.fields.Status } })),
+        null
+      ),
+    },
+    {
+      title: 'Page through the results',
+      description: 'Send the next_cursor back with the same where and sort to get the next page.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED, limit: 1 },
+      status: 200,
+      response: page([ORDER_1042], CURSOR_QUERY, 1),
+    },
+    {
+      title: 'A field name with a typo',
+      description: 'Errors say where the problem is in the tree, and suggest the closest field name.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { match: 'any', conditions: [{ field: 'Staus', value: 'Active' }] } },
+      status: 400,
+      response: fail('bad_request', 'where.conditions[0]: No field named "Staus". Did you mean "Status"?'),
+    },
+    {
+      title: 'A lookup or formula field',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { field: 'Email', op: 'contains', value: 'asha' } },
+      status: 400,
+      response: fail(
+        'bad_request',
+        'where: "Email" is a lookup field. Formula and lookup fields are calculated when read, so they can\'t be used to filter or sort.'
+      ),
+    },
+    {
+      title: 'An unknown match',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { match: 'either', conditions: [{ field: 'Status', value: 'Active' }] } },
+      status: 400,
+      response: fail('bad_request', 'where.match must be all, any or none.'),
     },
   ],
 };
@@ -677,7 +809,7 @@ const DELETE_RECORDS: DocEndpoint = {
 
 export const ENDPOINT_GROUPS: DocGroup[] = [
   { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE] },
-  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
+  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
 ];
 
 // ---- Reference ----
@@ -687,6 +819,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
   { method: 'GET', path: '/bases/{base}/tables', does: 'List tables' },
   { method: 'GET', path: '/bases/{base}/tables/{table}', does: 'Get a table and its fields' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
+  { method: 'POST', path: '/bases/{base}/tables/{table}/records/query', does: 'Find records with or / not filters' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Get a record' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records', does: 'Create one or many records' },
   { method: 'PATCH', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Update a record' },
@@ -728,8 +861,8 @@ export const FIELD_VALUES: { type: string; write: string; example: string; filte
 ];
 
 export const READ_ONLY_VALUES: { type: string; read: string }[] = [
-  { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name' },
-  { type: 'formula', read: 'The computed value' },
+  { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name. Can\'t be used to filter or sort' },
+  { type: 'formula', read: 'The computed value. Calculated when read, so it can\'t be used to filter or sort' },
   { type: 'attachment', read: 'A list of {id, url, name, size, type}' },
   { type: 'user', read: 'A user ID, or a list of user IDs' },
   { type: 'created_time, last_modified_time', read: 'Date and time in UTC' },
@@ -737,7 +870,7 @@ export const READ_ONLY_VALUES: { type: string; read: string }[] = [
 ];
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
-  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
+  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
   { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
   { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running' },

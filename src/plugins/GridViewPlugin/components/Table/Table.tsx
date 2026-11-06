@@ -554,7 +554,6 @@ export const Table: React.FC<TableProps> = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const addColumnButtonRef = useRef<HTMLButtonElement | null>(null);
   const [openColumnDropdownIndex, setOpenColumnDropdownIndex] = useState<number | null>(null);
-  const dragPinnedStateRef = useRef<boolean | null>(null);
 
   // Static column widths (no resize). Prefer view meta widths, else column.width, else 235.
   const columnWidths = useMemo(() => {
@@ -582,8 +581,6 @@ export const Table: React.FC<TableProps> = ({
     if (!firstVisibleColumn) return [];
     return [String(firstVisibleColumn.id || firstVisibleColumn.key)];
   }, [visibleColumns]);
-
-  const pinnedColumnIdSet = useMemo(() => new Set(pinnedColumnIds), [pinnedColumnIds]);
 
   const pinnedColumnOffsets = useMemo(() => {
     const offsets: Record<string, number> = {};
@@ -1151,41 +1148,29 @@ export const Table: React.FC<TableProps> = ({
     if (selectedRecordIndex !== -1 && selectedRecordIndex < formRecordIds.length - 1) setSelectedRecordId(formRecordIds[selectedRecordIndex + 1]);
   }, [formRecordIds, selectedRecordIndex]);
 
-  // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params)
+  // Column drag and drop handler wrapper (uses hook's handleColumnDragEnd with proper params).
+  // Any column can move to or from the first place: pinning follows the order (the first visible column is
+  // pinned), so the column dropped first becomes the pinned one.
   const handleColumnDragStart = useCallback((index: number) => {
     if (!canReorderColumns) return;
-    const draggedColumn = visibleColumns[index];
-    const draggedColumnIdentity = String(draggedColumn?.id || draggedColumn?.key || '');
-    dragPinnedStateRef.current = pinnedColumnIdSet.has(draggedColumnIdentity);
     handleColumnDragStartFromHook(index, visibleColumns);
-  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns, pinnedColumnIdSet]);
+  }, [canReorderColumns, handleColumnDragStartFromHook, visibleColumns]);
 
   const handleColumnDragEnter = useCallback((index: number) => {
     if (!canReorderColumns) return;
-    const sourceIsPinned = dragPinnedStateRef.current;
-    if (sourceIsPinned === null) return;
-    const targetColumn = visibleColumns[index];
-    const targetIdentity = String(targetColumn?.id || targetColumn?.key || '');
-    const targetIsPinned = pinnedColumnIdSet.has(targetIdentity);
-    // Prevent crossing pinned/unpinned boundaries; reorder only within same group.
-    if (targetIsPinned !== sourceIsPinned) return;
     handleColumnDragEnterFromHook(index);
-  }, [canReorderColumns, handleColumnDragEnterFromHook, visibleColumns, pinnedColumnIdSet]);
+  }, [canReorderColumns, handleColumnDragEnterFromHook]);
 
   const handleColumnDragEnd = useCallback(async () => {
-    try {
-      if (!canReorderColumns) return;
-      await handleColumnDragEndFromHook(
-        visibleColumns,
-        localFieldConfig,
-        effectiveViewId,
-        baseMeta,
-        actions?.updateView,
-        handleFieldOrderChange
-      );
-    } finally {
-      dragPinnedStateRef.current = null;
-    }
+    if (!canReorderColumns) return;
+    await handleColumnDragEndFromHook(
+      visibleColumns,
+      localFieldConfig,
+      effectiveViewId,
+      baseMeta,
+      actions?.updateView,
+      handleFieldOrderChange
+    );
   }, [canReorderColumns, handleColumnDragEndFromHook, visibleColumns, localFieldConfig, effectiveViewId, baseMeta, actions?.updateView, handleFieldOrderChange]);
 
   // Wrapper for handleEditColumn to use hook's version
