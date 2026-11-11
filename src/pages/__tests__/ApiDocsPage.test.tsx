@@ -78,7 +78,7 @@ describe('ApiDocsPage', () => {
       expect(screen.getByRole('heading', { name: title, level: 3 })).toBeInTheDocument();
     }
     const summary = screen.getByRole('heading', { name: 'Endpoints' }).parentElement as HTMLElement;
-    expect(within(summary).getAllByRole('row')).toHaveLength(12);
+    expect(within(summary).getAllByRole('row')).toHaveLength(13);
     expect(screen.getByRole('heading', { name: 'Field values' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Errors' })).toBeInTheDocument();
   });

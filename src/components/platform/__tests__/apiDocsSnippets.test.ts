@@ -45,6 +45,12 @@ describe('apiDocsSnippets', () => {
     expect(toCurl(BASE, { ...get, method: 'DELETE', path: '/r/rec_1' })).toBe(`curl -X DELETE "${BASE}/r/rec_1"`);
   });
 
+  it('builds QUERY requests like POST, with the method named', () => {
+    const query = { ...get, method: 'QUERY' as const, path: '/r/query', body: { where: { field: 'Status', value: 'Open' } } };
+    expect(toCurl(BASE, query).split('\n')[0]).toBe(`curl -X QUERY "${BASE}/r/query" \\`);
+    expect(toFetch(BASE, query)).toContain('  method: "QUERY",');
+  });
+
   it('builds fetch calls', () => {
     expect(toFetch(BASE, get)).toBe(`const res = await fetch("${BASE}/bases");\nconst { data, error, meta } = await res.json();`);
 

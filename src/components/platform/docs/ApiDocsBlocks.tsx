@@ -12,6 +12,7 @@ const METHOD_CLASS: Record<HttpMethod, string> = {
   POST: 'badge-info',
   PATCH: 'badge-warning',
   DELETE: 'badge-error',
+  QUERY: 'badge-gray',
 };
 
 export const MethodBadge: React.FC<Readonly<{ method: HttpMethod }>> = ({ method }) => (

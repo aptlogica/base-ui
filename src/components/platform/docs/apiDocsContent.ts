@@ -8,7 +8,7 @@
 // (returned inside the link's objects). Responses and messages are what the
 // server returns (internal/platform in the backend).
 
-export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'QUERY';
 
 export interface DocExample {
   title: string;
@@ -432,7 +432,7 @@ const QUERY_RECORDS: DocEndpoint = {
   method: 'POST',
   path: '/bases/{base}/tables/{table}/records/query',
   summary:
-    'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not": where is a group that matches all, any or none of its conditions, and groups can hold other groups. Nothing is changed; it only reads.',
+    'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not": where is a group that matches all, any or none of its conditions, and groups can hold other groups. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method; both work the same.',
   params: [
     { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works.' },
     { name: 'conditions', in: 'body', description: 'Conditions or groups. A condition is {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
@@ -448,6 +448,7 @@ const QUERY_RECORDS: DocEndpoint = {
     'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
     'Groups can be nested up to 5 deep, with at most 50 conditions in all.',
     'The same tree also works on GET /records as the URL-encoded where parameter, combined with any filter[...] using AND.',
+    'POST and QUERY do exactly the same thing: same body, same answer. QUERY is the newer HTTP method for reads with a body; use it if your tool supports it, otherwise use POST. A cursor from one works with the other.',
   ],
   examples: [
     {
@@ -485,6 +486,15 @@ const QUERY_RECORDS: DocEndpoint = {
       body: { where: { match: 'none', conditions: [{ field: 'Status', value: 'Active' }] } },
       status: 200,
       response: page([ORDER_1043, ORDER_1044], null),
+    },
+    {
+      title: 'The same with the QUERY method',
+      description: 'QUERY takes the same body as POST and gives the same answer. Use it if your HTTP client supports it.',
+      method: 'QUERY',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED },
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], null),
     },
     {
       title: 'A list of values, and empty fields',
@@ -820,6 +830,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
   { method: 'GET', path: '/bases/{base}/tables/{table}', does: 'Get a table and its fields' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records/query', does: 'Find records with or / not filters' },
+  { method: 'QUERY', path: '/bases/{base}/tables/{table}/records/query', does: 'The same as POST, with the HTTP QUERY method' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Get a record' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records', does: 'Create one or many records' },
   { method: 'PATCH', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Update a record' },
