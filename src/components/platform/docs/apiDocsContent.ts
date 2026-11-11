@@ -564,7 +564,7 @@ const GET_RECORD: DocEndpoint = {
   path: '/bases/{base}/tables/{table}/records/{record}',
   summary: 'Returns one record by its ID.',
   params: [
-    { name: 'record', in: 'path', description: 'The primary key value of the record: the record ID (rec_1042) with the default key. When the key was changed to other fields, their values joined with _ in key order (A1_EU for SKU + Region; write a _ inside a value as __); a record ID is then refused.' },
+    { name: 'record', in: 'path', description: 'The record ID (rec_1042) with the default primary key. When the key was changed to other fields, a record ID is refused: use the value of a one-field key (records/A1), or by-key with each key field named, e.g. records/by-key?key[SKU]=A1&key[Region]=EU.' },
     { name: 'keys', in: 'query', description: 'name (default) or id.' },
   ],
   examples: [
@@ -692,7 +692,7 @@ const UPDATE_RECORDS: DocEndpoint = {
   summary:
     'Changes only the fields you send; the others keep their values. PATCH one record at /records/{record}, or up to 100 at /records with {"records": [{"id": ..., "fields": {...}}]}. Returns the updated records.',
   params: [
-    { name: 'record', in: 'path', description: 'The primary key value of the record, as for Get a record (rec_1042, or A1_EU for SKU + Region), for a single update. In a bulk update, each id is given the same way.' },
+    { name: 'record', in: 'path', description: 'The record, as for Get a record (rec_1042, records/A1, or records/by-key?key[SKU]=A1&key[Region]=EU), for a single update. In a bulk update, each record has an id, or a key object such as {"SKU": "A1", "Region": "EU"} when the primary key is other fields.' },
     { name: 'fields', in: 'body', description: 'The values to change. null empties a field.' },
     { name: 'records', in: 'body', description: 'For many records: an array of {"id", "fields"}, at most 100, each ID once.' },
   ],
@@ -780,8 +780,8 @@ const DELETE_RECORDS: DocEndpoint = {
   summary:
     'Deletes one record with DELETE, or up to 100 with POST /records/delete and {"ids": [...]}. Deleting is permanent.',
   params: [
-    { name: 'record', in: 'path', description: 'The primary key value of the record, as for Get a record (rec_1042, or A1_EU for SKU + Region), for a single delete.' },
-    { name: 'ids', in: 'body', description: 'For many records (POST /records/delete): primary key values as for Get a record (record IDs with the default key), at most 100.' },
+    { name: 'record', in: 'path', description: 'The record, as for Get a record (rec_1042, records/A1, or records/by-key?key[SKU]=A1&key[Region]=EU), for a single delete.' },
+    { name: 'ids', in: 'body', description: 'For many records (POST /records/delete): record IDs, at most 100. When the primary key is other fields, send keys instead: [{"SKU": "A1", "Region": "EU"}].' },
     { name: 'Idempotency-Key', in: 'header', description: 'Optional, on POST /records/delete.' },
   ],
   notes: ['All or nothing: if any ID does not exist, nothing is deleted.'],
