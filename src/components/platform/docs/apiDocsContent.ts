@@ -280,7 +280,7 @@ const LIST_RECORDS: DocEndpoint = {
     { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
     { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records.' },
     { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price,Name. Also created_at, updated_at and id.' },
-    { name: 'select', in: 'query', description: 'Comma-separated fields to return. id, created_at and updated_at always come back.' },
+    { name: 'select', in: 'query', description: 'Comma-separated fields to return; empty or left out returns all fields. id, created_at and updated_at always come back.' },
     { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
   ],
   notes: [
@@ -437,7 +437,7 @@ const QUERY_RECORDS: DocEndpoint = {
     { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works.' },
     { name: 'conditions', in: 'body', description: 'Conditions or groups. A condition is {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
     { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price", "Name"], or one comma-separated text.' },
-    { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text.' },
+    { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text. An empty list returns all fields.' },
     { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
     { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where and sort with it.' },
     { name: 'keys', in: 'body', description: 'name (default) or id.' },
@@ -564,7 +564,7 @@ const GET_RECORD: DocEndpoint = {
   path: '/bases/{base}/tables/{table}/records/{record}',
   summary: 'Returns one record by its ID.',
   params: [
-    { name: 'record', in: 'path', description: 'The record ID, e.g. rec_1042.' },
+    { name: 'record', in: 'path', description: 'The primary key value of the record: the record ID (rec_1042) with the default key. When the key was changed to other fields, their values joined with _ in key order (A1_EU for SKU + Region; write a _ inside a value as __); a record ID is then refused.' },
     { name: 'keys', in: 'query', description: 'name (default) or id.' },
   ],
   examples: [
@@ -692,7 +692,7 @@ const UPDATE_RECORDS: DocEndpoint = {
   summary:
     'Changes only the fields you send; the others keep their values. PATCH one record at /records/{record}, or up to 100 at /records with {"records": [{"id": ..., "fields": {...}}]}. Returns the updated records.',
   params: [
-    { name: 'record', in: 'path', description: 'The record ID, for a single update.' },
+    { name: 'record', in: 'path', description: 'The primary key value of the record, as for Get a record (rec_1042, or A1_EU for SKU + Region), for a single update. In a bulk update, each id is given the same way.' },
     { name: 'fields', in: 'body', description: 'The values to change. null empties a field.' },
     { name: 'records', in: 'body', description: 'For many records: an array of {"id", "fields"}, at most 100, each ID once.' },
   ],
@@ -780,8 +780,8 @@ const DELETE_RECORDS: DocEndpoint = {
   summary:
     'Deletes one record with DELETE, or up to 100 with POST /records/delete and {"ids": [...]}. Deleting is permanent.',
   params: [
-    { name: 'record', in: 'path', description: 'The record ID, for a single delete.' },
-    { name: 'ids', in: 'body', description: 'For many records (POST /records/delete): record IDs, at most 100.' },
+    { name: 'record', in: 'path', description: 'The primary key value of the record, as for Get a record (rec_1042, or A1_EU for SKU + Region), for a single delete.' },
+    { name: 'ids', in: 'body', description: 'For many records (POST /records/delete): primary key values as for Get a record (record IDs with the default key), at most 100.' },
     { name: 'Idempotency-Key', in: 'header', description: 'Optional, on POST /records/delete.' },
   ],
   notes: ['All or nothing: if any ID does not exist, nothing is deleted.'],
@@ -852,17 +852,17 @@ const VALUE_FILTERS = 'eq, neq, gt, gte, lt, lte, in, is_null';
 
 export const FIELD_VALUES: { type: string; write: string; example: string; filters: string }[] = [
   { type: 'text, long_text', write: 'Text', example: '"Order 1042"', filters: TEXT_FILTERS },
-  { type: 'email', write: 'A valid email address', example: '"asha@example.com"', filters: TEXT_FILTERS },
-  { type: 'url', write: 'A web address', example: '"https://example.com"', filters: TEXT_FILTERS },
-  { type: 'phone_number', write: 'Digits, spaces and + ( ) - .', example: '"+91 98765 43210"', filters: TEXT_FILTERS },
+  { type: 'email', write: 'A valid email address when the email check of the field is on; any text when it is off', example: '"asha@example.com"', filters: TEXT_FILTERS },
+  { type: 'url', write: 'A web address like example.com/page when the URL check of the field is on (off by default); any text when it is off', example: '"https://example.com"', filters: TEXT_FILTERS },
+  { type: 'phone_number', write: 'When the phone check of the field is on: an optional + and up to 16 digits, not starting with 0, with spaces, dashes or brackets allowed; any text when it is off', example: '"+91 98765 43210"', filters: TEXT_FILTERS },
   { type: 'number', write: 'A whole number', example: '12', filters: VALUE_FILTERS },
-  { type: 'decimal, currency, percent', write: 'A number', example: '499.5', filters: VALUE_FILTERS },
+  { type: 'decimal, currency, percent', write: 'A number. Decimal values are rounded to the decimal places set on the field, percent values to 1 decimal', example: '499.5', filters: VALUE_FILTERS },
   { type: 'rating', write: 'A whole number from 0 to the field\'s maximum', example: '4', filters: VALUE_FILTERS },
   { type: 'year', write: 'A whole number from 1 to 9999', example: '2026', filters: VALUE_FILTERS },
   { type: 'duration', write: 'Whole minutes, 0 or more', example: '90', filters: VALUE_FILTERS },
   { type: 'date', write: 'YYYY-MM-DD', example: '"2026-11-03"', filters: VALUE_FILTERS },
   { type: 'date_time', write: 'RFC 3339 with a time zone; returned in UTC', example: '"2026-11-03T10:15:00Z"', filters: VALUE_FILTERS },
-  { type: 'time', write: 'HH:mm, 24-hour', example: '"10:15"', filters: TEXT_FILTERS },
+  { type: 'time', write: 'HH:mm (24-hour) or 12-hour like 2:15 PM; returned as HH:mm', example: '"14:15"', filters: TEXT_FILTERS },
   { type: 'checkbox', write: 'true or false', example: 'true', filters: 'eq, neq, is_null' },
   { type: 'single_select', write: 'The name of one of the field\'s options', example: '"Active"', filters: TEXT_FILTERS },
   { type: 'multi_select', write: 'A list of option names', example: '["Urgent", "Gift"]', filters: 'contains (one option), is_null' },
@@ -884,11 +884,11 @@ export const ERROR_CODES: { code: string; status: number; when: string }[] = [
   { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
   { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
-  { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running' },
+  { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running; or the table was busy with other changes, so nothing was saved: try again' },
   { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request' },
-  { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key or failed check' },
+  { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
   { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
-  { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it' },
+  { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
 ];
 
 export const RESPONSE_EXAMPLES = {
