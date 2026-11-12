@@ -432,10 +432,11 @@ const QUERY_RECORDS: DocEndpoint = {
   method: 'POST',
   path: '/bases/{base}/tables/{table}/records/query',
   summary:
-    'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not": where is a group that matches all, any or none of its conditions, and groups can hold other groups. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method; both work the same.',
+    'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not". A where filter is built from two shapes: a condition, {"field", "op", "value"}, checks one field; a group, {"match", "conditions"}, combines conditions with all (AND), any (OR) or none (NOT), and can hold other groups. match only ever goes on a group. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method; both work the same.',
   params: [
-    { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works. null, {} or no conditions means no filter, and the whole body is optional.' },
-    { name: 'conditions', in: 'body', description: 'Conditions or groups. A condition is {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
+    { name: 'where', in: 'body', description: 'A group, {"match": "all", "conditions": [...]}, or a single condition on its own. null, {} or a group with no conditions means no filter, and the whole body is optional.' },
+    { name: 'match', in: 'body', description: 'On a group only: all (every condition true, AND), any (at least one, OR) or none (not one of them, NOT). all when left out. Never put match on a condition; to negate one condition, wrap it in a group with "match": "none".' },
+    { name: 'conditions', in: 'body', description: 'The list inside a group. Each item is a condition or another group. A condition has only field, op and value: {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
     { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price"], or one comma-separated text.' },
     { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text. An empty list returns all fields.' },
     { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
@@ -443,6 +444,7 @@ const QUERY_RECORDS: DocEndpoint = {
     { name: 'keys', in: 'body', description: 'name (default) or id.' },
   ],
   notes: [
+    'Two shapes only. Condition: {"field": "Name", "op": "contains", "value": "104"}. Group: {"match": "none", "conditions": [ ...conditions or groups... ]}. A condition with match, or a group with field, is an error.',
     'all: every condition must be true (AND). any: at least one (OR). none: not one of them (NOT).',
     'To say OR, put the conditions in a group with "match": "any". For one field with several values, "op": "in" is shorter.',
     'To say NOT, put the condition in a group with "match": "none". With several conditions inside, none means "neither ... nor ...".',
@@ -633,6 +635,40 @@ const QUERY_RECORDS: DocEndpoint = {
       body: { where: { match: 'any', conditions: [{ field: 'Staus', value: 'Active' }] } },
       status: 400,
       response: fail('bad_request', 'where.conditions[0]: No field named "Staus". Did you mean "Status"?'),
+    },
+    {
+      title: 'A common mistake: match on a condition',
+      description: 'match belongs on a group. To say "Status is not Active", wrap the condition in a none group instead: {"match": "none", "conditions": [{"field": "Status", "value": "Active"}]}.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'all',
+          conditions: [
+            { field: 'Status', value: 'Active', match: 'none' },
+            { field: 'Name', op: 'contains', value: '104' },
+          ],
+        },
+      },
+      status: 400,
+      response: fail('bad_request', 'where.conditions[0]: a condition has field, op and value; a group has match and conditions. Use one or the other.'),
+    },
+    {
+      title: 'The same, written correctly',
+      description: 'Status is not Active, and Name contains "104". The none group is one of the conditions of the all group; order 1044 has no Status, so it comes back too.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'all',
+          conditions: [
+            { match: 'none', conditions: [{ field: 'Status', value: 'Active' }] },
+            { field: 'Name', op: 'contains', value: '104' },
+          ],
+        },
+      },
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
     },
     {
       title: 'A lookup or formula field',
