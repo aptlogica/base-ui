@@ -16,6 +16,7 @@ const STATUS_TEXT: Record<number, string> = {
   422: 'Unprocessable Entity',
   429: 'Too Many Requests',
   500: 'Internal Server Error',
+  503: 'Service Unavailable',
 };
 
 export const statusText = (status: number) => `${status} ${STATUS_TEXT[status] ?? ''}`.trim();

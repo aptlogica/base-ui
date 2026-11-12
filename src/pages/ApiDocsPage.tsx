@@ -314,6 +314,7 @@ const ApiDocsPage: React.FC = () => {
                 <li>Records can be sorted by any field except multi_select, links, lookup, formula, attachment and json fields.</li>
                 <li>User, created_by and last_modified_by fields can be filtered like text; created_time and last_modified_time like dates.</li>
                 <li>Formula and lookup fields are calculated when a record is read, so they can&apos;t be used to filter or sort. Attachment and json fields can&apos;t be filtered either.</li>
+                <li>search looks in text, long_text, email, url, phone_number and single_select fields.</li>
               </Bullets>
             </Section>
 
@@ -352,6 +353,9 @@ const ApiDocsPage: React.FC = () => {
                 <li>600 requests per minute per workspace by default (the server's PUBLIC_API_RATE_LIMIT_PER_MINUTE). Over that you get 429; wait for the seconds in Retry-After.</li>
                 <li>100 records per create, update or delete request.</li>
                 <li>200 records per page; 50 when limit is not given.</li>
+                <li>Reads (list, find and get one record) stop after 10 seconds with <InlineCode>503 query_timeout</InlineCode>.</li>
+                <li>where: groups nested up to 5 deep, 50 conditions in all. search: 200 characters.</li>
+                <li>expand: 2 levels, 5 link fields per request, and the first 100 linked records of each link.</li>
               </Bullets>
               <ExampleBlock example={RATE_LIMIT_EXAMPLE} baseUrl={baseUrl} language={language} defaultOpen />
             </Section>

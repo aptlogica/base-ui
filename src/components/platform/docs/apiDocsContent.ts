@@ -5,8 +5,8 @@
 
 // Content of the workspace API docs page. Every example uses the same sample data: a base "CRM" with a
 // table "Orders" whose "Customer" field links to "Customers", with a lookup of the customer's "Email"
-// (returned inside the link's objects). Responses and messages are what the
-// server returns (internal/platform in the backend).
+// (returned inside the link's objects). Customers in turn link to "Companies" (Company), for the expand
+// examples. Responses and messages are what the server returns (internal/platform in the backend).
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'QUERY';
 
@@ -149,6 +149,32 @@ const ORDERS_TABLE = {
 
 const RECORDS = '/bases/CRM/tables/Orders/records';
 
+// ---- Expanded links (expand=Customer, expand=Customer.Company) ----
+
+const ASHA = { Name: 'Asha', Email: 'asha@example.com', Company: [{ id: 'rec_3' }] };
+const RAVI = { Name: 'Ravi', Email: 'ravi@example.com', Company: [] };
+const ACME = { Name: 'Acme Group', City: 'Pune' };
+
+// An order whose Customer objects also hold the customer's fields; withCompany expands the customer's Company too
+const expandedOrder = (order: typeof ORDER_1042, withCompany = false) => ({
+  ...order,
+  fields: {
+    ...order.fields,
+    Customer: order.fields.Customer.map((c) => {
+      const customer = c.id === 'rec_12' ? ASHA : RAVI;
+      return {
+        ...c,
+        fields: withCompany
+          ? { ...customer, Company: customer.Company.map((co) => ({ ...co, fields: ACME })) }
+          : customer,
+      };
+    }),
+  },
+});
+
+const TIMEOUT_MESSAGE =
+  'The request took longer than 10s and was stopped. Narrow the filter or search, expand fewer fields, or ask for a smaller page.';
+
 // ---- Endpoints ----
 
 const LIST_BASES: DocEndpoint = {
@@ -272,22 +298,27 @@ const LIST_RECORDS: DocEndpoint = {
   method: 'GET',
   path: '/bases/{base}/tables/{table}/records',
   summary:
-    'Returns one page of records. Without sort, records come oldest first. Use filter, sort and select to choose which records and fields come back.',
+    'Returns one page of records. Without sort, records come oldest first. Use filter, search, sort and select to choose which records and fields come back, and expand to get linked records\' fields too.',
   params: [
     { name: 'limit', in: 'query', description: 'Records per page, 1 to 200. Default 50.' },
-    { name: 'cursor', in: 'query', description: 'meta.next_cursor from the previous page. Send the same filter and sort with it.' },
+    { name: 'cursor', in: 'query', description: 'meta.next_cursor from the previous page. Send the same filter, search and sort with it.' },
     { name: 'filter[Field]', in: 'query', description: 'Only records where the field equals the value.' },
     { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
     { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records. Empty or {} means no filter.' },
+    { name: 'search', in: 'query', description: 'Only records where any text field (text, long text, email, URL, phone, single select) contains this text, ignoring case. At most 200 characters; empty means no search.' },
+    { name: 'expand', in: 'query', description: 'Comma-separated link fields whose linked records\' fields to return, e.g. Customer. Customer.Company goes one level further. At most 2 levels and 5 link fields.' },
     { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price. Also created_at, updated_at and id.' },
     { name: 'select', in: 'query', description: 'Comma-separated fields to return; empty or left out returns all fields. id, created_at and updated_at always come back.' },
     { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
   ],
   notes: [
     'Several filters are combined with AND: a record must match all of them. For "or" and "not" filters, use Find records.',
+    'search is combined with filter and where using AND. It looks only in stored text fields: lookups, formulas, numbers and dates are not searched.',
     'Formula and lookup fields are calculated when a record is read, so they can\'t be used to filter or sort.',
     'Empty fields are null, or [] for lists (multi-select, links).',
     'A link field is a list of objects, one per linked record: its id and the lookups through the link, keyed by the looked-up field\'s name. select=<lookup field> returns its link field with only that lookup.',
+    'With expand, each object of the link field also has fields: the linked record\'s fields. Only the first 100 linked records of each link are expanded; the rest keep only their id. An expanded field comes back even when select leaves it out.',
+    'expand changes what each record shows, not which records come back. Filtering by a linked record\'s fields (Customer.Country) is not supported yet.',
     'In filter, sort and select, id, created_at and updated_at mean the record\'s own values. A field with one of these names, or with , [ or ] in its name, must be given by its ID.',
   ],
   examples: [
@@ -361,6 +392,49 @@ const LIST_RECORDS: DocEndpoint = {
       response: page([ORDER_1042], null),
     },
     {
+      title: 'Search every text field',
+      description: 'Finds "paused" in the Status field of order 1043, ignoring case. Name and the other text fields are searched too.',
+      method: 'GET',
+      path: `${RECORDS}?search=paused`,
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Search together with a filter',
+      description: 'Both must match: "order" is in every Name, and only order 1042 is paid.',
+      method: 'GET',
+      path: `${RECORDS}?search=order&filter[Paid]=true`,
+      status: 200,
+      response: page([ORDER_1042], null),
+    },
+    {
+      title: 'Linked records inline (expand)',
+      description: 'Each Customer object also has fields: the customer\'s own fields. Its Company link still holds only IDs.',
+      method: 'GET',
+      path: `${RECORDS}?expand=Customer&limit=2`,
+      status: 200,
+      response: page([expandedOrder(ORDER_1042), expandedOrder(ORDER_1043)], CURSOR_PAGE_2, 2),
+    },
+    {
+      title: 'Two levels: the customer and its company',
+      description: 'Customer.Company also expands the Company link inside each customer. Customer.Company on its own does the same.',
+      method: 'GET',
+      path: `${RECORDS}?expand=Customer,Customer.Company&filter[Customer][contains]=rec_12`,
+      status: 200,
+      response: page([expandedOrder(ORDER_1042, true)], null),
+    },
+    {
+      title: 'Expand with select',
+      description: 'An expanded field comes back even when select leaves it out.',
+      method: 'GET',
+      path: `${RECORDS}?select=Name&expand=Customer&filter[Customer][contains]=rec_12`,
+      status: 200,
+      response: page(
+        [{ ...ORDER_1042, fields: { Name: ORDER_1042.fields.Name, Customer: expandedOrder(ORDER_1042).fields.Customer } }],
+        null
+      ),
+    },
+    {
       title: 'Only some fields',
       method: 'GET',
       path: `${RECORDS}?select=Name,Price`,
@@ -407,6 +481,7 @@ const LIST_RECORDS: DocEndpoint = {
     },
     {
       title: 'A cursor sent with a different filter',
+      description: 'A different search counts as a different filter too.',
       method: 'GET',
       path: `${RECORDS}?limit=2&cursor=${CURSOR_PAGE_2}&filter[Paid]=true`,
       status: 400,
@@ -414,6 +489,47 @@ const LIST_RECORDS: DocEndpoint = {
         'bad_request',
         'cursor was made for a different filter or sort. Send the same filter and sort as the first page, or start again without a cursor.'
       ),
+    },
+    {
+      title: 'Expanding a field that is not a link',
+      method: 'GET',
+      path: `${RECORDS}?expand=Price`,
+      status: 400,
+      response: fail('bad_request', 'expand: "Price" is a currency field; only link fields can be expanded.'),
+    },
+    {
+      title: 'A link field name with a typo',
+      description: 'The closest field name is suggested, at each level: expand=Customer.Compny suggests "Company".',
+      method: 'GET',
+      path: `${RECORDS}?expand=Custmer`,
+      status: 400,
+      response: fail('bad_request', 'expand: No field named "Custmer". Did you mean "Customer"?'),
+    },
+    {
+      title: 'Expanding more than 2 levels',
+      method: 'GET',
+      path: `${RECORDS}?expand=Customer.Company.Owner`,
+      status: 400,
+      response: fail(
+        'bad_request',
+        'expand: "Customer.Company.Owner" goes deeper than 2 levels. Read the linked records\' own links with another request.'
+      ),
+    },
+    {
+      title: 'A search that is too long',
+      description: 'The text is shortened here; it had 201 characters.',
+      method: 'GET',
+      path: `${RECORDS}?search=aaaa…aaaa`,
+      status: 400,
+      response: fail('bad_request', 'search: at most 200 characters.'),
+    },
+    {
+      title: 'A request that runs too long',
+      description: 'Reads are stopped after 10 seconds. Narrow the filter or search, expand fewer fields, or ask for a smaller page.',
+      method: 'GET',
+      path: `${RECORDS}?search=a&expand=Customer.Company&limit=200`,
+      status: 503,
+      response: fail('query_timeout', TIMEOUT_MESSAGE),
     },
   ],
 };
@@ -440,7 +556,9 @@ const QUERY_RECORDS: DocEndpoint = {
     { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price"], or one comma-separated text.' },
     { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text. An empty list returns all fields.' },
     { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
-    { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where and sort with it.' },
+    { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where, search and sort with it.' },
+    { name: 'search', in: 'body', description: 'Only records where any text field contains this text, ignoring case; combined with where using AND. See List records.' },
+    { name: 'expand', in: 'body', description: 'Link fields whose linked records\' fields to return: a list, e.g. ["Customer", "Customer.Company"], or one comma-separated text. See List records.' },
     { name: 'keys', in: 'body', description: 'name (default) or id.' },
   ],
   notes: [
@@ -628,6 +746,15 @@ const QUERY_RECORDS: DocEndpoint = {
       response: page([ORDER_1042], CURSOR_QUERY, 1),
     },
     {
+      title: 'Search, filter and expand in one request',
+      description: 'Active or Paused orders that mention "1042" in a text field, with each customer and its company.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED, search: '1042', expand: ['Customer', 'Customer.Company'] },
+      status: 200,
+      response: page([expandedOrder(ORDER_1042, true)], null),
+    },
+    {
       title: 'A field name with a typo',
       description: 'Errors say where the problem is in the tree, and suggest the closest field name.',
       method: 'POST',
@@ -701,7 +828,7 @@ const QUERY_RECORDS_WITH_QUERY: DocEndpoint = {
     'The same as Find records, sent with the HTTP QUERY method instead of POST: the same body, the same answer and the same errors. QUERY is the newer HTTP method for reads with a body; it says plainly that nothing is changed, so it can be retried safely. Use it if your HTTP client supports it, otherwise use POST.',
   params: QUERY_RECORDS.params,
   notes: [
-    'Everything in Find records applies: all / any / none groups, sort, select, limit, cursor and keys.',
+    'Everything in Find records applies: all / any / none groups, search, expand, sort, select, limit, cursor and keys.',
     'A cursor from POST works with QUERY and the other way around, as long as where and sort stay the same.',
     'Browsers and most HTTP clients can send QUERY (fetch, curl -X QUERY); some older tools and proxies cannot. If yours cannot, use POST.',
     'The body is optional: with no body, or an empty where, every record is listed.',
@@ -762,6 +889,7 @@ const GET_RECORD: DocEndpoint = {
   summary: 'Returns one record by its ID.',
   params: [
     { name: 'record', in: 'path', description: 'The record ID (rec_1042) with the default primary key. When the key was changed to other fields, a record ID is refused: use the value of a one-field key (records/A1), or by-key with each key field named, e.g. records/by-key?key[SKU]=A1&key[Region]=EU.' },
+    { name: 'expand', in: 'query', description: 'Comma-separated link fields whose linked records\' fields to return, as for List records.' },
     { name: 'keys', in: 'query', description: 'name (default) or id.' },
   ],
   examples: [
@@ -771,6 +899,13 @@ const GET_RECORD: DocEndpoint = {
       path: `${RECORDS}/rec_1042`,
       status: 200,
       response: ok(ORDER_1042),
+    },
+    {
+      title: 'One record with its customer',
+      method: 'GET',
+      path: `${RECORDS}/rec_1042?expand=Customer`,
+      status: 200,
+      response: ok(expandedOrder(ORDER_1042)),
     },
     {
       title: 'The record does not exist',
@@ -1065,7 +1200,7 @@ export const FIELD_VALUES: { type: string; write: string; example: string; filte
   { type: 'multi_select', write: 'A list of option names', example: '["Urgent", "Gift"]', filters: 'contains (one option), is_null' },
   { type: 'json', write: 'Any JSON value', example: '{"size": "M"}', filters: 'Can\'t be filtered' },
   { type: 'uuid', write: 'A UUID (auto-generated UUID fields are read-only)', example: '"0b6f3c1e-…"', filters: TEXT_FILTERS },
-  { type: 'links', write: 'Record IDs, or the objects it returns (one-record writes only). Read back as objects: id plus the lookups through the link', example: '["rec_12"]', filters: 'contains (a record ID), is_null' },
+  { type: 'links', write: 'Record IDs, or the objects it returns (one-record writes only). Read back as objects: id plus the lookups through the link, and with expand the linked record\'s fields', example: '["rec_12"]', filters: 'contains (a record ID), is_null' },
 ];
 
 export const READ_ONLY_VALUES: { type: string; read: string }[] = [
@@ -1086,6 +1221,7 @@ export const ERROR_CODES: { code: string; status: number; when: string }[] = [
   { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
   { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
   { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
+  { code: 'query_timeout', status: 503, when: 'A read ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
 ];
 
 export const RESPONSE_EXAMPLES = {
