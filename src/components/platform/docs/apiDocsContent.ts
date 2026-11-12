@@ -444,6 +444,10 @@ const QUERY_RECORDS: DocEndpoint = {
   ],
   notes: [
     'all: every condition must be true (AND). any: at least one (OR). none: not one of them (NOT).',
+    'To say OR, put the conditions in a group with "match": "any". For one field with several values, "op": "in" is shorter.',
+    'To say NOT, put the condition in a group with "match": "none". With several conditions inside, none means "neither ... nor ...".',
+    'To say NOT (A AND B), put an "all" group inside a "none" group. To mix AND with OR, put an "any" group inside an "all" group, and so on.',
+    'neq and none differ on empty fields: "op": "neq" leaves out records where the field is empty, a none group keeps them.',
     'none counts an empty field as not matching, so "none of Status is Active" also finds records with no Status.',
     'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
     'Groups can be nested up to 5 deep, with at most 50 conditions in all.',
@@ -458,6 +462,110 @@ const QUERY_RECORDS: DocEndpoint = {
       body: { where: ACTIVE_OR_PAUSED },
       status: 200,
       response: page([ORDER_1042, ORDER_1043], null),
+    },
+    // ---- How to say OR ----
+    {
+      title: 'OR across two fields',
+      description: 'Status is Paused, or Price is under 100. A record needs only one of them.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'any',
+          conditions: [
+            { field: 'Status', value: 'Paused' },
+            { field: 'Price', op: 'lt', value: 100 },
+          ],
+        },
+      },
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
+    },
+    {
+      title: 'OR on one field: the in shortcut',
+      description: 'The same as an any group of Status is Active and Status is Paused.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { field: 'Status', op: 'in', value: ['Active', 'Paused'] } },
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], null),
+    },
+    {
+      title: '(A AND B) OR C',
+      description: 'Active and paid, or Price under 100: an all group inside an any group.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'any',
+          conditions: [
+            { match: 'all', conditions: [{ field: 'Status', value: 'Active' }, { field: 'Paid', value: true }] },
+            { field: 'Price', op: 'lt', value: 100 },
+          ],
+        },
+      },
+      status: 200,
+      response: page([ORDER_1042, ORDER_1044], null),
+    },
+    {
+      title: 'OR on GET, with the where parameter',
+      description: 'The same tree as URL-encoded JSON on List records, for clients that can only send GET.',
+      method: 'GET',
+      path: `${RECORDS}?where=${encodeURIComponent(JSON.stringify({ match: 'any', conditions: [{ field: 'Status', value: 'Paused' }, { field: 'Price', op: 'lt', value: 100 }] }))}`,
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
+    },
+    // ---- How to say NOT ----
+    {
+      title: 'NOT one condition: Status is not Active',
+      description: 'A none group with one condition. Order 1044 has no Status, so it comes back too.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { match: 'none', conditions: [{ field: 'Status', value: 'Active' }] } },
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
+    },
+    {
+      title: 'neq instead: empty fields are left out',
+      description: 'Status neq Active only returns records that have a Status. Compare with the none group above.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { field: 'Status', op: 'neq', value: 'Active' } },
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Neither ... nor ...',
+      description: 'Status is neither Active nor Paused: a none group with two conditions.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'none',
+          conditions: [
+            { field: 'Status', value: 'Active' },
+            { field: 'Status', value: 'Paused' },
+          ],
+        },
+      },
+      status: 200,
+      response: page([ORDER_1044], null),
+    },
+    {
+      title: 'NOT (A AND B)',
+      description: 'Every order except the paid ones of 100 or more: an all group inside a none group.',
+      method: 'POST',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'none',
+          conditions: [
+            { match: 'all', conditions: [{ field: 'Paid', value: true }, { field: 'Price', op: 'gte', value: 100 }] },
+          ],
+        },
+      },
+      status: 200,
+      response: page([ORDER_1043, ORDER_1044], null),
     },
     {
       title: 'All, any and none together',
