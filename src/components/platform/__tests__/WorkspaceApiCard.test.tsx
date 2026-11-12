@@ -69,7 +69,8 @@ describe('WorkspaceApiCard', () => {
     expect(overview).toBeEnabled();
     expect(overview).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Logs' })).toBeEnabled();
-    for (const label of ['API keys', 'Login settings', 'App users', 'Roles & rules', 'Test as user']) {
+    expect(screen.getByRole('button', { name: 'Login settings' })).toBeEnabled();
+    for (const label of ['App users', 'Roles & rules', 'Test as user']) {
       expect(screen.getByRole('button', { name: `${label} Soon` })).toBeDisabled();
     }
   });

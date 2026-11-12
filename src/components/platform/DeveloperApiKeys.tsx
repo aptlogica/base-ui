@@ -22,8 +22,9 @@ const INITIAL_KEYS: ExtraKey[] = [
 ];
 
 const ACCESS_OPTIONS = ['Read only', 'Read & write'];
-const SCOPE_OPTIONS = ['Whole workspace', 'Sales base', 'Orders table'];
-const EXPIRY_OPTIONS = ['In 30 days', 'In 90 days', 'In 1 year', 'Never'];
+const SCOPE_OPTIONS = ['Sales base', 'Whole workspace', 'Choose tables...'];
+const EXPIRY_OPTIONS = ['In 90 days', 'In 30 days', 'In 1 year', 'Never (not recommended)'];
+const NEVER_EXPIRES = EXPIRY_OPTIONS[3];
 
 const FIELD_CLASS = 'h-9 w-full rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-card)] px-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-green-600';
 const OUTLINE_BTN = 'h-8 px-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 text-sm text-gray-700 transition-colors cursor-pointer';
@@ -54,8 +55,8 @@ export const DeveloperApiKeys: React.FC = () => {
   const [keys, setKeys] = useState<ExtraKey[]>(INITIAL_KEYS);
   const [name, setName] = useState('');
   const [access, setAccess] = useState(ACCESS_OPTIONS[0]);
-  const [scope, setScope] = useState(SCOPE_OPTIONS[1]);
-  const [expiry, setExpiry] = useState(EXPIRY_OPTIONS[1]);
+  const [scope, setScope] = useState(SCOPE_OPTIONS[0]);
+  const [expiry, setExpiry] = useState(EXPIRY_OPTIONS[0]);
   const [limit, setLimit] = useState('600');
   const [copied, setCopied] = useState(false);
 
@@ -73,7 +74,7 @@ export const DeveloperApiKeys: React.FC = () => {
     if (!name.trim()) return;
     setKeys((prev) => [
       ...prev,
-      { id: Date.now(), name: name.trim(), access, scope, expires: expiry === 'Never' ? '—' : expiry, lastUsed: 'Never', status: 'Active' },
+      { id: Date.now(), name: name.trim(), access, scope, expires: expiry === NEVER_EXPIRES ? '—' : expiry, lastUsed: 'Never', status: 'Active' },
     ]);
     setName('');
   };

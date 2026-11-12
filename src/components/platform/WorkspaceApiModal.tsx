@@ -10,6 +10,8 @@ import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import DeveloperOverview from './DeveloperOverview';
 import DeveloperLogs from './DeveloperLogs';
 import DeveloperApiKeys from './DeveloperApiKeys';
+import DeveloperLoginSettings from './DeveloperLoginSettings';
+import DeveloperRolesRules from './DeveloperRolesRules';
 import { apiDocsPath } from './docs/apiDocsContent';
 
 interface WorkspaceApiModalProps {
@@ -21,9 +23,9 @@ interface WorkspaceApiModalProps {
 const SECTIONS: { key: string; label: string; icon: React.ElementType; ready: boolean }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, ready: true },
   { key: 'apiKeys', label: 'API keys', icon: KeyRound, ready: true },
-  { key: 'loginSettings', label: 'Login settings', icon: LogIn, ready: false },
+  { key: 'loginSettings', label: 'Login settings', icon: LogIn, ready: true },
   { key: 'appUsers', label: 'App users', icon: Users, ready: false },
-  { key: 'rolesAndRules', label: 'Roles & rules', icon: ShieldCheck, ready: false },
+  { key: 'rolesAndRules', label: 'Roles & rules', icon: ShieldCheck, ready: true },
   { key: 'testAsUser', label: 'Test as user', icon: UserCheck, ready: false },
   { key: 'logs', label: 'Logs', icon: ScrollText, ready: true },
 ];
@@ -136,6 +138,10 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
               <DeveloperLogs />
             ) : activeSection === 'apiKeys' ? (
               <DeveloperApiKeys />
+            ) : activeSection === 'loginSettings' ? (
+              <DeveloperLoginSettings />
+            ) : activeSection === 'rolesAndRules' ? (
+              <DeveloperRolesRules />
             ) : (
               <DeveloperOverview
                 workspaceId={selectedWorkspaceId}
