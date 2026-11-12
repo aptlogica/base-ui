@@ -278,8 +278,8 @@ const LIST_RECORDS: DocEndpoint = {
     { name: 'cursor', in: 'query', description: 'meta.next_cursor from the previous page. Send the same filter and sort with it.' },
     { name: 'filter[Field]', in: 'query', description: 'Only records where the field equals the value.' },
     { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
-    { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records.' },
-    { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price,Name. Also created_at, updated_at and id.' },
+    { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records. Empty or {} means no filter.' },
+    { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price. Also created_at, updated_at and id.' },
     { name: 'select', in: 'query', description: 'Comma-separated fields to return; empty or left out returns all fields. id, created_at and updated_at always come back.' },
     { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
   ],
@@ -434,9 +434,9 @@ const QUERY_RECORDS: DocEndpoint = {
   summary:
     'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not": where is a group that matches all, any or none of its conditions, and groups can hold other groups. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method; both work the same.',
   params: [
-    { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works.' },
+    { name: 'where', in: 'body', description: 'A group: {"match": "all" | "any" | "none", "conditions": [...]}. match is all when left out. A single condition on its own also works. null, {} or no conditions means no filter, and the whole body is optional.' },
     { name: 'conditions', in: 'body', description: 'Conditions or groups. A condition is {"field": "Status", "op": "eq", "value": "Active"}; op is eq when left out. The operators each field takes are the same as for filter.' },
-    { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price", "Name"], or one comma-separated text.' },
+    { name: 'sort', in: 'body', description: 'A list of fields, e.g. ["-Price"], or one comma-separated text.' },
     { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text. An empty list returns all fields.' },
     { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
     { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where and sort with it.' },
@@ -448,7 +448,7 @@ const QUERY_RECORDS: DocEndpoint = {
     'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
     'Groups can be nested up to 5 deep, with at most 50 conditions in all.',
     'The same tree also works on GET /records as the URL-encoded where parameter, combined with any filter[...] using AND.',
-    'POST and QUERY do exactly the same thing: same body, same answer. QUERY is the newer HTTP method for reads with a body; use it if your tool supports it, otherwise use POST. A cursor from one works with the other.',
+    'POST and QUERY do exactly the same thing: same body, same answer. See Find records with QUERY.',
   ],
   examples: [
     {
@@ -486,15 +486,6 @@ const QUERY_RECORDS: DocEndpoint = {
       body: { where: { match: 'none', conditions: [{ field: 'Status', value: 'Active' }] } },
       status: 200,
       response: page([ORDER_1043, ORDER_1044], null),
-    },
-    {
-      title: 'The same with the QUERY method',
-      description: 'QUERY takes the same body as POST and gives the same answer. Use it if your HTTP client supports it.',
-      method: 'QUERY',
-      path: `${RECORDS}/query`,
-      body: { where: ACTIVE_OR_PAUSED },
-      status: 200,
-      response: page([ORDER_1042, ORDER_1043], null),
     },
     {
       title: 'A list of values, and empty fields',
@@ -549,6 +540,68 @@ const QUERY_RECORDS: DocEndpoint = {
     {
       title: 'An unknown match',
       method: 'POST',
+      path: `${RECORDS}/query`,
+      body: { where: { match: 'either', conditions: [{ field: 'Status', value: 'Active' }] } },
+      status: 400,
+      response: fail('bad_request', 'where.match must be all, any or none.'),
+    },
+  ],
+};
+
+const QUERY_RECORDS_WITH_QUERY: DocEndpoint = {
+  id: 'query-records-query-method',
+  title: 'Find records with QUERY',
+  method: 'QUERY',
+  path: '/bases/{base}/tables/{table}/records/query',
+  summary:
+    'The same as Find records, sent with the HTTP QUERY method instead of POST: the same body, the same answer and the same errors. QUERY is the newer HTTP method for reads with a body; it says plainly that nothing is changed, so it can be retried safely. Use it if your HTTP client supports it, otherwise use POST.',
+  params: QUERY_RECORDS.params,
+  notes: [
+    'Everything in Find records applies: all / any / none groups, sort, select, limit, cursor and keys.',
+    'A cursor from POST works with QUERY and the other way around, as long as where and sort stay the same.',
+    'Browsers and most HTTP clients can send QUERY (fetch, curl -X QUERY); some older tools and proxies cannot. If yours cannot, use POST.',
+    'The body is optional: with no body, or an empty where, every record is listed.',
+  ],
+  examples: [
+    {
+      title: 'Any of: Status is Active or Paused',
+      method: 'QUERY',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED },
+      status: 200,
+      response: page([ORDER_1042, ORDER_1043], null),
+    },
+    {
+      title: 'All, any and none together',
+      description: 'Price is 100 or more, Status is Active or Paused, and the order is not paid. The highest price first.',
+      method: 'QUERY',
+      path: `${RECORDS}/query`,
+      body: {
+        where: {
+          match: 'all',
+          conditions: [
+            { field: 'Price', op: 'gte', value: 100 },
+            ACTIVE_OR_PAUSED,
+            { match: 'none', conditions: [{ field: 'Paid', value: true }] },
+          ],
+        },
+        sort: ['-Price'],
+      },
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Page through the results',
+      description: 'Send the next_cursor back with the same where and sort to get the next page.',
+      method: 'QUERY',
+      path: `${RECORDS}/query`,
+      body: { where: ACTIVE_OR_PAUSED, limit: 1 },
+      status: 200,
+      response: page([ORDER_1042], CURSOR_QUERY, 1),
+    },
+    {
+      title: 'An error, as with POST',
+      method: 'QUERY',
       path: `${RECORDS}/query`,
       body: { where: { match: 'either', conditions: [{ field: 'Status', value: 'Active' }] } },
       status: 400,
@@ -819,7 +872,7 @@ const DELETE_RECORDS: DocEndpoint = {
 
 export const ENDPOINT_GROUPS: DocGroup[] = [
   { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE] },
-  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
+  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
 ];
 
 // ---- Reference ----
