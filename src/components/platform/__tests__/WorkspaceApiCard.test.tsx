@@ -61,16 +61,30 @@ describe('WorkspaceApiCard', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('shows Overview as the only section that can be opened', () => {
+  it('shows Overview and Logs as the sections that can be opened', () => {
     renderCard({ disabled: false, hasWorkspace: true });
     fireEvent.click(screen.getByRole('button', { name: /Workspace API/i }));
 
     const overview = screen.getByRole('button', { name: 'Overview' });
     expect(overview).toBeEnabled();
     expect(overview).toHaveAttribute('aria-current', 'page');
-    for (const label of ['API keys', 'Login settings', 'App users', 'Roles & rules', 'Test as user', 'Logs']) {
+    expect(screen.getByRole('button', { name: 'Logs' })).toBeEnabled();
+    for (const label of ['API keys', 'Login settings', 'App users', 'Roles & rules', 'Test as user']) {
       expect(screen.getByRole('button', { name: `${label} Soon` })).toBeDisabled();
     }
+  });
+
+  it('opens the Logs section and filters to denied requests', () => {
+    renderCard({ disabled: false, hasWorkspace: true });
+    fireEvent.click(screen.getByRole('button', { name: /Workspace API/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Logs' }));
+
+    expect(screen.getByText('Every request, and the rule that allowed or blocked it.')).toBeInTheDocument();
+    expect(screen.getAllByText('Allowed').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Denied only' }));
+    expect(screen.queryByText('Allowed')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Denied').length).toBe(3);
   });
 
   it('is disabled and asks for a workspace when none is selected', () => {

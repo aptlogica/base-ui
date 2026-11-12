@@ -8,6 +8,8 @@ import { BookOpen, Code, KeyRound, LayoutDashboard, LogIn, ScrollText, ShieldChe
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import DeveloperOverview from './DeveloperOverview';
+import DeveloperLogs from './DeveloperLogs';
+import DeveloperApiKeys from './DeveloperApiKeys';
 import { apiDocsPath } from './docs/apiDocsContent';
 
 interface WorkspaceApiModalProps {
@@ -18,18 +20,19 @@ interface WorkspaceApiModalProps {
 // Sections of the left panel; only Overview is built so far
 const SECTIONS: { key: string; label: string; icon: React.ElementType; ready: boolean }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, ready: true },
-  { key: 'apiKeys', label: 'API keys', icon: KeyRound, ready: false },
+  { key: 'apiKeys', label: 'API keys', icon: KeyRound, ready: true },
   { key: 'loginSettings', label: 'Login settings', icon: LogIn, ready: false },
   { key: 'appUsers', label: 'App users', icon: Users, ready: false },
   { key: 'rolesAndRules', label: 'Roles & rules', icon: ShieldCheck, ready: false },
   { key: 'testAsUser', label: 'Test as user', icon: UserCheck, ready: false },
-  { key: 'logs', label: 'Logs', icon: ScrollText, ready: false },
+  { key: 'logs', label: 'Logs', icon: ScrollText, ready: true },
 ];
 
 // Developer settings of the selected workspace: sections on the left, Overview on the right
 export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, onClose }) => {
   const { selectedWorkspaceId } = useNavigationStore();
   const { currentWorkspace, isAdmin } = useWorkspaceAccess();
+  const [activeSection, setActiveSection] = React.useState('overview');
 
   if (!isOpen) return null;
 
@@ -106,12 +109,13 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
           {/* Left panel: sections */}
           <nav className="w-[220px] flex-shrink-0 border-r bg-gray-50 p-2 space-y-1 overflow-y-auto" aria-label="Developer sections">
             {SECTIONS.map(({ key, label, icon: Icon, ready }) => {
-              const isActive = key === 'overview';
+              const isActive = key === activeSection;
               return (
                 <button
                   key={key}
                   type="button"
                   disabled={!ready}
+                  onClick={() => setActiveSection(key)}
                   aria-current={isActive ? 'page' : undefined}
                   className={`relative w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left transition-colors duration-200 ${isActive ? 'bg-card shadow-xs font-medium text-primary' : 'text-gray-700 hover:bg-gray-100'} disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent`}
                 >
@@ -126,15 +130,21 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
             })}
           </nav>
 
-          {/* Right panel: Overview */}
+          {/* Right panel: the selected section */}
           <div className="flex-1 min-w-0 overflow-y-auto">
-            <DeveloperOverview
-              workspaceId={selectedWorkspaceId}
-              workspaceName={workspaceName}
-              canEnable={isAdmin}
-              onCancel={onClose}
-              onOpenDocs={openDocs}
-            />
+            {activeSection === 'logs' ? (
+              <DeveloperLogs />
+            ) : activeSection === 'apiKeys' ? (
+              <DeveloperApiKeys />
+            ) : (
+              <DeveloperOverview
+                workspaceId={selectedWorkspaceId}
+                workspaceName={workspaceName}
+                canEnable={isAdmin}
+                onCancel={onClose}
+                onOpenDocs={openDocs}
+              />
+            )}
           </div>
         </div>
       </div>
