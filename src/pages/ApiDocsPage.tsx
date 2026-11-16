@@ -189,7 +189,9 @@ const ApiDocsPage: React.FC = () => {
               </div>
               <Note>
                 Development only: there are no API keys yet, so anyone with the base URL can read and change this
-                workspace's data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true.
+                workspace's data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true. Changes to
+                tables and fields apply to the next request; after the API is turned back on, it can take up to 10
+                seconds to answer again.
               </Note>
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-primary">Endpoints</h3>
@@ -221,7 +223,7 @@ const ApiDocsPage: React.FC = () => {
               <p className="text-sm text-secondary">
                 This page explains the API with sample data. Your workspace also serves docs built from its own bases,
                 tables and fields: each table's real field names, types and select options, and what can be written.
-                They update within about 10 seconds when a table changes.
+                They update as soon as a table changes.
               </p>
               <DocTable
                 head={['Page', 'Address', 'Use it to']}
@@ -311,9 +313,9 @@ const ApiDocsPage: React.FC = () => {
                 rows={READ_ONLY_VALUES.map((f) => [<InlineCode key="t">{f.type}</InlineCode>, f.read])}
               />
               <Bullets>
-                <li>Records can be sorted by any field except multi_select, links, lookup, formula, attachment and json fields.</li>
-                <li>User, created_by and last_modified_by fields can be filtered like text; created_time and last_modified_time like dates.</li>
-                <li>Formula and lookup fields are calculated when a record is read, so they can&apos;t be used to filter or sort. Attachment and json fields can&apos;t be filtered either.</li>
+                <li>Records can be sorted by any field except multi_select, links, lookup, formula, attachment and json fields, and user fields that hold several users.</li>
+                <li>A single user, created_by and last_modified_by field filters like text; a user field holding several users takes contains (one user ID) and is_null. created_time and last_modified_time filter like date_time (RFC 3339 with a time zone).</li>
+                <li>Lookup fields filter through their link (a record matches when one of its linked records does) but can&apos;t be sorted by. Formula fields aren&apos;t in the API yet. Attachment and json fields can&apos;t be filtered.</li>
                 <li>search looks in text, long_text, email, url, phone_number and single_select fields.</li>
               </Bullets>
             </Section>
@@ -321,8 +323,9 @@ const ApiDocsPage: React.FC = () => {
             <Section id="safe-retries" title="Safe retries">
               <p className="text-sm text-secondary">
                 If a create or bulk delete times out, you can't tell whether it worked. Send an{' '}
-                <InlineCode>Idempotency-Key</InlineCode> header with POST requests: a retry with the same key and body
-                gets the first response again instead of writing twice.
+                <InlineCode>Idempotency-Key</InlineCode> header with POST /records (create) and POST /records/delete: a retry
+                with the same key and body gets the first response again instead of writing twice. Other requests
+                ignore the header: reads are safe to retry, and PATCH sets the same values again.
               </p>
               <Bullets>
                 <li>Use a new key for each new request, up to 255 characters. Keys are kept for 24 hours.</li>
@@ -353,9 +356,12 @@ const ApiDocsPage: React.FC = () => {
                 <li>600 requests per minute per workspace by default (the server's PUBLIC_API_RATE_LIMIT_PER_MINUTE). Over that you get 429; wait for the seconds in Retry-After.</li>
                 <li>100 records per create, update or delete request.</li>
                 <li>200 records per page; 50 when limit is not given.</li>
-                <li>Reads (list, find and get one record) stop after 10 seconds with <InlineCode>503 query_timeout</InlineCode>.</li>
-                <li>where: groups nested up to 5 deep, 50 conditions in all. search: 200 characters.</li>
-                <li>expand: 2 levels, 5 link fields per request, and the first 100 linked records of each link.</li>
+                <li>Reads (list, find, aggregate and get one record) stop after 10 seconds with <InlineCode>503 query_timeout</InlineCode>.</li>
+                <li>Filters: 50 conditions per request, filter[...] and where together; where groups nested up to 5 deep. An in list takes 100 values (200 for id). A condition on a linked record&apos;s field (Customer.Country) may match at most 1000 linked records. search: 200 characters and 10 words.</li>
+                <li>sort: 5 fields, each once (the id tie-breaker added at the end doesn't count; fields after id are ignored).</li>
+                <li>Aggregate: 10 metrics, 3 group_by fields (each once, and one link or multi-select field per request), and up to 1000 groups per answer (meta.has_more says there are more).</li>
+                <li>A request body can be at most 10 MB (413 payload_too_large).</li>
+                <li>expand: 2 levels, 5 link fields per request, the first 100 linked records of each link, and 5,000 linked records per request.</li>
               </Bullets>
               <ExampleBlock example={RATE_LIMIT_EXAMPLE} baseUrl={baseUrl} language={language} defaultOpen />
             </Section>

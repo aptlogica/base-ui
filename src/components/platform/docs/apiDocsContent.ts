@@ -83,6 +83,9 @@ const page = (data: unknown[], nextCursor: string | null, limit = 50) => ({
   meta: { request_id: REQUEST_ID, next_cursor: nextCursor, has_more: nextCursor !== null, limit },
 });
 
+// A page with meta.total, as count=true returns it
+const withTotal = (p: ReturnType<typeof page>, total: number) => ({ ...p, meta: { ...p.meta, total } });
+
 // The answer of an aggregate: groups have no cursor, has_more says more groups matched than limit
 const groups = (data: { group: Record<string, unknown>; values: Record<string, unknown> }[], hasMore = false, limit = 100) => ({
   data,
@@ -317,19 +320,20 @@ const LIST_RECORDS: DocEndpoint = {
     { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records. Empty or {} means no filter.' },
     { name: 'search', in: 'query', description: 'Only records where every word of this text is in some text field (text, long text, email, URL, phone, single select), ignoring case. Words can be in any order and in different fields; they are split on spaces only. At most 200 characters and 10 words; empty means no search.' },
     { name: 'expand', in: 'query', description: 'Comma-separated link fields whose linked records\' fields to return, e.g. Customer. Customer.Company goes one level further. At most 2 levels and 5 link fields.' },
-    { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price. Also created_at, updated_at and id.' },
+    { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price. Also created_at, updated_at and id. At most 5 fields, each once; id is always added last as a tie-breaker, and fields after id are ignored.' },
     { name: 'select', in: 'query', description: 'Comma-separated fields to return; empty or left out returns all fields. id, created_at and updated_at always come back.' },
     { name: 'keys', in: 'query', description: 'name (default) keys fields by name; id keys them by field ID (fld_…).' },
+    { name: 'count', in: 'query', description: 'true adds meta.total: the number of records the filter matches, on every page. It costs one more query; ask on the first page only.' },
   ],
   notes: [
     'Several filters are combined with AND: a record must match all of them. For "or" and "not" filters, use Find records.',
     'search is combined with filter and where using AND. It looks only in stored text fields: lookups, numbers and dates are not searched.',
-    'Lookup fields are calculated when a record is read, so they can\'t be used to filter or sort.',
+    'A field of the linked records can be filtered on, as Link.Field (filter[Customer.Country]=India) or by a lookup\'s name (filter[Email][contains]=asha): a record matches when at least one of its linked records does; with none or neq, records with no linked record match too. At most 1000 linked records may match one such condition, and filters follow one link. Lookups can\'t be sorted by.',
     'Formula fields aren\'t in the API yet: the app calculates their values, so the value stored on the server can be empty or out of date.',
     'Empty fields are null, or [] for lists (multi-select, links).',
     'A link field is a list of objects, one per linked record: its id and the lookups through the link, keyed by the looked-up field\'s name. select=<lookup field> returns its link field with only that lookup.',
-    'With expand, each object of the link field also has fields: the linked record\'s fields. Only the first 100 linked records of each link are expanded; the rest keep only their id. An expanded field comes back even when select leaves it out.',
-    'expand changes what each record shows, not which records come back. Filtering by a linked record\'s fields (Customer.Country) is not supported yet.',
+    'With expand, each object of the link field also has fields: the linked record\'s fields. Only the first 100 linked records of each link are expanded, and at most 5,000 in the whole request; the rest keep only their id. Inside an expanded record, its own link fields hold only ids, without lookups, unless expanded too. An expanded field comes back even when select leaves it out.',
+    'expand changes what each record shows, not which records come back. To filter by a linked record\'s fields, use Customer.Country or a lookup (see the notes above).',
     'In filter, sort and select, id, created_at and updated_at mean the record\'s own values. A field with one of these names, or with , [ or ] in its name, must be given by its ID.',
     'Paging is safe while records change: the cursor remembers the last record of the page, so records added or deleted between pages are not skipped or repeated. Only a record whose sort value is edited between pages can move (seen twice or not at all); sorting by id, the default, is never affected.',
   ],
@@ -410,6 +414,22 @@ const LIST_RECORDS: DocEndpoint = {
       path: `${RECORDS}?search=paused`,
       status: 200,
       response: page([ORDER_1043], null),
+    },
+    {
+      title: 'Count every matching record',
+      description: 'count=true adds meta.total: all records the filter matches, not only this page. Ask on the first page only; it costs one more query.',
+      method: 'GET',
+      path: `${RECORDS}?limit=1&count=true`,
+      status: 200,
+      response: withTotal(page([ORDER_1042], CURSOR_KEYS, 1), 3),
+    },
+    {
+      title: 'Filter by a linked record\'s field',
+      description: 'Customer.Email is the Email of the linked customer: order 1042 has a customer whose email contains asha. The Email lookup works the same way: filter[Email][contains]=asha.',
+      method: 'GET',
+      path: `${RECORDS}?filter[Customer.Email][contains]=asha`,
+      status: 200,
+      response: page([ORDER_1042], null),
     },
     {
       title: 'Search for several words',
@@ -604,6 +624,7 @@ const QUERY_RECORDS: DocEndpoint = {
     { name: 'search', in: 'body', description: 'Only records where every word of this text is in some text field, ignoring case; combined with where using AND. See List records.' },
     { name: 'expand', in: 'body', description: 'Link fields whose linked records\' fields to return: a list, e.g. ["Customer", "Customer.Company"], or one comma-separated text. See List records.' },
     { name: 'keys', in: 'body', description: 'name (default) or id.' },
+    { name: 'count', in: 'body', description: 'true adds meta.total, as count in List records.' },
   ],
   notes: [
     'Two shapes only. Condition: {"field": "Name", "op": "contains", "value": "104"}. Group: {"match": "none", "conditions": [ ...conditions or groups... ]}. A condition with match, or a group with field, is an error.',
@@ -614,7 +635,7 @@ const QUERY_RECORDS: DocEndpoint = {
     'neq and none differ on empty fields: "op": "neq" leaves out records where the field is empty, a none group keeps them.',
     'none counts an empty field as not matching, so "none of Status is Active" also finds records with no Status.',
     'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
-    'Groups can be nested up to 5 deep, with at most 50 conditions in all, counted together with any filter[...]. An in list takes at most 100 values (200 for id), and sort at most 5 fields.',
+    'Groups can be nested up to 5 deep, with at most 50 conditions in all, counted together with any filter[...]. An in list takes at most 100 values (200 for id), and sort at most 5 fields, each once; fields after id are ignored.',
     'The same tree also works on GET /records as the URL-encoded where parameter, combined with any filter[...] using AND.',
     'POST and QUERY do exactly the same thing: same body, same answer. See Find records with QUERY.',
     'Every option goes in the body. Options sent in the URL, like ?filter[Status]=Active or ?keys=id, are refused with 400 and the message says where to put them; other URL parameters (cache busters, tracking tags) are ignored.',
@@ -843,15 +864,20 @@ const QUERY_RECORDS: DocEndpoint = {
       response: page([ORDER_1043, ORDER_1044], null),
     },
     {
-      title: 'A lookup field',
+      title: 'Filter by a lookup',
+      description: 'Email is a lookup of the customer\'s Email: order 1042 has a customer whose email contains asha.',
       method: 'POST',
       path: `${RECORDS}/query`,
       body: { where: { field: 'Email', op: 'contains', value: 'asha' } },
+      status: 200,
+      response: page([ORDER_1042], null),
+    },
+    {
+      title: 'Sorting by a lookup',
+      method: 'GET',
+      path: `${RECORDS}?sort=Email`,
       status: 400,
-      response: fail(
-        'bad_request',
-        'where: "Email" is a lookup field. Its value is calculated when read, so it can\'t be used to filter or sort.'
-      ),
+      response: fail('bad_request', 'sort: "Email" is a lookup field. It can be filtered on, but not sorted by: a record can have several linked records.'),
     },
     {
       title: 'An unknown match',
@@ -946,12 +972,12 @@ const AGGREGATE_RECORDS: DocEndpoint = {
   summary:
     'Counts, sums, averages, minimums and maximums over the records a filter selects, optionally grouped: records per status, revenue per month, the top customers. where and search work as in Find records, so both select the same records. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method.',
   params: [
-    { name: 'metrics', in: 'body', description: 'Required, 1 to 10: [{"op": "count"}, {"op": "sum", "field": "Price", "as": "revenue"}]. op is count (records), count_distinct (different non-empty values), sum, avg, min or max. field is needed except for count. as names the value in the answer; by default it is count or <op>_<field name>, like avg_Price.' },
-    { name: 'group_by', in: 'body', description: 'Up to 3 fields: ["Status"], or {"field": "Order date", "by": "month"} to group a date or date-time by day, week, month or year. Date-times (including created_at and updated_at) need by. Link, multi-select and lookup fields work too: ["Customer"] gives one group per customer. Without group_by the answer is one group over all matching records.' },
+    { name: 'metrics', in: 'body', description: 'Required, 1 to 10: [{"op": "count"}, {"op": "sum", "field": "Price", "as": "revenue"}]. op is count (records), count_distinct (different non-empty values), sum, avg, min or max. field is needed except for count. as names the value in the answer; by default it is count or <op>_<field name>, like avg_Price; with keys=id it is <op>_<field ID>, so a rename doesn\'t change it.' },
+    { name: 'group_by', in: 'body', description: 'Up to 3 fields, each once: ["Status"], or {"field": "Order date", "by": "month"} to group a date or date-time by day, week, month or year. Date-times (including created_at and updated_at) need by. Link, multi-select and lookup fields work too: ["Customer"] gives one group per customer. Without group_by the answer is one group over all matching records.' },
     { name: 'timezone', in: 'body', description: 'Which day a date-time belongs to when grouped, e.g. "Asia/Kolkata". Default UTC.' },
     { name: 'where', in: 'body', description: 'The same filter tree as in Find records.' },
     { name: 'search', in: 'body', description: 'Only records where every word of this text is in some text field, as in List records.' },
-    { name: 'sort', in: 'body', description: 'Metric names or group_by fields, - for descending: ["-revenue"]. At most 5. Default: the groups in order.' },
+    { name: 'sort', in: 'body', description: 'Metric names or group_by fields, - for descending: ["-revenue"]. At most 5, each once. Default: the groups in order.' },
     { name: 'limit', in: 'body', description: 'Groups to return, 1 to 1000. Default 100.' },
     { name: 'keys', in: 'body', description: 'name (default) or id: how group fields are keyed in the answer.' },
   ],
@@ -960,7 +986,7 @@ const AGGREGATE_RECORDS: DocEndpoint = {
     'Grouped: text, email, URL, phone, single select, checkbox, number, decimal, currency, percent, rating, year, duration and date fields; dates and date-times also by day, week, month or year. sum and avg: number fields (duration in minutes). min and max: number, date and date-time fields. count_distinct: the fields that can be grouped, except date-times.',
     'Link, multi-select and lookup fields can be grouped: a link group is the linked record, {"id": "rec_12"}; a multi-select group is the option; a lookup group is the looked-up value, grouped like that field. Records with no links or options, and links to deleted records, are the null group.',
     'A record counts once in each group it belongs to: an order linked to two customers counts for both, so group totals can add up to more than the overall total. One link or multi-select field per request; lookups through that same link can be added. These fields can\'t be used in metrics.',
-    'Long text, JSON, attachments, users, uuid and formula fields can\'t be grouped or aggregated yet.',
+    'Long text, JSON, attachments, users, created_by, last_modified_by, time, uuid and formula fields can\'t be grouped or aggregated yet.',
     'Empty values make their own group, null, which comes last. Empty text counts as empty and an unchecked checkbox as false, as in filters.',
     'sum of no values is 0; avg, min and max of no values are null. Without group_by there is always one group, even when nothing matches.',
     'Weeks start on Monday, and a period comes back as its first day: 2026-11-01 for November.',
@@ -1079,6 +1105,14 @@ const AGGREGATE_RECORDS: DocEndpoint = {
       response: fail('bad_request', 'metrics is required: a list like [{"op": "count"}, {"op": "sum", "field": "Price"}].'),
     },
     {
+      title: 'An unknown time zone',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: [{ field: 'created_at', by: 'month' }], metrics: [{ op: 'count' }], timezone: 'Mars/Base' },
+      status: 400,
+      response: fail('bad_request', 'timezone: "Mars/Base" is not a time zone. Use a name like "Asia/Kolkata", "Europe/Berlin" or "UTC".'),
+    },
+    {
       title: 'A date-time grouped without a period',
       method: 'POST',
       path: `${RECORDS}/aggregate`,
@@ -1122,6 +1156,9 @@ const GET_RECORD: DocEndpoint = {
     { name: 'expand', in: 'query', description: 'Comma-separated link fields whose linked records\' fields to return, as for List records.' },
     { name: 'keys', in: 'query', description: 'name (default) or id.' },
   ],
+  notes: [
+    'When the table\'s primary key was changed to other fields, each record also has key: the key fields\' values, like {"SKU": "A1", "Region": "EU"}. The same is true in lists, in created and updated records, and in delete results.',
+  ],
   examples: [
     {
       title: 'One record',
@@ -1158,6 +1195,7 @@ const CREATE_RECORDS: DocEndpoint = {
     { name: 'fields', in: 'body', description: 'Field values by name or ID. Fields you leave out stay empty.' },
     { name: 'records', in: 'body', description: 'For many records: an array of {"fields": {...}}, at most 100.' },
     { name: 'Idempotency-Key', in: 'header', description: 'Optional. Makes a retry safe; see Safe retries.' },
+    { name: 'keys', in: 'query', description: 'name (default) or id: how fields are keyed in the records returned.' },
   ],
   notes: [
     'All or nothing: if any record has a problem, nothing is saved and error.details lists every problem, with the record\'s index for bulk requests.',
@@ -1257,9 +1295,10 @@ const UPDATE_RECORDS: DocEndpoint = {
     { name: 'record', in: 'path', description: 'The record, as for Get a record (rec_1042, records/A1, or records/by-key?key[SKU]=A1&key[Region]=EU), for a single update. In a bulk update, each record has an id, or a key object such as {"SKU": "A1", "Region": "EU"} when the primary key is other fields.' },
     { name: 'fields', in: 'body', description: 'The values to change. null empties a field.' },
     { name: 'records', in: 'body', description: 'For many records: an array of {"id", "fields"}, at most 100, each ID once.' },
+    { name: 'keys', in: 'query', description: 'name (default) or id: how fields are keyed in the records returned.' },
   ],
   notes: [
-    'A link field takes record IDs (["rec_15"]) or the objects it returns ([{"id": "rec_15", ...}]). The new value replaces its links, and [] or null removes all links.',
+    'A link field takes record IDs (["rec_15"]) or the objects it returns ([{"id": "rec_15", ...}]). The new value replaces its links, and [] or null removes all links. Link fields can be set only when updating one record (PATCH /records/{record}); a bulk update with a link field is 422.',
     'All or nothing: if any record is missing or invalid, no record is changed.',
   ],
   examples: [
@@ -1373,7 +1412,7 @@ const DELETE_RECORDS: DocEndpoint = {
       body: { ids: ['rec_1046', 'rec_9999'] },
       status: 404,
       response: fail('not_found', 'Some records don\'t exist. Nothing was deleted.', [
-        { id: 'rec_9999', issue: 'no record with this ID' },
+        { id: 'rec_9999', issue: 'no record with this ID or key' },
       ]),
     },
   ],
@@ -1435,23 +1474,24 @@ export const FIELD_VALUES: { type: string; write: string; example: string; filte
 ];
 
 export const READ_ONLY_VALUES: { type: string; read: string }[] = [
-  { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name. Can\'t be used to filter or sort' },
+  { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name. Filtered through its link (filter[Email][contains]=asha); can\'t be sorted by' },
   { type: 'attachment', read: 'A list of {id, url, name, size, type}' },
-  { type: 'user', read: 'A user ID, or a list of user IDs' },
+  { type: 'user', read: 'A user ID, or a list of user IDs. A list is filtered with contains (one user ID) and is_null, and can\'t be sorted by' },
   { type: 'created_time, last_modified_time', read: 'Date and time in UTC' },
   { type: 'created_by, last_modified_by', read: 'A user ID' },
 ];
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
-  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
+  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort or edited, a value in the wrong format (the message says which), an unknown timezone, the same ID twice in a bulk request, or an Idempotency-Key longer than 255 characters' },
   { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
   { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running; or the table was busy with other changes, so nothing was saved: try again' },
-  { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request' },
+  { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request, or a request body over 10 MB' },
   { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
   { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
   { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
   { code: 'query_timeout', status: 503, when: 'A read (list, find, aggregate or get a record) ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
+  { code: 'schema_changed', status: 409, when: 'A field or table the request uses was changed or deleted in the app while the request was being answered; try again' },
 ];
 
 export const RESPONSE_EXAMPLES = {
