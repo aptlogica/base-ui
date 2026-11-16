@@ -71,9 +71,9 @@ const IDS = {
   customersEmail: 'fld_708192a3b4c54d6485f6a7b8c9d0e1f2',
 };
 
-const CURSOR_PAGE_2 = 'eyJ2IjoxLCJvIjoyLCJoIjoiOWM0MWUwN2IifQ';
-const CURSOR_KEYS = 'eyJ2IjoxLCJvIjoxLCJoIjoiNTJhZDhmMTAifQ';
-const CURSOR_QUERY = 'eyJ2IjoxLCJvIjoxLCJoIjoiNWUwYjdkMmM0MWE5ZjM4NiJ9';
+const CURSOR_PAGE_2 = 'eyJ2IjoyLCJrIjpbMTA0M10sImgiOiI5YzQxZTA3YiJ9';
+const CURSOR_KEYS = 'eyJ2IjoyLCJrIjpbMTA0Ml0sImgiOiI1MmFkOGYxMCJ9';
+const CURSOR_QUERY = 'eyJ2IjoyLCJrIjpbMTA0Ml0sImgiOiI1ZTBiN2QyYzQxZTlmMzg2In0';
 
 const ok = (data: unknown) => ({ data, error: null, meta: { request_id: REQUEST_ID } });
 
@@ -82,6 +82,16 @@ const page = (data: unknown[], nextCursor: string | null, limit = 50) => ({
   error: null,
   meta: { request_id: REQUEST_ID, next_cursor: nextCursor, has_more: nextCursor !== null, limit },
 });
+
+// The answer of an aggregate: groups have no cursor, has_more says more groups matched than limit
+const groups = (data: { group: Record<string, unknown>; values: Record<string, unknown> }[], hasMore = false, limit = 100) => ({
+  data,
+  error: null,
+  meta: { request_id: REQUEST_ID, next_cursor: null, has_more: hasMore, limit },
+});
+
+const FORMULA_MESSAGE =
+  '"Total" is a formula field. Formula fields aren\'t in the API yet: the app calculates their values, so the value stored on the server can be empty or out of date.';
 
 const fail = (code: string, message: string, details?: Record<string, unknown>[]) => ({
   data: null,
@@ -305,7 +315,7 @@ const LIST_RECORDS: DocEndpoint = {
     { name: 'filter[Field]', in: 'query', description: 'Only records where the field equals the value.' },
     { name: 'filter[Field][op]', in: 'query', description: 'Compare with an operator: eq, neq, gt, gte, lt, lte, in, contains, is_null. See Field values for which work on each type.' },
     { name: 'where', in: 'query', description: 'For "or" and "not": a filter tree as URL-encoded JSON. Easier to send in a body; see Find records. Empty or {} means no filter.' },
-    { name: 'search', in: 'query', description: 'Only records where any text field (text, long text, email, URL, phone, single select) contains this text, ignoring case. At most 200 characters; empty means no search.' },
+    { name: 'search', in: 'query', description: 'Only records where every word of this text is in some text field (text, long text, email, URL, phone, single select), ignoring case. Words can be in any order and in different fields; they are split on spaces only. At most 200 characters and 10 words; empty means no search.' },
     { name: 'expand', in: 'query', description: 'Comma-separated link fields whose linked records\' fields to return, e.g. Customer. Customer.Company goes one level further. At most 2 levels and 5 link fields.' },
     { name: 'sort', in: 'query', description: 'Comma-separated fields; a leading - sorts descending, e.g. -Price. Also created_at, updated_at and id.' },
     { name: 'select', in: 'query', description: 'Comma-separated fields to return; empty or left out returns all fields. id, created_at and updated_at always come back.' },
@@ -313,13 +323,15 @@ const LIST_RECORDS: DocEndpoint = {
   ],
   notes: [
     'Several filters are combined with AND: a record must match all of them. For "or" and "not" filters, use Find records.',
-    'search is combined with filter and where using AND. It looks only in stored text fields: lookups, formulas, numbers and dates are not searched.',
-    'Formula and lookup fields are calculated when a record is read, so they can\'t be used to filter or sort.',
+    'search is combined with filter and where using AND. It looks only in stored text fields: lookups, numbers and dates are not searched.',
+    'Lookup fields are calculated when a record is read, so they can\'t be used to filter or sort.',
+    'Formula fields aren\'t in the API yet: the app calculates their values, so the value stored on the server can be empty or out of date.',
     'Empty fields are null, or [] for lists (multi-select, links).',
     'A link field is a list of objects, one per linked record: its id and the lookups through the link, keyed by the looked-up field\'s name. select=<lookup field> returns its link field with only that lookup.',
     'With expand, each object of the link field also has fields: the linked record\'s fields. Only the first 100 linked records of each link are expanded; the rest keep only their id. An expanded field comes back even when select leaves it out.',
     'expand changes what each record shows, not which records come back. Filtering by a linked record\'s fields (Customer.Country) is not supported yet.',
     'In filter, sort and select, id, created_at and updated_at mean the record\'s own values. A field with one of these names, or with , [ or ] in its name, must be given by its ID.',
+    'Paging is safe while records change: the cursor remembers the last record of the page, so records added or deleted between pages are not skipped or repeated. Only a record whose sort value is edited between pages can move (seen twice or not at all); sorting by id, the default, is never affected.',
   ],
   examples: [
     {
@@ -400,6 +412,14 @@ const LIST_RECORDS: DocEndpoint = {
       response: page([ORDER_1043], null),
     },
     {
+      title: 'Search for several words',
+      description: 'Every word must be found, in any order and in any text field: "order" is in the Name and "paused" in the Status of order 1043. Order 1042 has "order" but not "paused".',
+      method: 'GET',
+      path: `${RECORDS}?search=paused%20order`,
+      status: 200,
+      response: page([ORDER_1043], null),
+    },
+    {
       title: 'Search together with a filter',
       description: 'Both must match: "order" is in every Name, and only order 1042 is paid.',
       method: 'GET',
@@ -470,6 +490,14 @@ const LIST_RECORDS: DocEndpoint = {
       ),
     },
     {
+      title: 'A formula field',
+      description: 'Orders has a formula field "Total" in the app. The API leaves formula fields out, so it isn\'t in the records, and naming it in sort, filter or select says why.',
+      method: 'GET',
+      path: `${RECORDS}?sort=Total`,
+      status: 400,
+      response: fail('bad_request', `sort: ${FORMULA_MESSAGE}`),
+    },
+    {
       title: 'An operator the field does not support',
       method: 'GET',
       path: `${RECORDS}?filter[Price][contains]=100`,
@@ -489,6 +517,14 @@ const LIST_RECORDS: DocEndpoint = {
         'bad_request',
         'cursor was made for a different filter or sort. Send the same filter and sort as the first page, or start again without a cursor.'
       ),
+    },
+    {
+      title: 'A cursor that was changed',
+      description: 'A cursor is opaque: send meta.next_cursor exactly as it came. An edited or cut-off cursor is refused.',
+      method: 'GET',
+      path: `${RECORDS}?limit=2&cursor=abc123`,
+      status: 400,
+      response: fail('bad_request', 'cursor is not valid. Use the next_cursor of the previous page.'),
     },
     {
       title: 'Expanding a field that is not a link',
@@ -524,6 +560,14 @@ const LIST_RECORDS: DocEndpoint = {
       response: fail('bad_request', 'search: at most 200 characters.'),
     },
     {
+      title: 'A search with too many words',
+      description: 'A search can have at most 10 words; a word given twice counts once.',
+      method: 'GET',
+      path: `${RECORDS}?search=a%20b%20c%20d%20e%20f%20g%20h%20i%20j%20k`,
+      status: 400,
+      response: fail('bad_request', 'search: at most 10 words.'),
+    },
+    {
       title: 'A request that runs too long',
       description: 'Reads are stopped after 10 seconds. Narrow the filter or search, expand fewer fields, or ask for a smaller page.',
       method: 'GET',
@@ -557,7 +601,7 @@ const QUERY_RECORDS: DocEndpoint = {
     { name: 'select', in: 'body', description: 'A list of fields to return, or one comma-separated text. An empty list returns all fields.' },
     { name: 'limit', in: 'body', description: 'Records per page, 1 to 200. Default 50.' },
     { name: 'cursor', in: 'body', description: 'meta.next_cursor from the previous page. Send the same where, search and sort with it.' },
-    { name: 'search', in: 'body', description: 'Only records where any text field contains this text, ignoring case; combined with where using AND. See List records.' },
+    { name: 'search', in: 'body', description: 'Only records where every word of this text is in some text field, ignoring case; combined with where using AND. See List records.' },
     { name: 'expand', in: 'body', description: 'Link fields whose linked records\' fields to return: a list, e.g. ["Customer", "Customer.Company"], or one comma-separated text. See List records.' },
     { name: 'keys', in: 'body', description: 'name (default) or id.' },
   ],
@@ -570,9 +614,10 @@ const QUERY_RECORDS: DocEndpoint = {
     'neq and none differ on empty fields: "op": "neq" leaves out records where the field is empty, a none group keeps them.',
     'none counts an empty field as not matching, so "none of Status is Active" also finds records with no Status.',
     'in takes a JSON list: {"field": "Status", "op": "in", "value": ["Active", "Paused"]}. {"field": "Status", "op": "is_null"} finds empty fields.',
-    'Groups can be nested up to 5 deep, with at most 50 conditions in all.',
+    'Groups can be nested up to 5 deep, with at most 50 conditions in all, counted together with any filter[...]. An in list takes at most 100 values (200 for id), and sort at most 5 fields.',
     'The same tree also works on GET /records as the URL-encoded where parameter, combined with any filter[...] using AND.',
     'POST and QUERY do exactly the same thing: same body, same answer. See Find records with QUERY.',
+    'Every option goes in the body. Options sent in the URL, like ?filter[Status]=Active or ?keys=id, are refused with 400 and the message says where to put them; other URL parameters (cache busters, tracking tags) are ignored.',
   ],
   examples: [
     {
@@ -798,14 +843,14 @@ const QUERY_RECORDS: DocEndpoint = {
       response: page([ORDER_1043, ORDER_1044], null),
     },
     {
-      title: 'A lookup or formula field',
+      title: 'A lookup field',
       method: 'POST',
       path: `${RECORDS}/query`,
       body: { where: { field: 'Email', op: 'contains', value: 'asha' } },
       status: 400,
       response: fail(
         'bad_request',
-        'where: "Email" is a lookup field. Formula and lookup fields are calculated when read, so they can\'t be used to filter or sort.'
+        'where: "Email" is a lookup field. Its value is calculated when read, so it can\'t be used to filter or sort.'
       ),
     },
     {
@@ -815,6 +860,18 @@ const QUERY_RECORDS: DocEndpoint = {
       body: { where: { match: 'either', conditions: [{ field: 'Status', value: 'Active' }] } },
       status: 400,
       response: fail('bad_request', 'where.match must be all, any or none.'),
+    },
+    {
+      title: 'A filter sent in the URL',
+      description: 'Find records reads only its body. Before, the URL filter was ignored and every record came back; now the request is refused and the message shows the where to send instead.',
+      method: 'POST',
+      path: `${RECORDS}/query?filter[Status]=Active`,
+      body: {},
+      status: 400,
+      response: fail(
+        'bad_request',
+        'POST /records/query reads its options from the body, not the URL. Move filter[Status] into where, e.g. {"where": {"field":"Status","op":"eq","value":"Active"}}.'
+      ),
     },
   ],
 };
@@ -877,6 +934,179 @@ const QUERY_RECORDS_WITH_QUERY: DocEndpoint = {
       body: { where: { match: 'either', conditions: [{ field: 'Status', value: 'Active' }] } },
       status: 400,
       response: fail('bad_request', 'where.match must be all, any or none.'),
+    },
+  ],
+};
+
+const AGGREGATE_RECORDS: DocEndpoint = {
+  id: 'aggregate-records',
+  title: 'Count, sum and group records',
+  method: 'POST',
+  path: '/bases/{base}/tables/{table}/records/aggregate',
+  summary:
+    'Counts, sums, averages, minimums and maximums over the records a filter selects, optionally grouped: records per status, revenue per month, the top customers. where and search work as in Find records, so both select the same records. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method.',
+  params: [
+    { name: 'metrics', in: 'body', description: 'Required, 1 to 10: [{"op": "count"}, {"op": "sum", "field": "Price", "as": "revenue"}]. op is count (records), count_distinct (different non-empty values), sum, avg, min or max. field is needed except for count. as names the value in the answer; by default it is count or <op>_<field name>, like avg_Price.' },
+    { name: 'group_by', in: 'body', description: 'Up to 3 fields: ["Status"], or {"field": "Order date", "by": "month"} to group a date or date-time by day, week, month or year. Date-times (including created_at and updated_at) need by. Link, multi-select and lookup fields work too: ["Customer"] gives one group per customer. Without group_by the answer is one group over all matching records.' },
+    { name: 'timezone', in: 'body', description: 'Which day a date-time belongs to when grouped, e.g. "Asia/Kolkata". Default UTC.' },
+    { name: 'where', in: 'body', description: 'The same filter tree as in Find records.' },
+    { name: 'search', in: 'body', description: 'Only records where every word of this text is in some text field, as in List records.' },
+    { name: 'sort', in: 'body', description: 'Metric names or group_by fields, - for descending: ["-revenue"]. At most 5. Default: the groups in order.' },
+    { name: 'limit', in: 'body', description: 'Groups to return, 1 to 1000. Default 100.' },
+    { name: 'keys', in: 'body', description: 'name (default) or id: how group fields are keyed in the answer.' },
+  ],
+  notes: [
+    'Each item of data is {"group": {...}, "values": {...}}: the group\'s value of each group_by field, keyed like record fields, and each metric by its name.',
+    'Grouped: text, email, URL, phone, single select, checkbox, number, decimal, currency, percent, rating, year, duration and date fields; dates and date-times also by day, week, month or year. sum and avg: number fields (duration in minutes). min and max: number, date and date-time fields. count_distinct: the fields that can be grouped, except date-times.',
+    'Link, multi-select and lookup fields can be grouped: a link group is the linked record, {"id": "rec_12"}; a multi-select group is the option; a lookup group is the looked-up value, grouped like that field. Records with no links or options, and links to deleted records, are the null group.',
+    'A record counts once in each group it belongs to: an order linked to two customers counts for both, so group totals can add up to more than the overall total. One link or multi-select field per request; lookups through that same link can be added. These fields can\'t be used in metrics.',
+    'Long text, JSON, attachments, users, uuid and formula fields can\'t be grouped or aggregated yet.',
+    'Empty values make their own group, null, which comes last. Empty text counts as empty and an unchecked checkbox as false, as in filters.',
+    'sum of no values is 0; avg, min and max of no values are null. Without group_by there is always one group, even when nothing matches.',
+    'Weeks start on Monday, and a period comes back as its first day: 2026-11-01 for November.',
+    'Date-times are stored in UTC. timezone decides the day: an order at 19:30 UTC on 30 November is in December with "Asia/Kolkata".',
+    'When more groups match than limit, meta.has_more is true. There is no cursor for groups: narrow the filter or raise limit.',
+    'Every option goes in the body; options sent in the URL are refused with 400, as in Find records.',
+  ],
+  examples: [
+    {
+      title: 'Records per status',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Status'], metrics: [{ op: 'count' }] },
+      status: 200,
+      response: groups([
+        { group: { Status: 'Active' }, values: { count: 1 } },
+        { group: { Status: 'Paused' }, values: { count: 1 } },
+        { group: { Status: null }, values: { count: 1 } },
+      ]),
+    },
+    {
+      title: 'Totals over unpaid orders',
+      description: 'Without group_by there is one group, {}.',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: {
+        where: { field: 'Paid', value: false },
+        metrics: [{ op: 'count' }, { op: 'sum', field: 'Price' }, { op: 'avg', field: 'Price' }, { op: 'max', field: 'Price' }],
+      },
+      status: 200,
+      response: groups([{ group: {}, values: { count: 2, sum_Price: 195, avg_Price: 97.5, max_Price: 120 } }]),
+    },
+    {
+      title: 'Revenue per month',
+      description: 'Order 1044 has no Order date, so it is in the null group.',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: {
+        group_by: [{ field: 'Order date', by: 'month' }],
+        metrics: [{ op: 'sum', field: 'Price', as: 'revenue' }],
+      },
+      status: 200,
+      response: groups([
+        { group: { 'Order date': '2026-11-01' }, values: { revenue: 619 } },
+        { group: { 'Order date': null }, values: { revenue: 75 } },
+      ]),
+    },
+    {
+      title: 'Revenue per customer (a link field)',
+      description: 'Each group is a linked record. Order 1044 has no customer, so it is in the null group. An order linked to two customers would count for both.',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Customer'], metrics: [{ op: 'sum', field: 'Price', as: 'revenue' }], sort: ['-revenue'] },
+      status: 200,
+      response: groups([
+        { group: { Customer: { id: 'rec_12' } }, values: { revenue: 499 } },
+        { group: { Customer: { id: 'rec_15' } }, values: { revenue: 120 } },
+        { group: { Customer: null }, values: { revenue: 75 } },
+      ]),
+    },
+    {
+      title: 'Orders per customer email (a lookup)',
+      description: 'A lookup groups by the looked-up value, here the customer\'s Email.',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Email'], metrics: [{ op: 'count' }] },
+      status: 200,
+      response: groups([
+        { group: { Email: 'asha@example.com' }, values: { count: 1 } },
+        { group: { Email: 'ravi@example.com' }, values: { count: 1 } },
+        { group: { Email: null }, values: { count: 1 } },
+      ]),
+    },
+    {
+      title: 'Orders created per day, in India time',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: {
+        group_by: [{ field: 'created_at', by: 'day' }],
+        metrics: [{ op: 'count' }],
+        timezone: 'Asia/Kolkata',
+      },
+      status: 200,
+      response: groups([
+        { group: { created_at: '2026-11-03' }, values: { count: 1 } },
+        { group: { created_at: '2026-11-04' }, values: { count: 2 } },
+      ]),
+    },
+    {
+      title: 'The top status by revenue',
+      description: 'has_more is true: more groups matched than limit.',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Status'], metrics: [{ op: 'sum', field: 'Price', as: 'revenue' }], sort: ['-revenue'], limit: 1 },
+      status: 200,
+      response: groups([{ group: { Status: 'Active' }, values: { revenue: 499 } }], true, 1),
+    },
+    {
+      title: 'The same with QUERY',
+      method: 'QUERY',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Status'], metrics: [{ op: 'count' }] },
+      status: 200,
+      response: groups([
+        { group: { Status: 'Active' }, values: { count: 1 } },
+        { group: { Status: 'Paused' }, values: { count: 1 } },
+        { group: { Status: null }, values: { count: 1 } },
+      ]),
+    },
+    {
+      title: 'No metrics',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['Status'] },
+      status: 400,
+      response: fail('bad_request', 'metrics is required: a list like [{"op": "count"}, {"op": "sum", "field": "Price"}].'),
+    },
+    {
+      title: 'A date-time grouped without a period',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { group_by: ['created_at'], metrics: [{ op: 'count' }] },
+      status: 400,
+      response: fail(
+        'bad_request',
+        'group_by[0]: "created_at" is a date-time field. Group it by day, week, month or year, e.g. {"field": "created_at", "by": "month"}.'
+      ),
+    },
+    {
+      title: 'A link field in metrics',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { metrics: [{ op: 'count_distinct', field: 'Customer' }] },
+      status: 400,
+      response: fail('bad_request', 'metrics[0]: "Customer" is a links field; it can be used in group_by, not in metrics.'),
+    },
+    {
+      title: 'A sum of a text field',
+      method: 'POST',
+      path: `${RECORDS}/aggregate`,
+      body: { metrics: [{ op: 'sum', field: 'Name' }] },
+      status: 400,
+      response: fail(
+        'bad_request',
+        'metrics[0]: sum doesn\'t work on "Name", a text field. sum takes a number field (number, decimal, currency, percent, rating, year, duration).'
+      ),
     },
   ],
 };
@@ -1151,7 +1381,7 @@ const DELETE_RECORDS: DocEndpoint = {
 
 export const ENDPOINT_GROUPS: DocGroup[] = [
   { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE] },
-  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
+  { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, AGGREGATE_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
 ];
 
 // ---- Reference ----
@@ -1163,6 +1393,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
   { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records/query', does: 'Find records with or / not filters' },
   { method: 'QUERY', path: '/bases/{base}/tables/{table}/records/query', does: 'The same as POST, with the HTTP QUERY method' },
+  { method: 'POST', path: '/bases/{base}/tables/{table}/records/aggregate', does: 'Count, sum and group records (QUERY works too)' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Get a record' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records', does: 'Create one or many records' },
   { method: 'PATCH', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Update a record' },
@@ -1205,7 +1436,6 @@ export const FIELD_VALUES: { type: string; write: string; example: string; filte
 
 export const READ_ONLY_VALUES: { type: string; read: string }[] = [
   { type: 'lookup', read: 'Not a key of its own: its value is in each object of its link field, under the looked-up field\'s name. Can\'t be used to filter or sort' },
-  { type: 'formula', read: 'The computed value. Calculated when read, so it can\'t be used to filter or sort' },
   { type: 'attachment', read: 'A list of {id, url, name, size, type}' },
   { type: 'user', read: 'A user ID, or a list of user IDs' },
   { type: 'created_time, last_modified_time', read: 'Date and time in UTC' },
@@ -1213,7 +1443,7 @@ export const READ_ONLY_VALUES: { type: string; read: string }[] = [
 ];
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
-  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
+  { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort, or the same ID twice in a bulk request' },
   { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
   { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running; or the table was busy with other changes, so nothing was saved: try again' },
@@ -1221,7 +1451,7 @@ export const ERROR_CODES: { code: string; status: number; when: string }[] = [
   { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
   { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
   { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
-  { code: 'query_timeout', status: 503, when: 'A read ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
+  { code: 'query_timeout', status: 503, when: 'A read (list, find, aggregate or get a record) ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
 ];
 
 export const RESPONSE_EXAMPLES = {
