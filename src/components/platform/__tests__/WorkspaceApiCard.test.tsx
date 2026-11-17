@@ -13,10 +13,21 @@ vi.mock('../../../hooks/useWorkspaceAccess', () => ({
 
 // The Overview panel has its own tests; here it only needs to expose Cancel and what it was given
 vi.mock('../DeveloperOverview', () => ({
-  default: ({ workspaceId, workspaceName, canEnable, onCancel }: any) => (
+  default: ({ workspaceId, workspaceName, canEnable, onCancel, onOpenDocs }: any) => (
     <div data-testid="developer-overview">
       {workspaceId} {workspaceName} {String(canEnable)}
       <button type="button" onClick={onCancel}>Cancel</button>
+      <button type="button" onClick={onOpenDocs}>Read the docs</button>
+    </div>
+  ),
+}));
+
+// The docs have their own tests (ApiDocsPage); here they only need to show what they were given and go back
+vi.mock('../docs/ApiDocsView', () => ({
+  default: ({ workspaceId, onBack, backLabel, embedded }: any) => (
+    <div data-testid="api-docs-view">
+      {workspaceId} {embedded ? 'embedded' : 'page'}
+      <button type="button" onClick={onBack}>{backLabel}</button>
     </div>
   ),
 }));
@@ -84,15 +95,35 @@ describe('WorkspaceApiCard', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('opens the API docs page in a new tab and keeps the popup open', () => {
+  it('shows the API docs inside the popup and goes back to Overview', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderCard({ disabled: false, hasWorkspace: true });
     fireEvent.click(screen.getByRole('button', { name: /Workspace API/i }));
 
     fireEvent.click(screen.getByRole('button', { name: 'API docs' }));
 
-    expect(open).toHaveBeenCalledWith('/workspace/ws-1/developer/api-docs', '_blank');
+    expect(open).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Developer' })).toBeInTheDocument();
+    expect(screen.getByTestId('api-docs-view')).toHaveTextContent('ws-1 embedded');
+    expect(screen.queryByTestId('developer-overview')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'API docs' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
+    expect(screen.queryByTestId('api-docs-view')).not.toBeInTheDocument();
+    expect(screen.getByTestId('developer-overview')).toBeInTheDocument();
     open.mockRestore();
+  });
+
+  it('opens the docs from the Overview panel too, and reopens on Overview after closing', () => {
+    renderCard({ disabled: false, hasWorkspace: true });
+    fireEvent.click(screen.getByRole('button', { name: /Workspace API/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read the docs' }));
+    expect(screen.getByTestId('api-docs-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: /Workspace API/i }));
+    expect(screen.getByTestId('developer-overview')).toBeInTheDocument();
+    expect(screen.queryByTestId('api-docs-view')).not.toBeInTheDocument();
   });
 });

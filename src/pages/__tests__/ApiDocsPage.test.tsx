@@ -74,11 +74,12 @@ describe('ApiDocsPage', () => {
     mockStatus(ENABLED);
     renderPage();
 
-    for (const title of ['List bases', 'List tables', 'Get a table and its fields', 'List records', 'Find records (or / not filters)', 'Get a record', 'Create records', 'Update records', 'Delete records']) {
+    for (const title of ['List bases', 'List tables', 'Get a table and its fields', "Get a table's columns", 'List records', 'Find records (or / not filters)', 'Get a record', 'Create records', 'Update records', 'Delete records']) {
       expect(screen.getByRole('heading', { name: title, level: 3 })).toBeInTheDocument();
     }
     const summary = screen.getByRole('heading', { name: 'Endpoints' }).parentElement as HTMLElement;
-    expect(within(summary).getAllByRole('row')).toHaveLength(13);
+    // A header row and one row per endpoint
+    expect(within(summary).getAllByRole('row')).toHaveLength(15);
     expect(screen.getByRole('heading', { name: 'Field values' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Errors' })).toBeInTheDocument();
   });
