@@ -305,6 +305,174 @@ const GET_TABLE: DocEndpoint = {
   ],
 };
 
+// ---- Columns: the sample Orders table as the database has it ----
+
+const ORDERS_ALIAS = 'orders_1762164900_ab12';
+const ORDERS_PKEY = `${ORDERS_ALIAS}_pkey`;
+const ORDERS_UNIQUE_NAME = `uq_${ORDERS_ALIAS}_3f9a2c1b`;
+const ORDERS_CHECK_PRICE = `ck_${ORDERS_ALIAS}_7b1e4d20`;
+
+const ID_COLUMN = 'fld_0a1b2c3d4e5f46a7b8c9d0e1f2a3b4c5';
+const CREATED_TIME_COLUMN = 'fld_9f8e7d6c5b4a43928170f6e5d4c3b2a1';
+
+// One column of the columns response; what isn't given is the value of an ordinary user field
+const column = (c: Record<string, unknown>) => ({
+  db_nullable: true,
+  db_default: null,
+  db_identity: false,
+  primary_key: false,
+  unique: false,
+  constraints: [],
+  system: false,
+  virtual: false,
+  read_only: false,
+  record_field: true,
+  meta: {},
+  ...c,
+});
+
+const ORDERS_COLUMNS = {
+  table_id: IDS.orders,
+  table_name: 'Orders',
+  base_id: IDS.crm,
+  primary_key: [{ id: ID_COLUMN, name: 'Id', column_name: 'id' }],
+  constraints: [
+    {
+      name: ORDERS_PKEY,
+      type: 'primary_key',
+      columns: [{ id: ID_COLUMN, name: 'Id', column_name: 'id' }],
+      definition: 'PRIMARY KEY (id)',
+    },
+    {
+      name: ORDERS_UNIQUE_NAME,
+      type: 'unique',
+      title: 'One order per name',
+      columns: [{ id: IDS.name, name: 'Name', column_name: 'name_1762164911' }],
+      definition: 'UNIQUE (name_1762164911)',
+    },
+    {
+      name: ORDERS_CHECK_PRICE,
+      type: 'check',
+      title: 'Price is not negative',
+      columns: [{ id: IDS.price, name: 'Price', column_name: 'price_1762164925' }],
+      definition: 'CHECK ((price_1762164925 >= (0)::numeric))',
+    },
+  ],
+  columns: [
+    column({
+      id: ID_COLUMN, name: 'Id', column_name: 'id', type: 'number', uidt: 'number',
+      db_type: 'bigint', db_nullable: false, db_default: `nextval('${ORDERS_ALIAS}_id_seq'::regclass)`,
+      primary_key: true, primary_key_position: 1, unique: true, constraints: [ORDERS_PKEY],
+      system: true, virtual: true, read_only: true, record_field: false, order: 0,
+    }),
+    column({
+      id: IDS.name, name: 'Name', column_name: 'name_1762164911', type: 'text', uidt: 'text',
+      db_type: 'text', unique: true, constraints: [ORDERS_UNIQUE_NAME], order: 1,
+    }),
+    column({
+      id: IDS.status, name: 'Status', column_name: 'status_1762164918', type: 'single_select', uidt: 'select',
+      db_type: 'text', order: 2,
+      meta: { options: [{ option: 'Active' }, { option: 'Paused' }, { option: 'Closed' }] },
+    }),
+    column({
+      id: IDS.price, name: 'Price', column_name: 'price_1762164925', type: 'currency', uidt: 'currency',
+      db_type: 'numeric', constraints: [ORDERS_CHECK_PRICE], order: 3,
+    }),
+    column({
+      id: IDS.customer, name: 'Customer', column_name: 'customer_1762164940', type: 'links', uidt: 'links',
+      db_type: 'jsonb', order: 4,
+      meta: { entity_role: 'source', relation: { with: '2d4f6a8c-0e1b-4d3f-9a7c-9e0b2d4f6a8c', type: 'belongs-to' } },
+    }),
+    column({
+      id: IDS.customersEmail, name: 'Email', column_name: 'email_1762164951', type: 'lookup', uidt: 'lookup',
+      db_type: null, db_nullable: null, read_only: true, order: 5,
+      meta: { link_column_id: '6f708192-a3b4-4c53-b4e5-f6a7b8c9d0e1', lookup_column_id: '708192a3-b4c5-4d64-85f6-a7b8c9d0e1f2' },
+    }),
+    column({
+      id: CREATED_TIME_COLUMN, name: 'Created Time', column_name: 'created_time', type: 'created_time', uidt: 'createdTime',
+      db_type: 'timestamp without time zone', db_nullable: false, db_default: 'CURRENT_TIMESTAMP',
+      system: true, virtual: true, read_only: true, record_field: false, order: 6,
+    }),
+  ],
+};
+
+const PRODUCTS_SKU = 'fld_b1c2d3e4f5a647b8c9d0e1f2a3b4c5d6';
+const PRODUCTS_REGION = 'fld_c2d3e4f5a6b748c9d0e1f2a3b4c5d6e7';
+const PRODUCTS_PKEY = 'products_1762170000_cd34_pkey';
+const PRODUCTS_KEY_COLUMNS = [
+  { id: PRODUCTS_SKU, name: 'SKU', column_name: 'sku_1762170011' },
+  { id: PRODUCTS_REGION, name: 'Region', column_name: 'region_1762170019' },
+];
+
+const LIST_COLUMNS: DocEndpoint = {
+  id: 'list-columns',
+  title: 'Get a table\'s columns',
+  method: 'GET',
+  path: '/bases/{base}/tables/{table}/columns',
+  summary:
+    'Returns every column of the table as the database has it: the app\'s settings for the column, its database type, whether it can be empty, its default, whether it is part of the primary key, and the constraints it belongs to. Use it to build forms, check values before you write them, or see why a write was rejected.',
+  params: [
+    { name: 'base', in: 'path', description: 'Base name or ID (bse_…).' },
+    { name: 'table', in: 'path', description: 'Table name or ID (tbl_…).' },
+  ],
+  notes: [
+    'Every column is listed, including system columns (Id, Created Time…), formulas and buttons. record_field is true for the columns that appear in a record\'s fields; the others are not read or written through the records endpoints.',
+    'primary_key lists the key columns in key order. On a column, primary_key_position is its place in that key, starting at 1. unique is true when the column alone is the primary key or a unique key; a column that is only part of a key of several columns is not unique by itself.',
+    'constraints lists the primary key, unique, check, foreign key and exclusion constraints of the table. definition is the rule as the database states it. Constraints made in the app also have the title given there.',
+    'db_type, db_nullable and db_default describe the database column. They are null for fields without one, such as lookups, whose values come from the linked table.',
+    'type is the field type used everywhere else in the API; uidt and meta are the type and settings as the app stores them.',
+    'The answer is read from the database on every request, so a constraint added in the app shows up at once.',
+  ],
+  examples: [
+    {
+      title: 'The columns of a table',
+      description: 'Name has a unique constraint and Price a check constraint, both made in the app. The primary key is the record ID.',
+      method: 'GET',
+      path: '/bases/CRM/tables/Orders/columns',
+      status: 200,
+      response: ok(ORDERS_COLUMNS),
+    },
+    {
+      title: 'A primary key of two fields',
+      description: 'The key of Products was changed in the app to SKU + Region. Each key column has its position, and neither is unique alone. Only the key columns are shown here.',
+      method: 'GET',
+      path: '/bases/CRM/tables/Products/columns',
+      status: 200,
+      response: ok({
+        table_id: 'tbl_5a6b7c8d9e0f41a2b3c4d5e6f7a8b9c0',
+        table_name: 'Products',
+        base_id: IDS.crm,
+        primary_key: PRODUCTS_KEY_COLUMNS,
+        constraints: [
+          {
+            name: PRODUCTS_PKEY,
+            type: 'primary_key',
+            columns: PRODUCTS_KEY_COLUMNS,
+            definition: 'PRIMARY KEY (sku_1762170011, region_1762170019)',
+          },
+        ],
+        columns: [
+          column({
+            id: PRODUCTS_SKU, name: 'SKU', column_name: 'sku_1762170011', type: 'text', uidt: 'text', db_type: 'text',
+            db_nullable: false, primary_key: true, primary_key_position: 1, constraints: [PRODUCTS_PKEY], order: 1,
+          }),
+          column({
+            id: PRODUCTS_REGION, name: 'Region', column_name: 'region_1762170019', type: 'text', uidt: 'text', db_type: 'text',
+            db_nullable: false, primary_key: true, primary_key_position: 2, constraints: [PRODUCTS_PKEY], order: 2,
+          }),
+        ],
+      }),
+    },
+    {
+      title: 'The table does not exist',
+      method: 'GET',
+      path: '/bases/CRM/tables/Order/columns',
+      status: 404,
+      response: fail('not_found', 'No table named "Order".'),
+    },
+  ],
+};
+
 const LIST_RECORDS: DocEndpoint = {
   id: 'list-records',
   title: 'List records',
@@ -1419,7 +1587,7 @@ const DELETE_RECORDS: DocEndpoint = {
 };
 
 export const ENDPOINT_GROUPS: DocGroup[] = [
-  { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE] },
+  { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE, LIST_COLUMNS] },
   { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, AGGREGATE_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
 ];
 
@@ -1429,6 +1597,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
   { method: 'GET', path: '/bases', does: 'List bases' },
   { method: 'GET', path: '/bases/{base}/tables', does: 'List tables' },
   { method: 'GET', path: '/bases/{base}/tables/{table}', does: 'Get a table and its fields' },
+  { method: 'GET', path: '/bases/{base}/tables/{table}/columns', does: 'Get a table\'s columns: database types, primary key and constraints' },
   { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
   { method: 'POST', path: '/bases/{base}/tables/{table}/records/query', does: 'Find records with or / not filters' },
   { method: 'QUERY', path: '/bases/{base}/tables/{table}/records/query', does: 'The same as POST, with the HTTP QUERY method' },
