@@ -165,16 +165,16 @@ describe('BaseMenu', () => {
       expect(defaultProps.onDelete).toHaveBeenCalledWith(mockBase);
     });
 
-    it('shows API & apps only when allowed, and opens them for the base', async () => {
+    it('shows API only when allowed, and opens it for the base', async () => {
       const user = userEvent.setup();
-      const onOpenApps = vi.fn();
-      const { rerender } = render(<BaseMenu {...defaultProps} onOpenApps={onOpenApps} />);
-      expect(screen.queryByTestId('menu-item-api-&-apps')).not.toBeInTheDocument();
+      const onOpenApi = vi.fn();
+      const { rerender } = render(<BaseMenu {...defaultProps} onOpenApi={onOpenApi} />);
+      expect(screen.queryByTestId('menu-item-api')).not.toBeInTheDocument();
 
-      rerender(<BaseMenu {...defaultProps} onOpenApps={onOpenApps} canOpenApps />);
-      await user.click(screen.getByTestId('menu-item-api-&-apps'));
+      rerender(<BaseMenu {...defaultProps} onOpenApi={onOpenApi} canOpenApi />);
+      await user.click(screen.getByTestId('menu-item-api'));
 
-      expect(onOpenApps).toHaveBeenCalledWith(mockBase);
+      expect(onOpenApi).toHaveBeenCalledWith(mockBase);
     });
   });
 

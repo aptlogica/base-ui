@@ -19,6 +19,7 @@ import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { CreateBaseModal, type CreateBaseData } from '../modals/CreateBaseModal';
 import { DeleteBaseModal } from '../modals/DeleteBaseModal';
+import { BaseApiModal } from '../platform/BaseApiModal';
 import { useNavigationActions } from '../../hooks/useNavigationActions';
 import { useToast } from './Toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -50,15 +51,18 @@ const BaseMenuWrapper: React.FC<{
   onEdit: (base: Base) => void;
   onAddMembers: (base: Base) => void;
   onDelete: (base: Base) => void;
-}> = ({ base, onEdit, onAddMembers, onDelete }) => {
-  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
+  onOpenApi: (base: Base) => void;
+}> = ({ base, onEdit, onAddMembers, onDelete, onOpenApi }) => {
+  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers, isAdmin } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
 
   // Base-member can edit title/description, but not delete or manage members
   const canEdit = canUpdateBaseFromWorkspace() || canUpdateBaseFromBase() || baseAccess === 'base-member';
   const canDelete = canDeleteBaseFromWorkspace() || canDeleteBaseFromBase();
   const canAddMembers = canAssignUsers() || canManageBaseMembers();
-  const hasAnyAction = canEdit || canDelete || canAddMembers;
+  // A base's API is managed by the owners and co-owners of its workspace
+  const canOpenApi = isAdmin;
+  const hasAnyAction = canEdit || canDelete || canAddMembers || canOpenApi;
 
   // Don't render menu if no actions are available
   if (!hasAnyAction) {
@@ -77,9 +81,11 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
+        onOpenApi={onOpenApi}
         canEdit={canEdit}
         canDelete={canDelete}
         canAddMembers={canAddMembers}
+        canOpenApi={canOpenApi}
         align={"left"}
       />
     </div>
@@ -104,6 +110,8 @@ const Breadcrumb: React.FC = () => {
   const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
+  // The base whose "API" menu item opened its Developer popup
+  const [apiForBase, setApiForBase] = useState<Base | null>(null);
 
   // State for create modals
   const [showCreateBase, setShowCreateBase] = useState(false);
@@ -741,6 +749,7 @@ const Breadcrumb: React.FC = () => {
                                       onEdit={handleEditBase}
                                       onAddMembers={handleAddMembers}
                                       onDelete={handleDeleteBase}
+                                      onOpenApi={setApiForBase}
                                     />
                                   )}
                                 </div>
@@ -823,6 +832,9 @@ const Breadcrumb: React.FC = () => {
         }}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* A base's API (Developer popup), opened from its menu */}
+      {apiForBase && <BaseApiModal key={apiForBase.id} isOpen onClose={() => setApiForBase(null)} base={apiForBase} />}
 
       {showAddMembers && baseForMembers && (
         <AddBaseMembersModal
