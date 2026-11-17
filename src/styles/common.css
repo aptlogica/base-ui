@@ -729,3 +729,140 @@ input[type="password"]::-ms-clear {
     /* Firefox */
   }
 }
+
+/* ---- Workspace API docs (src/components/platform/docs) ---- */
+/* Colors of the workspace API docs that the theme has no tokens for: method and status badges, the accent,
+   and code highlighting. Light values here, dark values under the app's dark theme, so badges stay readable
+   tints instead of light pastel boxes on the dark card. Scoped to .api-docs (the docs view's root). */
+.api-docs {
+  --docs-get-bg: #ecfdf3;
+  --docs-get-fg: #067647;
+  --docs-get-border: #abefc6;
+  --docs-post-bg: #eff8ff;
+  --docs-post-fg: #175cd3;
+  --docs-post-border: #b2ddff;
+  --docs-patch-bg: #fffaeb;
+  --docs-patch-fg: #b54708;
+  --docs-patch-border: #fedf89;
+  --docs-delete-bg: #fef3f2;
+  --docs-delete-fg: #b42318;
+  --docs-delete-border: #fecdca;
+  --docs-query-bg: #f5f5f5;
+  --docs-query-fg: #414651;
+  --docs-query-border: #d5d7da;
+
+  --docs-accent: #067647;
+  --docs-param: #175cd3;
+  --docs-line-no: #a4a7ae;
+
+  --docs-tok-key: #175cd3;
+  --docs-tok-string: #067647;
+  --docs-tok-number: #b54708;
+  --docs-tok-literal: #6941c6;
+  --docs-tok-keyword: #c11574;
+  --docs-tok-punct: #5d6270;
+}
+
+:root[data-theme='dark'] .api-docs {
+  --docs-get-bg: rgba(23, 178, 106, 0.14);
+  --docs-get-fg: #47cd89;
+  --docs-get-border: rgba(71, 205, 137, 0.32);
+  --docs-post-bg: rgba(46, 144, 250, 0.14);
+  --docs-post-fg: #84caff;
+  --docs-post-border: rgba(132, 202, 255, 0.32);
+  --docs-patch-bg: rgba(247, 144, 9, 0.14);
+  --docs-patch-fg: #fdb022;
+  --docs-patch-border: rgba(253, 176, 34, 0.32);
+  --docs-delete-bg: rgba(240, 68, 56, 0.14);
+  --docs-delete-fg: #f97066;
+  --docs-delete-border: rgba(249, 112, 102, 0.32);
+  --docs-query-bg: rgba(255, 255, 255, 0.06);
+  --docs-query-fg: #d5d7da;
+  --docs-query-border: rgba(255, 255, 255, 0.14);
+
+  --docs-accent: #47cd89;
+  --docs-param: #84adff;
+  --docs-line-no: #61656c;
+
+  --docs-tok-key: #84adff;
+  --docs-tok-string: #47cd89;
+  --docs-tok-number: #fdb022;
+  --docs-tok-literal: #bdb4fe;
+  --docs-tok-keyword: #f670c7;
+  --docs-tok-punct: #a4a7ae;
+}
+
+.api-docs-get {
+  background-color: var(--docs-get-bg);
+  color: var(--docs-get-fg);
+  border: 1px solid var(--docs-get-border);
+}
+
+.api-docs-post {
+  background-color: var(--docs-post-bg);
+  color: var(--docs-post-fg);
+  border: 1px solid var(--docs-post-border);
+}
+
+.api-docs-patch {
+  background-color: var(--docs-patch-bg);
+  color: var(--docs-patch-fg);
+  border: 1px solid var(--docs-patch-border);
+}
+
+.api-docs-delete {
+  background-color: var(--docs-delete-bg);
+  color: var(--docs-delete-fg);
+  border: 1px solid var(--docs-delete-border);
+}
+
+.api-docs-query {
+  background-color: var(--docs-query-bg);
+  color: var(--docs-query-fg);
+  border: 1px solid var(--docs-query-border);
+}
+
+.api-docs-accent {
+  color: var(--docs-accent);
+}
+
+.api-docs-accent-bg {
+  background-color: var(--docs-accent);
+}
+
+.api-docs-accent-border {
+  border-color: var(--docs-accent);
+}
+
+.api-docs-param {
+  color: var(--docs-param);
+}
+
+.api-docs-line-no {
+  color: var(--docs-line-no);
+}
+
+.api-docs-tok-key {
+  color: var(--docs-tok-key);
+}
+
+.api-docs-tok-string {
+  color: var(--docs-tok-string);
+}
+
+.api-docs-tok-number {
+  color: var(--docs-tok-number);
+}
+
+.api-docs-tok-literal {
+  color: var(--docs-tok-literal);
+}
+
+.api-docs-tok-keyword {
+  color: var(--docs-tok-keyword);
+}
+
+.api-docs-tok-punct,
+.api-docs-tok-meta {
+  color: var(--docs-tok-punct);
+}
