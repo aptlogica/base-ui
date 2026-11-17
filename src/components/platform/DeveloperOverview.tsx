@@ -10,6 +10,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { getApiOrigin, type WorkspaceApiStatus } from '../../service/clientService';
 import { useEnableWorkspaceApi, useWorkspaceApi } from './useWorkspaceApi';
 import LiveDocsLinks, { liveDocsUrls } from './LiveDocsLinks';
+import { WarningNote } from './docs/ApiDocsBlocks';
 
 interface DeveloperOverviewProps {
   workspaceId: string | null;
@@ -93,10 +94,10 @@ const EnabledApi: React.FC<Readonly<{ status: WorkspaceApiStatus; onOpenDocs?: (
           Read the API docs: every endpoint with request and response examples
         </button>
       )}
-      <div role="note" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+      <WarningNote>
         Development only: there are no API keys yet, so anyone with this URL can read and change this workspace's
         data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true.
-      </div>
+      </WarningNote>
     </div>
   );
 };

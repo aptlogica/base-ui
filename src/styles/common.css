@@ -378,10 +378,11 @@ Support: support@aptlogica.com | support@serenibase.com
 }
 
 /*   Info Badges         */
+/* The gray-blue scale is not defined in theme.css, so info badges use the blue scale */
 .badge-info {
-  background-color: var(--color-gray-blue-50);
-  border: 1px solid var(--color-gray-blue-300);
-  color: var(--color-gray-blue-700);
+  background-color: var(--color-blue-50);
+  border: 1px solid var(--color-blue-300);
+  color: var(--color-blue-700);
 }
 
 .border-destructive {

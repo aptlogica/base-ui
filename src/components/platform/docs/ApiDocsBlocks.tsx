@@ -3,9 +3,18 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { Check, ChevronRight, Copy } from 'lucide-react';
+import { AlertTriangle, Check, ChevronRight, Copy } from 'lucide-react';
 import type { DocEndpoint, DocExample, HttpMethod } from './apiDocsContent';
 import { statusText, toResponse, toSnippet, type SnippetLanguage } from './apiDocsSnippets';
+
+// A warning on the theme's surface, with an amber icon as the app's other warnings have, so it reads well in
+// light and dark mode
+export const WarningNote: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) => (
+  <div role="note" className="flex items-start gap-2 p-3 rounded-xl border border-[var(--color-border-primary)] bg-gray-50 text-sm text-secondary">
+    <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-500 flex-shrink-0" aria-hidden="true" />
+    <div className="min-w-0">{children}</div>
+  </div>
+);
 
 const METHOD_CLASS: Record<HttpMethod, string> = {
   GET: 'badge-brand',

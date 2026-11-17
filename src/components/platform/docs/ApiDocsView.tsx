@@ -26,6 +26,7 @@ import {
   ExampleBlock,
   InlineCode,
   MethodBadge,
+  WarningNote,
 } from './ApiDocsBlocks';
 import type { SnippetLanguage } from './apiDocsSnippets';
 
@@ -73,11 +74,7 @@ const Bullets: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }
   <ul className="list-disc space-y-1 pl-5 text-sm text-secondary">{children}</ul>
 );
 
-const Note: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) => (
-  <div role="note" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
-    {children}
-  </div>
-);
+const Note = WarningNote;
 
 interface ApiDocsViewProps {
   workspaceId?: string | null;

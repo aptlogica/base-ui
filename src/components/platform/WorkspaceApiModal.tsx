@@ -76,7 +76,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-brand-100 text-brand-800 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-[var(--color-bg-brand-primary)] rounded-full flex items-center justify-center flex-shrink-0">
               <Code className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
