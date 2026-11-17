@@ -374,7 +374,9 @@ const AppRoutes = () => {
         path="/workspace/:workspaceId/base/:baseId/table/:tableId/settings/:section?"
         element={<PrivateRoute><TableSettingsPage /></PrivateRoute>}
       />
-      {/* Workspace API docs: a full page, opened from the Developer popup */}
+      {/* Application API docs: a full page with the application's address in the examples */}
+      <Route path="/workspace/:workspaceId/applications/:applicationId/api-docs" element={<PrivateRoute><ApiDocsPage /></PrivateRoute>} />
+      {/* The docs with a sample address; kept so links made before applications still open */}
       <Route path="/workspace/:workspaceId/developer/api-docs" element={<PrivateRoute><ApiDocsPage /></PrivateRoute>} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/workspace" replace />} />

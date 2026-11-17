@@ -15,7 +15,8 @@ import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
-import { WorkspaceApiCard } from '../components/platform/WorkspaceApiCard';
+import { ApplicationsCard } from '../components/platform/ApplicationsCard';
+import { ApplicationsModal } from '../components/platform/ApplicationsModal';
 
 const CreateTableModal = lazy(() =>
   import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
@@ -40,8 +41,9 @@ const BaseMenuWrapper: React.FC<{
   onEdit: (base: any) => void;
   onAddMembers: (base: any) => void;
   onDelete: (base: any) => void;
-}> = ({ base, onEdit, onAddMembers, onDelete }) => {
-  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
+  onOpenApps: (base: any) => void;
+}> = ({ base, onEdit, onAddMembers, onDelete, onOpenApps }) => {
+  const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers, isAdmin } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
 
   // Base-member can edit title/description, but not delete or manage members
@@ -49,7 +51,9 @@ const BaseMenuWrapper: React.FC<{
   const canEdit = canUpdateBaseFromWorkspace() || canUpdateBaseFromBase() || baseAccess === 'base-member';
   const canDelete = canDeleteBaseFromWorkspace() || canDeleteBaseFromBase();
   const canAddMembers = canAssignUsers() || canManageBaseMembers();
-  const hasAnyAction = canEdit || canDelete || canAddMembers;
+  // Applications are managed by workspace owners and co-owners
+  const canOpenApps = isAdmin;
+  const hasAnyAction = canEdit || canDelete || canAddMembers || canOpenApps;
 
   // Don't render menu if no actions are available
   if (!hasAnyAction) {
@@ -65,9 +69,11 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
+        onOpenApps={onOpenApps}
         canEdit={canEdit}
         canDelete={canDelete}
         canAddMembers={canAddMembers}
+        canOpenApps={canOpenApps}
       />
     </div>
   );
@@ -128,6 +134,8 @@ const HomePage: React.FC = () => {
   const [editingBase, setEditingBase] = useState<Base | null>(null);
   const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
+  // The base whose "API & apps" menu item opened the Applications popup
+  const [appsForBase, setAppsForBase] = useState<Base | null>(null);
   const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
   const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
   const [checkingBaseId, setCheckingBaseId] = useState<string | null>(null);
@@ -500,7 +508,7 @@ const HomePage: React.FC = () => {
               </div>
             </button>
 
-            <WorkspaceApiCard disabled={!canUseBaseActions} hasWorkspace={hasValidSelectedWorkspace} />
+            <ApplicationsCard disabled={!canUseBaseActions} hasWorkspace={hasValidSelectedWorkspace} />
           </div>
         </div>
       </div>
@@ -661,6 +669,7 @@ const HomePage: React.FC = () => {
                           onEdit={handleEditBase}
                           onAddMembers={handleAddMembers}
                           onDelete={handleDeleteBase}
+                          onOpenApps={setAppsForBase}
                         />
                       )}
                     </div>
@@ -758,6 +767,17 @@ const HomePage: React.FC = () => {
         }}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* Applications that use a base, opened from its menu */}
+      {appsForBase && (
+        <ApplicationsModal
+          key={appsForBase.id}
+          isOpen
+          onClose={() => setAppsForBase(null)}
+          focusBaseId={appsForBase.id}
+          workspaceId={appsForBase.workspace_id}
+        />
+      )}
 
       {/* Add Members Modal */}
       {showAddMembers && baseForMembers && (

@@ -3,16 +3,16 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { Code } from 'lucide-react';
-import { WorkspaceApiModal } from './WorkspaceApiModal';
+import { AppWindow } from 'lucide-react';
+import { ApplicationsModal } from './ApplicationsModal';
 
-interface WorkspaceApiCardProps {
+interface ApplicationsCardProps {
   disabled: boolean;
   hasWorkspace: boolean;
 }
 
-/** Home banner quick-action card that opens the Workspace API popup. */
-export const WorkspaceApiCard: React.FC<WorkspaceApiCardProps> = ({ disabled, hasWorkspace }) => {
+/** Home banner quick-action card that opens the Applications popup. */
+export const ApplicationsCard: React.FC<ApplicationsCardProps> = ({ disabled, hasWorkspace }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -25,17 +25,17 @@ export const WorkspaceApiCard: React.FC<WorkspaceApiCardProps> = ({ disabled, ha
           }`}
       >
         <div className="w-12 h-12 p-3 rounded-xl bg-card border flex items-center justify-center">
-          <Code className="w-6 h-6 text-gray-900" />
+          <AppWindow className="w-6 h-6 text-gray-900" />
         </div>
         <div>
-          <div className="font-semibold text-md text-gray-900">Workspace API</div>
+          <div className="font-semibold text-md text-gray-900">Applications</div>
           <div className="text-[10px] text-gray-600">
-            {hasWorkspace ? 'Connect your own apps, websites and scripts to the data in this workspace.' : 'Select a workspace first.'}
+            {hasWorkspace ? 'Give your own apps, websites and scripts an API to the bases you choose.' : 'Select a workspace first.'}
           </div>
         </div>
       </button>
 
-      <WorkspaceApiModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <ApplicationsModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 };

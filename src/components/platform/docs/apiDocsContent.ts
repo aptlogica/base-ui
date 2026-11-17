@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 
-// Content of the workspace API docs page. Every example uses the same sample data: a base "CRM" with a
+// Content of the application API docs page. Every example uses the same sample data: a base "CRM" with a
 // table "Orders" whose "Customer" field links to "Customers", with a lookup of the customer's "Email"
 // (returned inside the link's objects). Customers in turn link to "Companies" (Company), for the expand
 // examples. Responses and messages are what the server returns (internal/platform in the backend).
@@ -46,10 +46,12 @@ export interface DocGroup {
   endpoints: DocEndpoint[];
 }
 
-export const apiDocsPath = (workspaceId: string) => `/workspace/${workspaceId}/developer/api-docs`;
+// The docs page of an application, which uses its address in the examples
+export const apiDocsPath = (workspaceId: string, applicationId: string) =>
+  `/workspace/${workspaceId}/applications/${encodeURIComponent(applicationId)}/api-docs`;
 
-// Used in the examples until the workspace's API is turned on
-export const SAMPLE_BASE_PATH = '/api/v1/ws_8f3k2m9qx7';
+// Used in the examples when no application with its API on is chosen
+export const SAMPLE_BASE_PATH = '/api/v1/app_8f3k2m9qx7';
 
 // ---- Sample data ----
 
@@ -195,10 +197,10 @@ const LIST_BASES: DocEndpoint = {
   title: 'List bases',
   method: 'GET',
   path: '/bases',
-  summary: 'Returns every base in the workspace with its ID and name.',
+  summary: 'Returns every base the application exposes, with its ID and name.',
   examples: [
     {
-      title: 'All bases in the workspace',
+      title: 'All bases of the application',
       method: 'GET',
       path: '/bases',
       status: 200,
@@ -208,12 +210,12 @@ const LIST_BASES: DocEndpoint = {
       ]),
     },
     {
-      title: 'Wrong workspace ID, or the API is turned off',
-      description: 'Every endpoint answers this way when the ws_ part of the URL is wrong or the workspace API is off.',
+      title: 'Wrong application ID, or the API is turned off',
+      description: 'Every endpoint answers this way when the app_ part of the URL is wrong or the application\'s API is off.',
       method: 'GET',
       path: '/bases',
       status: 404,
-      response: fail('not_found', 'No workspace with ID "ws_8f3k2m9qx7", or its API is turned off.'),
+      response: fail('not_found', 'No application with ID "app_8f3k2m9qx7", or its API is turned off.'),
     },
   ],
 };
@@ -1611,7 +1613,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
 ];
 
 export const ID_PREFIXES: { prefix: string; what: string; example: string }[] = [
-  { prefix: 'ws_', what: 'Workspace (part of the base URL)', example: 'ws_8f3k2m9qx7' },
+  { prefix: 'app_', what: 'Application (part of the base URL)', example: 'app_8f3k2m9qx7' },
   { prefix: 'bse_', what: 'Base', example: IDS.crm },
   { prefix: 'tbl_', what: 'Table', example: IDS.orders },
   { prefix: 'fld_', what: 'Field', example: IDS.name },
@@ -1652,12 +1654,12 @@ export const READ_ONLY_VALUES: { type: string; read: string }[] = [
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
   { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort or edited, a value in the wrong format (the message says which), an unknown timezone, the same ID twice in a bulk request, or an Idempotency-Key longer than 255 characters' },
-  { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
+  { code: 'not_found', status: 404, when: 'The application, base, table, field or record doesn\'t exist (a base outside the application counts as missing), or the application\'s API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
   { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running; or the table was busy with other changes, so nothing was saved: try again' },
   { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request, or a request body over 10 MB' },
   { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
-  { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
+  { code: 'rate_limited', status: 429, when: 'Too many requests for the application; wait for Retry-After seconds' },
   { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
   { code: 'query_timeout', status: 503, when: 'A read (list, find, aggregate or get a record) ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
   { code: 'schema_changed', status: 409, when: 'A field or table the request uses was changed or deleted in the app while the request was being answered; try again' },
@@ -1710,5 +1712,5 @@ export const RATE_LIMIT_EXAMPLE: DocExample = {
   path: RECORDS,
   status: 429,
   responseHeaders: { 'Retry-After': '12' },
-  response: fail('rate_limited', 'Too many requests: this workspace allows 600 per minute. Try again after the time in Retry-After.'),
+  response: fail('rate_limited', 'Too many requests: this application allows 600 per minute. Try again after the time in Retry-After.'),
 };

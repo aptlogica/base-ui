@@ -5,7 +5,7 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
-// The pages the API serves for a workspace, built from its real bases, tables and fields
+// The pages the API serves for an application, built from the real tables and fields of its bases
 export const liveDocsUrls = (baseUrl: string) => ({
   swagger: `${baseUrl}/docs`,
   redoc: `${baseUrl}/redoc`,
@@ -14,7 +14,7 @@ export const liveDocsUrls = (baseUrl: string) => ({
 
 const LINK_CLASS = 'inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 text-sm font-medium text-primary transition-colors';
 
-// Opens the workspace's Swagger UI and ReDoc pages in a new tab
+// Opens the application's Swagger UI and ReDoc pages in a new tab
 const LiveDocsLinks: React.FC<Readonly<{ baseUrl: string }>> = ({ baseUrl }) => {
   const urls = liveDocsUrls(baseUrl);
   return (

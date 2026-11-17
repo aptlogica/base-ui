@@ -6,16 +6,18 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ApiDocsView from '../components/platform/docs/ApiDocsView';
 
-// The workspace API docs on a page of their own, for direct links.
-// Route: /workspace/:workspaceId/developer/api-docs
+// The application API docs on a page of their own, for direct links.
+// Routes: /workspace/:workspaceId/applications/:applicationId/api-docs (the examples use that application's
+// address) and /workspace/:workspaceId/developer/api-docs (a sample address)
 const ApiDocsPage: React.FC = () => {
-  const { workspaceId } = useParams();
+  const { workspaceId, applicationId } = useParams();
   const navigate = useNavigate();
 
   return (
     <div className="h-screen w-screen min-w-0">
       <ApiDocsView
         workspaceId={workspaceId}
+        applicationId={applicationId}
         onBack={() => navigate(workspaceId ? `/workspace/${workspaceId}` : '/workspace')}
         backLabel="Back to workspace"
       />

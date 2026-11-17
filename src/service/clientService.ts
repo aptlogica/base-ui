@@ -670,31 +670,86 @@ export async function getWorkspaceByIdService(id: string) {
   return await makeAuthenticatedCall(() => client.workspace.getById(id));
 }
 
-// Public API status of a workspace; public_id, base_path and enabled_at are set once it has been turned on
-export interface WorkspaceApiStatus {
-  workspace_id: string;
-  enabled: boolean;
-  public_id?: string;
-  base_path?: string;
-  enabled_at?: string;
+// A base an application exposes
+export interface ApplicationBase {
+  id: string;
+  title: string;
 }
 
-// The SDK has no methods for the workspace API endpoints yet, so they go through the workspace service's HTTP client.
+// An application: chosen bases of a workspace, exposed at its own public API address (base_path)
+export interface Application {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  // Permanent public ID, e.g. app_8f3k2m9qx7
+  public_id: string;
+  // e.g. /api/v1/app_8f3k2m9qx7
+  base_path: string;
+  enabled: boolean;
+  enabled_at?: string;
+  bases: ApplicationBase[];
+  created_time: string;
+  last_modified_time: string;
+}
+
+export interface CreateApplicationInput {
+  name: string;
+  description?: string;
+  base_ids: string[];
+}
+
+// Only the fields that are sent change; enabled false turns the API off and keeps the address
+export interface UpdateApplicationInput {
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+}
+
+// The SDK has no methods for the application endpoints yet, so they go through the workspace service's HTTP client.
 const workspaceHttp = () => (client.workspace as unknown as {
   http: {
     get: <T>(url: string) => Promise<StandardResponse<T>>;
     post: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
+    put: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
+    patch: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
+    delete: <T>(url: string) => Promise<StandardResponse<T>>;
   };
 }).http;
 
-// GET /workspace/:id/api
-export async function getWorkspaceApiService(id: string) {
-  return await makeAuthenticatedCall(() => workspaceHttp().get<WorkspaceApiStatus>(`/workspace/${id}/api`));
+const applicationsPath = (workspaceId: string) => `/workspace/${workspaceId}/applications`;
+const applicationPath = (workspaceId: string, applicationId: string) =>
+  `${applicationsPath(workspaceId)}/${encodeURIComponent(applicationId)}`;
+
+// GET /workspace/:id/applications
+export async function listApplicationsService(workspaceId: string) {
+  return await makeAuthenticatedCall(() => workspaceHttp().get<Application[]>(applicationsPath(workspaceId)));
 }
 
-// POST /workspace/:id/api/enable; owner and co-owner only
-export async function enableWorkspaceApiService(id: string) {
-  return await makeAuthenticatedCall(() => workspaceHttp().post<WorkspaceApiStatus>(`/workspace/${id}/api/enable`));
+// POST /workspace/:id/applications; owner and co-owner only
+export async function createApplicationService(workspaceId: string, input: CreateApplicationInput) {
+  return await makeAuthenticatedCall(() => workspaceHttp().post<Application>(applicationsPath(workspaceId), input));
+}
+
+// GET /workspace/:id/applications/:appId
+export async function getApplicationService(workspaceId: string, applicationId: string) {
+  return await makeAuthenticatedCall(() => workspaceHttp().get<Application>(applicationPath(workspaceId, applicationId)));
+}
+
+// PATCH /workspace/:id/applications/:appId; owner and co-owner only
+export async function updateApplicationService(workspaceId: string, applicationId: string, input: UpdateApplicationInput) {
+  return await makeAuthenticatedCall(() => workspaceHttp().patch<Application>(applicationPath(workspaceId, applicationId), input));
+}
+
+// PUT /workspace/:id/applications/:appId/bases; owner and co-owner only
+export async function setApplicationBasesService(workspaceId: string, applicationId: string, baseIds: string[]) {
+  return await makeAuthenticatedCall(() =>
+    workspaceHttp().put<Application>(`${applicationPath(workspaceId, applicationId)}/bases`, { base_ids: baseIds }));
+}
+
+// DELETE /workspace/:id/applications/:appId; owner and co-owner only
+export async function deleteApplicationService(workspaceId: string, applicationId: string) {
+  return await makeAuthenticatedCall(() => workspaceHttp().delete<null>(applicationPath(workspaceId, applicationId)));
 }
 
 // Origin the backend is served from; VITE_API_BASE_URL is empty when nginx serves both on one origin

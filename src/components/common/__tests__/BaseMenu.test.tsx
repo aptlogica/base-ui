@@ -164,6 +164,18 @@ describe('BaseMenu', () => {
       expect(defaultProps.onDelete).toHaveBeenCalledTimes(1);
       expect(defaultProps.onDelete).toHaveBeenCalledWith(mockBase);
     });
+
+    it('shows API & apps only when allowed, and opens them for the base', async () => {
+      const user = userEvent.setup();
+      const onOpenApps = vi.fn();
+      const { rerender } = render(<BaseMenu {...defaultProps} onOpenApps={onOpenApps} />);
+      expect(screen.queryByTestId('menu-item-api-&-apps')).not.toBeInTheDocument();
+
+      rerender(<BaseMenu {...defaultProps} onOpenApps={onOpenApps} canOpenApps />);
+      await user.click(screen.getByTestId('menu-item-api-&-apps'));
+
+      expect(onOpenApps).toHaveBeenCalledWith(mockBase);
+    });
   });
 
   describe('Base Object Variations', () => {

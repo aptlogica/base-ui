@@ -5,7 +5,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Search } from 'lucide-react';
 import { getApiOrigin } from '../../../service/clientService';
-import { useWorkspaceApi } from '../useWorkspaceApi';
+import { useApplication } from '../useApplications';
 import LiveDocsLinks, { liveDocsUrls } from '../LiveDocsLinks';
 import {
   ENDPOINT_GROUPS,
@@ -84,26 +84,28 @@ const Text: React.FC<Readonly<{ children: React.ReactNode }>> = ({ children }) =
 
 interface ApiDocsViewProps {
   workspaceId?: string | null;
+  // The application whose address the examples use; without one they use a sample address
+  applicationId?: string | null;
   onBack: () => void;
   // Accessible name of the back button, e.g. "Back to workspace"
   backLabel: string;
-  // Inside the Developer popup, which already has its own heading: the title is not a page heading
+  // Inside the Applications popup, which already has its own heading: the title is not a page heading
   embedded?: boolean;
 }
 
-// How to use the workspace API: one page per guide section and per endpoint, with request and response
-// examples. Shown on its own page (ApiDocsPage) and inside the Developer popup.
-const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack, backLabel, embedded = false }) => {
-  const { data: status } = useWorkspaceApi(workspaceId);
+// How to use the application API: one page per guide section and per endpoint, with request and response
+// examples. Shown on its own page (ApiDocsPage) and inside the Applications popup.
+const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, applicationId, onBack, backLabel, embedded = false }) => {
+  const { data: application } = useApplication(workspaceId, applicationId);
   const [language, setLanguage] = useState<SnippetLanguage>('curl');
   const [pageId, setPageId] = useState(PAGES[0].id);
   const [query, setQuery] = useState('');
   const [sectionId, setSectionId] = useState('endpoint');
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // The examples use the workspace's own address once its API is on, and a sample one until then
-  const enabled = Boolean(status?.enabled && status.base_path);
-  const baseUrl = `${getApiOrigin()}${enabled ? status?.base_path : SAMPLE_BASE_PATH}`;
+  // The examples use the application's own address while its API is on, and a sample one otherwise
+  const enabled = Boolean(application?.enabled && application.base_path);
+  const baseUrl = `${getApiOrigin()}${enabled ? application?.base_path : SAMPLE_BASE_PATH}`;
   const liveDocs = liveDocsUrls(baseUrl);
 
   const pageIndex = Math.max(0, PAGES.findIndex((p) => p.id === pageId));
@@ -153,20 +155,21 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack
         return (
           <>
             <Text>
-              The workspace API lets your own apps, sites and scripts read and write the records of this workspace.
-              Bases, tables and fields are still set up in SereniBase; the API works with the data inside them.
+              An application gives your own apps, sites and scripts an API address for the bases you choose, so they
+              can read and write their records. Bases, tables and fields are still set up in SereniBase; the API works
+              with the data inside them, and only with the application's own bases.
             </Text>
             <div className="space-y-2">
               <CodePanel code={baseUrl} kind="plain" label="base URL" lineNumbers={false} header={<PanelTitle>Base URL</PanelTitle>} />
               <p className="text-xs text-secondary">
                 {enabled
-                  ? 'This is your workspace\'s address; the examples below use it. Every endpoint path is added to it.'
-                  : 'The API is not turned on for this workspace yet, so the examples use a sample address. An owner or co-owner can turn it on from Home → Workspace API.'}
+                  ? `This is the address of ${application?.name ?? 'the application'}; the examples below use it. Every endpoint path is added to it.`
+                  : 'No application with its API on is chosen, so the examples use a sample address. An owner or co-owner can create an application from Home → Applications.'}
               </p>
             </div>
             <WarningNote>
-              Development only: there are no API keys yet, so anyone with the base URL can read and change this
-              workspace's data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true. Changes to
+              Development only: there are no API keys yet, so anyone with the base URL can read and change the data
+              of the application's bases. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true. Changes to
               tables and fields apply to the next request; after the API is turned back on, it can take up to 10
               seconds to answer again.
             </WarningNote>
@@ -200,7 +203,7 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack
         return (
           <>
             <Text>
-              This page explains the API with sample data. Your workspace also serves docs built from its own bases,
+              This page explains the API with sample data. Each application also serves docs built from its own bases,
               tables and fields: each table's real field names, types and select options, and what can be written.
               They update as soon as a table changes.
             </Text>
@@ -215,14 +218,14 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack
             <Bullets>
               <Bullet>
                 Add <InlineCode>?base=Sales</InlineCode> (a base name or <InlineCode>bse_…</InlineCode> ID) to any of them to show
-                only one base. It helps when a workspace has many tables.
+                only one base. It helps when an application has many tables.
               </Bullet>
               <Bullet>Swagger UI's "Try it out" sends real requests: changes it makes are saved in your tables.</Bullet>
             </Bullets>
             {enabled ? (
               <LiveDocsLinks baseUrl={baseUrl} />
             ) : (
-              <p className="text-xs text-secondary">The addresses above are samples. Turn the API on to open your workspace's live docs.</p>
+              <p className="text-xs text-secondary">The addresses above are samples. Open the docs from an application with its API on to see its live docs.</p>
             )}
           </>
         );
@@ -324,7 +327,7 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack
         return (
           <>
             <Bullets>
-              <Bullet>600 requests per minute per workspace by default (the server's PUBLIC_API_RATE_LIMIT_PER_MINUTE). Over that you get 429; wait for the seconds in Retry-After.</Bullet>
+              <Bullet>600 requests per minute per application by default (the server's PUBLIC_API_RATE_LIMIT_PER_MINUTE). Over that you get 429; wait for the seconds in Retry-After.</Bullet>
               <Bullet>100 records per create, update or delete request.</Bullet>
               <Bullet>200 records per page; 50 when limit is not given.</Bullet>
               <Bullet>Reads (list, find, aggregate and get one record) stop after 10 seconds with <InlineCode>503 query_timeout</InlineCode>.</Bullet>
@@ -360,8 +363,8 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ workspaceId, onBack
           </div>
         )}
         <div className="min-w-0 flex-1 basis-56">
-          <Title className={`${embedded ? 'text-[15px]' : 'text-xl'} font-semibold text-primary truncate`}>Workspace API docs</Title>
-          <p className="text-[13px] text-secondary truncate">Read and write this workspace's records from your own apps over HTTP</p>
+          <Title className={`${embedded ? 'text-[15px]' : 'text-xl'} font-semibold text-primary truncate`}>Application API docs</Title>
+          <p className="text-[13px] text-secondary truncate">Read and write the records of an application's bases from your own apps over HTTP</p>
         </div>
         <div className="flex items-center gap-2 h-9 max-w-full min-w-0 pl-3 pr-1 rounded-xl border border-[var(--color-border-primary)] bg-gray-50">
           <span className="text-xs font-medium text-secondary whitespace-nowrap">Base URL</span>

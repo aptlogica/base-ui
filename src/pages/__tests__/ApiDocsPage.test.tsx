@@ -2,32 +2,38 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ApiDocsPage from '../ApiDocsPage';
-import { useWorkspaceApi } from '../../components/platform/useWorkspaceApi';
+import { useApplication } from '../../components/platform/useApplications';
 import { ENDPOINT_GROUPS } from '../../components/platform/docs/apiDocsContent';
 
-vi.mock('../../components/platform/useWorkspaceApi', () => ({ useWorkspaceApi: vi.fn() }));
+vi.mock('../../components/platform/useApplications', () => ({ useApplication: vi.fn() }));
 vi.mock('../../service/clientService', () => ({ getApiOrigin: () => 'https://api.example.com' }));
 
-const useWorkspaceApiMock = vi.mocked(useWorkspaceApi);
+const useApplicationMock = vi.mocked(useApplication);
 
 const mockStatus = (data: unknown) => {
-  useWorkspaceApiMock.mockReturnValue({ data, isLoading: false, error: null } as any);
+  useApplicationMock.mockReturnValue({ data, isLoading: false, error: null } as any);
 };
 
 const Where = () => <div data-testid="where">{useLocation().pathname}</div>;
 
-const renderPage = () =>
+const renderPage = (path = '/workspace/ws-1/applications/app-1/api-docs') =>
   render(
-    <MemoryRouter initialEntries={['/workspace/ws-1/developer/api-docs']}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
+        <Route path="/workspace/:workspaceId/applications/:applicationId/api-docs" element={<ApiDocsPage />} />
         <Route path="/workspace/:workspaceId/developer/api-docs" element={<ApiDocsPage />} />
         <Route path="*" element={<Where />} />
       </Routes>
     </MemoryRouter>
   );
 
-const ENABLED = { workspace_id: 'ws-1', enabled: true, public_id: 'ws_ab12cd34ef', base_path: '/api/v1/ws_ab12cd34ef' };
-const BASE = 'https://api.example.com/api/v1/ws_ab12cd34ef';
+const ENABLED = {
+  id: 'app-1', workspace_id: 'ws-1', name: 'Portal', enabled: true, public_id: 'app_ab12cd34ef',
+  base_path: '/api/v1/app_ab12cd34ef', bases: [{ id: 'b1', title: 'CRM' }],
+};
+const DISABLED = { ...ENABLED, enabled: false };
+const BASE = 'https://api.example.com/api/v1/app_ab12cd34ef';
+const SAMPLE = 'https://api.example.com/api/v1/app_8f3k2m9qx7';
 
 const menu = () => screen.getByRole('navigation', { name: 'Docs sections' });
 const openPage = (label: string) => fireEvent.click(within(menu()).getByRole('button', { name: label }));
@@ -40,29 +46,37 @@ describe('ApiDocsPage', () => {
     vi.clearAllMocks();
   });
 
-  it('uses the workspace base URL in the examples once the API is on', () => {
+  it("uses the application's base URL in the examples while its API is on", () => {
     mockStatus(ENABLED);
     renderPage();
 
-    expect(useWorkspaceApiMock).toHaveBeenCalledWith('ws-1');
+    expect(useApplicationMock).toHaveBeenCalledWith('ws-1', 'app-1');
     // In the header and on the Introduction page
     expect(screen.getAllByText(BASE).length).toBeGreaterThanOrEqual(1);
     expect(codePanels()).toContain(BASE);
-    expect(screen.getByText(/This is your workspace's address/)).toBeInTheDocument();
+    expect(screen.getByText(/This is the address of Portal/)).toBeInTheDocument();
 
     openPage('List bases');
     expect(codePanels()).toContain(`curl "${BASE}/bases"`);
   });
 
-  it('uses a sample address and says how to turn the API on when it is off', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+  it("uses a sample address when the application's API is off", () => {
+    mockStatus(DISABLED);
     renderPage();
 
-    expect(codePanels()).toContain('https://api.example.com/api/v1/ws_8f3k2m9qx7');
-    expect(screen.getByText(/The API is not turned on for this workspace yet/)).toBeInTheDocument();
+    expect(codePanels()).toContain(SAMPLE);
+    expect(screen.getByText(/No application with its API on is chosen/)).toBeInTheDocument();
   });
 
-  it('explains the live docs and links to the workspace pages once the API is on', () => {
+  it('uses a sample address on the docs page without an application', () => {
+    mockStatus(undefined);
+    renderPage('/workspace/ws-1/developer/api-docs');
+
+    expect(useApplicationMock).toHaveBeenCalledWith('ws-1', undefined);
+    expect(codePanels()).toContain(SAMPLE);
+  });
+
+  it("explains the live docs and links to the application's pages while its API is on", () => {
     mockStatus(ENABLED);
     renderPage();
     openPage('Live docs');
@@ -74,13 +88,13 @@ describe('ApiDocsPage', () => {
   });
 
   it('shows sample live docs addresses without links when the API is off', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    mockStatus(DISABLED);
     renderPage();
     openPage('Live docs');
 
-    expect(screen.getByText('https://api.example.com/api/v1/ws_8f3k2m9qx7/docs')).toBeInTheDocument();
+    expect(screen.getByText(`${SAMPLE}/docs`)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Open Swagger UI/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/Turn the API on to open your workspace's live docs/)).toBeInTheDocument();
+    expect(screen.getByText(/Open the docs from an application with its API on/)).toBeInTheDocument();
   });
 
   it('has a page for every endpoint, and lists them all on the Introduction', () => {
@@ -125,7 +139,7 @@ describe('ApiDocsPage', () => {
     openPage('List bases');
 
     const examples = screen.getByRole('group', { name: 'Examples' });
-    const wrongWorkspace = within(examples).getByRole('button', { name: /Wrong workspace ID/ });
+    const wrongWorkspace = within(examples).getByRole('button', { name: /Wrong application ID/ });
     expect(wrongWorkspace).toHaveAttribute('aria-pressed', 'false');
     expect(codePanels().some((code) => code.startsWith('HTTP/1.1 200 OK'))).toBe(true);
 
