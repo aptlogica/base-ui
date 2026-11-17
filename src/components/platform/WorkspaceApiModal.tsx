@@ -62,7 +62,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
         role="dialog"
         aria-modal="true"
         aria-labelledby="workspace-api-modal-title"
-        className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl w-[94vw] h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
+        className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl w-[94vw] max-w-6xl h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
