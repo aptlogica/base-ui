@@ -670,31 +670,31 @@ export async function getWorkspaceByIdService(id: string) {
   return await makeAuthenticatedCall(() => client.workspace.getById(id));
 }
 
-// Public API status of a workspace; public_id, base_path and enabled_at are set once it has been turned on
-export interface WorkspaceApiStatus {
-  workspace_id: string;
+// Public API status of a base; public_id, base_path and enabled_at are set once it has been turned on
+export interface BaseApiStatus {
+  base_id: string;
   enabled: boolean;
   public_id?: string;
   base_path?: string;
   enabled_at?: string;
 }
 
-// The SDK has no methods for the workspace API endpoints yet, so they go through the workspace service's HTTP client.
-const workspaceHttp = () => (client.workspace as unknown as {
+// The SDK has no methods for the base API endpoints yet, so they go through the base service's HTTP client.
+const baseHttp = () => (client.baseService as unknown as {
   http: {
     get: <T>(url: string) => Promise<StandardResponse<T>>;
     post: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
   };
 }).http;
 
-// GET /workspace/:id/api
-export async function getWorkspaceApiService(id: string) {
-  return await makeAuthenticatedCall(() => workspaceHttp().get<WorkspaceApiStatus>(`/workspace/${id}/api`));
+// GET /base/:id/api
+export async function getBaseApiService(id: string) {
+  return await makeAuthenticatedCall(() => baseHttp().get<BaseApiStatus>(`/base/${id}/api`));
 }
 
-// POST /workspace/:id/api/enable; owner and co-owner only
-export async function enableWorkspaceApiService(id: string) {
-  return await makeAuthenticatedCall(() => workspaceHttp().post<WorkspaceApiStatus>(`/workspace/${id}/api/enable`));
+// POST /base/:id/api/enable; owner and co-owner only
+export async function enableBaseApiService(id: string) {
+  return await makeAuthenticatedCall(() => baseHttp().post<BaseApiStatus>(`/base/${id}/api/enable`));
 }
 
 // Origin the backend is served from; VITE_API_BASE_URL is empty when nginx serves both on one origin

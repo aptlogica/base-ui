@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { statusText, toCurl, toFetch, toResponse } from '../docs/apiDocsSnippets';
 import { ENDPOINT_GROUPS, type DocExample } from '../docs/apiDocsContent';
 
-const BASE = 'http://localhost:8080/api/v1/ws_8f3k2m9qx7';
+const BASE = 'http://localhost:8080/api/v1/bs_8f3k2m9qx7';
 
-const get: DocExample = { title: 'List', method: 'GET', path: '/bases', status: 200, response: { data: [] } };
+const get: DocExample = { title: 'List', method: 'GET', path: '/tables', status: 200, response: { data: [] } };
 
 const post: DocExample = {
   title: 'Create',
   method: 'POST',
-  path: '/bases/CRM/tables/Orders/records',
+  path: '/tables/Orders/records',
   headers: { 'Idempotency-Key': 'order-1' },
   body: { fields: { Name: 'Order 1' } },
   status: 201,
@@ -19,7 +19,7 @@ const post: DocExample = {
 
 describe('apiDocsSnippets', () => {
   it('builds a plain cURL GET', () => {
-    expect(toCurl(BASE, get)).toBe(`curl "${BASE}/bases"`);
+    expect(toCurl(BASE, get)).toBe(`curl "${BASE}/tables"`);
   });
 
   it('adds -g when the query has filter brackets', () => {
@@ -29,7 +29,7 @@ describe('apiDocsSnippets', () => {
   it('builds a cURL POST with headers and a JSON body', () => {
     expect(toCurl(BASE, post)).toBe(
       [
-        `curl -X POST "${BASE}/bases/CRM/tables/Orders/records" \\`,
+        `curl -X POST "${BASE}/tables/Orders/records" \\`,
         '  -H "Content-Type: application/json" \\',
         '  -H "Idempotency-Key: order-1" \\',
         "  -d '{",
@@ -52,7 +52,7 @@ describe('apiDocsSnippets', () => {
   });
 
   it('builds fetch calls', () => {
-    expect(toFetch(BASE, get)).toBe(`const res = await fetch("${BASE}/bases");\nconst { data, error, meta } = await res.json();`);
+    expect(toFetch(BASE, get)).toBe(`const res = await fetch("${BASE}/tables");\nconst { data, error, meta } = await res.json();`);
 
     const code = toFetch(BASE, post);
     expect(code).toContain('method: "POST",');

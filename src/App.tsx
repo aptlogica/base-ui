@@ -374,8 +374,8 @@ const AppRoutes = () => {
         path="/workspace/:workspaceId/base/:baseId/table/:tableId/settings/:section?"
         element={<PrivateRoute><TableSettingsPage /></PrivateRoute>}
       />
-      {/* Workspace API docs: a full page, opened from the Developer popup */}
-      <Route path="/workspace/:workspaceId/developer/api-docs" element={<PrivateRoute><ApiDocsPage /></PrivateRoute>} />
+      {/* Base API docs: a full page, opened from the Developer popup */}
+      <Route path="/base/:baseId/developer/api-docs" element={<PrivateRoute><ApiDocsPage /></PrivateRoute>} />
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/" element={<Navigate to="/workspace" replace />} />
         <Route path="/workspace" element={<ExtensionPoint id="page:homepage" />} /> {/* Handles /workspace when no workspaceId - NavigationResolver will redirect to first workspace */}

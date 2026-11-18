@@ -196,5 +196,24 @@ describe('BaseMenu', () => {
       expect(defaultProps.onEdit).toHaveBeenCalledWith(customBase);
     });
   });
+  describe('Base API item', () => {
+    it('is left out when no handler is given', () => {
+      render(<BaseMenu {...defaultProps} />);
+      expect(screen.queryByTestId('menu-item-base-api')).not.toBeInTheDocument();
+    });
+
+    it('sits between Add Members and Delete and opens the Base API for the base', async () => {
+      const user = userEvent.setup();
+      const onBaseApi = vi.fn();
+      render(<BaseMenu {...defaultProps} onBaseApi={onBaseApi} />);
+
+      const ids = screen.getAllByRole('button').map((b) => b.getAttribute('data-testid'));
+      expect(ids.indexOf('menu-item-base-api')).toBe(ids.indexOf('menu-item-add-members') + 1);
+      expect(ids.indexOf('menu-item-delete')).toBe(ids.indexOf('menu-item-base-api') + 1);
+
+      await user.click(screen.getByTestId('menu-item-base-api'));
+      expect(onBaseApi).toHaveBeenCalledWith(mockBase);
+    });
+  });
 });
 

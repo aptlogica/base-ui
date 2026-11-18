@@ -15,7 +15,7 @@ import { ImportModal } from '../components/modals/ImportModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
-import { WorkspaceApiCard } from '../components/platform/WorkspaceApiCard';
+import { BaseApiModal } from '../components/platform/BaseApiModal';
 
 const CreateTableModal = lazy(() =>
   import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
@@ -40,7 +40,8 @@ const BaseMenuWrapper: React.FC<{
   onEdit: (base: any) => void;
   onAddMembers: (base: any) => void;
   onDelete: (base: any) => void;
-}> = ({ base, onEdit, onAddMembers, onDelete }) => {
+  onBaseApi: (base: any) => void;
+}> = ({ base, onEdit, onAddMembers, onDelete, onBaseApi }) => {
   const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
 
@@ -65,6 +66,7 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
+        onBaseApi={onBaseApi}
         canEdit={canEdit}
         canDelete={canDelete}
         canAddMembers={canAddMembers}
@@ -129,6 +131,7 @@ const HomePage: React.FC = () => {
   const [deletingBase, setDeletingBase] = useState<Base | null>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [baseForMembers, setBaseForMembers] = useState<Base | null>(null);
+  const [baseForApi, setBaseForApi] = useState<Base | null>(null);
   const [showCreateTableBaseId, setShowCreateTableBaseId] = useState<string | null>(null);
   const [checkingBaseId, setCheckingBaseId] = useState<string | null>(null);
   const { data: checkingBaseTablesData } = useBaseTables(checkingBaseId || '');
@@ -499,8 +502,6 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             </button>
-
-            <WorkspaceApiCard disabled={!canUseBaseActions} hasWorkspace={hasValidSelectedWorkspace} />
           </div>
         </div>
       </div>
@@ -661,6 +662,7 @@ const HomePage: React.FC = () => {
                           onEdit={handleEditBase}
                           onAddMembers={handleAddMembers}
                           onDelete={handleDeleteBase}
+                          onBaseApi={setBaseForApi}
                         />
                       )}
                     </div>
@@ -746,6 +748,16 @@ const HomePage: React.FC = () => {
             (typeof editingBase.meta?.image === 'string' ? editingBase.meta.image : null) ||
             null
           }
+        />
+      )}
+
+      {/* Base API (developer) popup */}
+      {baseForApi && (
+        <BaseApiModal
+          isOpen
+          onClose={() => setBaseForApi(null)}
+          baseId={baseForApi.id}
+          baseName={baseForApi.title || baseForApi.name}
         />
       )}
 

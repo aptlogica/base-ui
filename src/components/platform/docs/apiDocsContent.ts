@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 
-// Content of the workspace API docs page. Every example uses the same sample data: a base "CRM" with a
+// Content of the base API docs page. Every example uses the same sample data: a base "CRM" with a
 // table "Orders" whose "Customer" field links to "Customers", with a lookup of the customer's "Email"
 // (returned inside the link's objects). Customers in turn link to "Companies" (Company), for the expand
 // examples. Responses and messages are what the server returns (internal/platform in the backend).
@@ -46,10 +46,10 @@ export interface DocGroup {
   endpoints: DocEndpoint[];
 }
 
-export const apiDocsPath = (workspaceId: string) => `/workspace/${workspaceId}/developer/api-docs`;
+export const apiDocsPath = (baseId: string) => `/base/${baseId}/developer/api-docs`;
 
-// Used in the examples until the workspace's API is turned on
-export const SAMPLE_BASE_PATH = '/api/v1/ws_8f3k2m9qx7';
+// Used in the examples until the base's API is turned on
+export const SAMPLE_BASE_PATH = '/api/v1/bs_8f3k2m9qx7';
 
 // ---- Sample data ----
 
@@ -160,7 +160,7 @@ const ORDERS_TABLE = {
   ],
 };
 
-const RECORDS = '/bases/CRM/tables/Orders/records';
+const RECORDS = '/tables/Orders/records';
 
 // ---- Expanded links (expand=Customer, expand=Customer.Company) ----
 
@@ -190,46 +190,17 @@ const TIMEOUT_MESSAGE =
 
 // ---- Endpoints ----
 
-const LIST_BASES: DocEndpoint = {
-  id: 'list-bases',
-  title: 'List bases',
-  method: 'GET',
-  path: '/bases',
-  summary: 'Returns every base in the workspace with its ID and name.',
-  examples: [
-    {
-      title: 'All bases in the workspace',
-      method: 'GET',
-      path: '/bases',
-      status: 200,
-      response: ok([
-        { id: IDS.crm, name: 'CRM' },
-        { id: IDS.marketing, name: 'Marketing' },
-      ]),
-    },
-    {
-      title: 'Wrong workspace ID, or the API is turned off',
-      description: 'Every endpoint answers this way when the ws_ part of the URL is wrong or the workspace API is off.',
-      method: 'GET',
-      path: '/bases',
-      status: 404,
-      response: fail('not_found', 'No workspace with ID "ws_8f3k2m9qx7", or its API is turned off.'),
-    },
-  ],
-};
-
 const LIST_TABLES: DocEndpoint = {
   id: 'list-tables',
   title: 'List tables',
   method: 'GET',
-  path: '/bases/{base}/tables',
-  summary: 'Returns the tables of one base.',
-  params: [{ name: 'base', in: 'path', description: 'The base name (for example CRM) or its ID (bse_…).' }],
+  path: '/tables',
+  summary: 'Returns the tables of this base with their IDs and names.',
   examples: [
     {
-      title: 'Tables of a base, by name',
+      title: 'Tables of the base',
       method: 'GET',
-      path: '/bases/CRM/tables',
+      path: '/tables',
       status: 200,
       response: ok([
         { id: IDS.orders, name: 'Orders' },
@@ -237,33 +208,12 @@ const LIST_TABLES: DocEndpoint = {
       ]),
     },
     {
-      title: 'Tables of a base, by ID',
-      description: 'IDs keep working after a rename, so apps that must not break should store them.',
+      title: 'Wrong base ID, or the API is turned off',
+      description: 'Every endpoint answers this way when the bs_ part of the URL is wrong or the base API is off.',
       method: 'GET',
-      path: `/bases/${IDS.crm}/tables`,
-      status: 200,
-      response: ok([
-        { id: IDS.orders, name: 'Orders' },
-        { id: IDS.customers, name: 'Customers' },
-      ]),
-    },
-    {
-      title: 'The base does not exist',
-      method: 'GET',
-      path: '/bases/Sales/tables',
+      path: '/tables',
       status: 404,
-      response: fail('not_found', 'No base named "Sales".'),
-    },
-    {
-      title: 'Two bases have the same name',
-      description: 'Use one of the IDs listed in details instead of the name.',
-      method: 'GET',
-      path: '/bases/CRM/tables',
-      status: 409,
-      response: fail('ambiguous_name', '2 bases are named "CRM". Use one of their IDs instead.', [
-        { id: IDS.crm },
-        { id: IDS.crm2 },
-      ]),
+      response: fail('not_found', 'No base with ID "bs_8f3k2m9qx7", or its API is turned off.'),
     },
   ],
 };
@@ -272,18 +222,17 @@ const GET_TABLE: DocEndpoint = {
   id: 'get-table',
   title: 'Get a table and its fields',
   method: 'GET',
-  path: '/bases/{base}/tables/{table}',
+  path: '/tables/{table}',
   summary:
     'Returns the table with its fields: each field\'s ID, name, type and whether it is read-only. Select fields also list their options. Link fields list the table they link to, whether they hold several records, and in lookups the keys their objects carry; lookup fields are listed there, not as fields of their own.',
   params: [
-    { name: 'base', in: 'path', description: 'Base name or ID (bse_…).' },
     { name: 'table', in: 'path', description: 'Table name or ID (tbl_…).' },
   ],
   examples: [
     {
       title: 'A table with its fields',
       method: 'GET',
-      path: '/bases/CRM/tables/Orders',
+      path: '/tables/Orders',
       status: 200,
       response: ok(ORDERS_TABLE),
     },
@@ -291,14 +240,14 @@ const GET_TABLE: DocEndpoint = {
       title: 'A name with spaces or special characters',
       description: 'Encode names in the URL: a space is %20 and a slash is %2F.',
       method: 'GET',
-      path: '/bases/CRM/tables/Sales%20Team',
+      path: '/tables/Sales%20Team',
       status: 200,
       response: ok({ id: 'tbl_8e2c4a6f1b3d4f5a9c7e0b2d4f6a8c1e', name: 'Sales Team', base_id: IDS.crm, fields: [] }),
     },
     {
       title: 'The table does not exist',
       method: 'GET',
-      path: '/bases/CRM/tables/Order',
+      path: '/tables/Order',
       status: 404,
       response: fail('not_found', 'No table named "Order".'),
     },
@@ -408,11 +357,10 @@ const LIST_COLUMNS: DocEndpoint = {
   id: 'list-columns',
   title: 'Get a table\'s columns',
   method: 'GET',
-  path: '/bases/{base}/tables/{table}/columns',
+  path: '/tables/{table}/columns',
   summary:
     'Returns every column of the table as the database has it: the app\'s settings for the column, its database type, whether it can be empty, its default, whether it is part of the primary key, and the constraints it belongs to. Use it to build forms, check values before you write them, or see why a write was rejected.',
   params: [
-    { name: 'base', in: 'path', description: 'Base name or ID (bse_…).' },
     { name: 'table', in: 'path', description: 'Table name or ID (tbl_…).' },
   ],
   notes: [
@@ -428,7 +376,7 @@ const LIST_COLUMNS: DocEndpoint = {
       title: 'The columns of a table',
       description: 'Name has a unique constraint and Price a check constraint, both made in the app. The primary key is the record ID.',
       method: 'GET',
-      path: '/bases/CRM/tables/Orders/columns',
+      path: '/tables/Orders/columns',
       status: 200,
       response: ok(ORDERS_COLUMNS),
     },
@@ -436,7 +384,7 @@ const LIST_COLUMNS: DocEndpoint = {
       title: 'A primary key of two fields',
       description: 'The key of Products was changed in the app to SKU + Region. Each key column has its position, and neither is unique alone. Only the key columns are shown here.',
       method: 'GET',
-      path: '/bases/CRM/tables/Products/columns',
+      path: '/tables/Products/columns',
       status: 200,
       response: ok({
         table_id: 'tbl_5a6b7c8d9e0f41a2b3c4d5e6f7a8b9c0',
@@ -466,7 +414,7 @@ const LIST_COLUMNS: DocEndpoint = {
     {
       title: 'The table does not exist',
       method: 'GET',
-      path: '/bases/CRM/tables/Order/columns',
+      path: '/tables/Order/columns',
       status: 404,
       response: fail('not_found', 'No table named "Order".'),
     },
@@ -477,7 +425,7 @@ const LIST_RECORDS: DocEndpoint = {
   id: 'list-records',
   title: 'List records',
   method: 'GET',
-  path: '/bases/{base}/tables/{table}/records',
+  path: '/tables/{table}/records',
   summary:
     'Returns one page of records. Without sort, records come oldest first. Use filter, search, sort and select to choose which records and fields come back, and expand to get linked records\' fields too.',
   params: [
@@ -778,7 +726,7 @@ const QUERY_RECORDS: DocEndpoint = {
   id: 'query-records',
   title: 'Find records (or / not filters)',
   method: 'POST',
-  path: '/bases/{base}/tables/{table}/records/query',
+  path: '/tables/{table}/records/query',
   summary:
     'Like List records, with the options in a JSON body. Use it when a filter needs "or" or "not". A where filter is built from two shapes: a condition, {"field", "op", "value"}, checks one field; a group, {"match", "conditions"}, combines conditions with all (AND), any (OR) or none (NOT), and can hold other groups. match only ever goes on a group. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method; both work the same.',
   params: [
@@ -1074,7 +1022,7 @@ const QUERY_RECORDS_WITH_QUERY: DocEndpoint = {
   id: 'query-records-query-method',
   title: 'Find records with QUERY',
   method: 'QUERY',
-  path: '/bases/{base}/tables/{table}/records/query',
+  path: '/tables/{table}/records/query',
   summary:
     'The same as Find records, sent with the HTTP QUERY method instead of POST: the same body, the same answer and the same errors. QUERY is the newer HTTP method for reads with a body; it says plainly that nothing is changed, so it can be retried safely. Use it if your HTTP client supports it, otherwise use POST.',
   params: QUERY_RECORDS.params,
@@ -1136,7 +1084,7 @@ const AGGREGATE_RECORDS: DocEndpoint = {
   id: 'aggregate-records',
   title: 'Count, sum and group records',
   method: 'POST',
-  path: '/bases/{base}/tables/{table}/records/aggregate',
+  path: '/tables/{table}/records/aggregate',
   summary:
     'Counts, sums, averages, minimums and maximums over the records a filter selects, optionally grouped: records per status, revenue per month, the top customers. where and search work as in Find records, so both select the same records. Nothing is changed; it only reads. Send it with POST or with the HTTP QUERY method.',
   params: [
@@ -1317,7 +1265,7 @@ const GET_RECORD: DocEndpoint = {
   id: 'get-record',
   title: 'Get a record',
   method: 'GET',
-  path: '/bases/{base}/tables/{table}/records/{record}',
+  path: '/tables/{table}/records/{record}',
   summary: 'Returns one record by its ID.',
   params: [
     { name: 'record', in: 'path', description: 'The record ID (rec_1042) with the default primary key. When the key was changed to other fields, a record ID is refused: use the value of a one-field key (records/A1), or by-key with each key field named, e.g. records/by-key?key[SKU]=A1&key[Region]=EU.' },
@@ -1356,7 +1304,7 @@ const CREATE_RECORDS: DocEndpoint = {
   id: 'create-records',
   title: 'Create records',
   method: 'POST',
-  path: '/bases/{base}/tables/{table}/records',
+  path: '/tables/{table}/records',
   summary:
     'Send {"fields": {...}} to create one record, or {"records": [{"fields": {...}}, ...]} to create up to 100 at once. Returns the created records with 201.',
   params: [
@@ -1456,7 +1404,7 @@ const UPDATE_RECORDS: DocEndpoint = {
   id: 'update-records',
   title: 'Update records',
   method: 'PATCH',
-  path: '/bases/{base}/tables/{table}/records/{record}',
+  path: '/tables/{table}/records/{record}',
   summary:
     'Changes only the fields you send; the others keep their values. PATCH one record at /records/{record}, or up to 100 at /records with {"records": [{"id": ..., "fields": {...}}]}. Returns the updated records.',
   params: [
@@ -1545,7 +1493,7 @@ const DELETE_RECORDS: DocEndpoint = {
   id: 'delete-records',
   title: 'Delete records',
   method: 'DELETE',
-  path: '/bases/{base}/tables/{table}/records/{record}',
+  path: '/tables/{table}/records/{record}',
   summary:
     'Deletes one record with DELETE, or up to 100 with POST /records/delete and {"ids": [...]}. Deleting is permanent.',
   params: [
@@ -1587,31 +1535,30 @@ const DELETE_RECORDS: DocEndpoint = {
 };
 
 export const ENDPOINT_GROUPS: DocGroup[] = [
-  { id: 'bases-and-tables', title: 'Bases and tables', endpoints: [LIST_BASES, LIST_TABLES, GET_TABLE, LIST_COLUMNS] },
+  { id: 'tables', title: 'Tables', endpoints: [LIST_TABLES, GET_TABLE, LIST_COLUMNS] },
   { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, AGGREGATE_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
 ];
 
 // ---- Reference ----
 
 export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string }[] = [
-  { method: 'GET', path: '/bases', does: 'List bases' },
-  { method: 'GET', path: '/bases/{base}/tables', does: 'List tables' },
-  { method: 'GET', path: '/bases/{base}/tables/{table}', does: 'Get a table and its fields' },
-  { method: 'GET', path: '/bases/{base}/tables/{table}/columns', does: 'Get a table\'s columns: database types, primary key and constraints' },
-  { method: 'GET', path: '/bases/{base}/tables/{table}/records', does: 'List records' },
-  { method: 'POST', path: '/bases/{base}/tables/{table}/records/query', does: 'Find records with or / not filters' },
-  { method: 'QUERY', path: '/bases/{base}/tables/{table}/records/query', does: 'The same as POST, with the HTTP QUERY method' },
-  { method: 'POST', path: '/bases/{base}/tables/{table}/records/aggregate', does: 'Count, sum and group records (QUERY works too)' },
-  { method: 'GET', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Get a record' },
-  { method: 'POST', path: '/bases/{base}/tables/{table}/records', does: 'Create one or many records' },
-  { method: 'PATCH', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Update a record' },
-  { method: 'PATCH', path: '/bases/{base}/tables/{table}/records', does: 'Update many records' },
-  { method: 'DELETE', path: '/bases/{base}/tables/{table}/records/{record}', does: 'Delete a record' },
-  { method: 'POST', path: '/bases/{base}/tables/{table}/records/delete', does: 'Delete many records' },
+  { method: 'GET', path: '/tables', does: 'List tables' },
+  { method: 'GET', path: '/tables/{table}', does: 'Get a table and its fields' },
+  { method: 'GET', path: '/tables/{table}/columns', does: 'Get a table\'s columns: database types, primary key and constraints' },
+  { method: 'GET', path: '/tables/{table}/records', does: 'List records' },
+  { method: 'POST', path: '/tables/{table}/records/query', does: 'Find records with or / not filters' },
+  { method: 'QUERY', path: '/tables/{table}/records/query', does: 'The same as POST, with the HTTP QUERY method' },
+  { method: 'POST', path: '/tables/{table}/records/aggregate', does: 'Count, sum and group records (QUERY works too)' },
+  { method: 'GET', path: '/tables/{table}/records/{record}', does: 'Get a record' },
+  { method: 'POST', path: '/tables/{table}/records', does: 'Create one or many records' },
+  { method: 'PATCH', path: '/tables/{table}/records/{record}', does: 'Update a record' },
+  { method: 'PATCH', path: '/tables/{table}/records', does: 'Update many records' },
+  { method: 'DELETE', path: '/tables/{table}/records/{record}', does: 'Delete a record' },
+  { method: 'POST', path: '/tables/{table}/records/delete', does: 'Delete many records' },
 ];
 
 export const ID_PREFIXES: { prefix: string; what: string; example: string }[] = [
-  { prefix: 'ws_', what: 'Workspace (part of the base URL)', example: 'ws_8f3k2m9qx7' },
+  { prefix: 'bs_', what: 'Base (part of the base URL)', example: 'bs_8f3k2m9qx7' },
   { prefix: 'bse_', what: 'Base', example: IDS.crm },
   { prefix: 'tbl_', what: 'Table', example: IDS.orders },
   { prefix: 'fld_', what: 'Field', example: IDS.name },
@@ -1652,12 +1599,12 @@ export const READ_ONLY_VALUES: { type: string; read: string }[] = [
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
   { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort or edited, a value in the wrong format (the message says which), an unknown timezone, the same ID twice in a bulk request, or an Idempotency-Key longer than 255 characters' },
-  { code: 'not_found', status: 404, when: 'The workspace, base, table, field or record doesn\'t exist, or the workspace API is off' },
+  { code: 'not_found', status: 404, when: 'The base, table, field or record doesn\'t exist, or the base API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },
   { code: 'conflict', status: 409, when: 'An Idempotency-Key reused with a different body, or still running; or the table was busy with other changes, so nothing was saved: try again' },
   { code: 'payload_too_large', status: 413, when: 'More than 100 records in one request, or a request body over 10 MB' },
   { code: 'validation_failed', status: 422, when: 'A wrong value type, unknown or read-only field, unknown option, link field in a bulk write, duplicate key, failed check, or a table automation that rejected the change (its own message is shown)' },
-  { code: 'rate_limited', status: 429, when: 'Too many requests for the workspace; wait for Retry-After seconds' },
+  { code: 'rate_limited', status: 429, when: 'Too many requests for the base; wait for Retry-After seconds' },
   { code: 'internal_error', status: 500, when: 'A server error; quote meta.request_id when you report it. If an automation on the table failed, the message says so: check the automations of the table' },
   { code: 'query_timeout', status: 503, when: 'A read (list, find, aggregate or get a record) ran longer than 10 seconds and was stopped; narrow the filter or search, expand fewer fields, or ask for a smaller page' },
   { code: 'schema_changed', status: 409, when: 'A field or table the request uses was changed or deleted in the app while the request was being answered; try again' },
@@ -1710,5 +1657,5 @@ export const RATE_LIMIT_EXAMPLE: DocExample = {
   path: RECORDS,
   status: 429,
   responseHeaders: { 'Retry-After': '12' },
-  response: fail('rate_limited', 'Too many requests: this workspace allows 600 per minute. Try again after the time in Retry-After.'),
+  response: fail('rate_limited', 'Too many requests: this base allows 600 per minute. Try again after the time in Retry-After.'),
 };

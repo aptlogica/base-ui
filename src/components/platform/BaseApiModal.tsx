@@ -5,14 +5,15 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, Code, KeyRound, LayoutDashboard, LogIn, ScrollText, ShieldCheck, UserCheck, Users, X } from 'lucide-react';
-import { useNavigationStore } from '../../stores/navigationStore';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import DeveloperOverview from './DeveloperOverview';
 import ApiDocsView from './docs/ApiDocsView';
 
-interface WorkspaceApiModalProps {
+interface BaseApiModalProps {
   isOpen: boolean;
   onClose: () => void;
+  baseId: string | null;
+  baseName?: string;
 }
 
 // Sections of the left panel; only Overview is built so far
@@ -26,19 +27,18 @@ const SECTIONS: { key: string; label: string; icon: React.ElementType; ready: bo
   { key: 'logs', label: 'Logs', icon: ScrollText, ready: false },
 ];
 
-// Developer settings of the selected workspace: sections on the left, Overview on the right
-export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, onClose }) => {
-  const { selectedWorkspaceId } = useNavigationStore();
-  const { currentWorkspace, isAdmin } = useWorkspaceAccess();
+// Developer settings of a base: sections on the left, Overview on the right
+export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, baseId, baseName: baseNameProp }) => {
+  const { isAdmin } = useWorkspaceAccess();
   // The docs open inside the popup, in place of the sections; Back returns to Overview
   const [showDocs, setShowDocs] = useState(false);
 
   if (!isOpen) return null;
 
-  const workspaceName: string = currentWorkspace?.title || currentWorkspace?.name || 'this workspace';
+  const baseName: string = baseNameProp || 'this base';
 
   const openDocs = () => {
-    if (selectedWorkspaceId) setShowDocs(true);
+    if (baseId) setShowDocs(true);
   };
 
   // The popup opens on Overview next time
@@ -53,7 +53,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
     }
   };
 
-  // Portal to body: the home banner's z-10 layer would otherwise trap the overlay below the app header
+  // Portal to body: the card's stacking context would otherwise trap the overlay below the app header
   return createPortal(
     <div // NOSONAR
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.169] backdrop-blur-sm transition-all duration-200 p-4"
@@ -68,7 +68,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
       <div // NOSONAR
         role="dialog"
         aria-modal="true"
-        aria-labelledby="workspace-api-modal-title"
+        aria-labelledby="base-api-modal-title"
         className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl w-[94vw] max-w-6xl h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
@@ -80,11 +80,11 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
               <Code className="text-green-600 h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h2 id="workspace-api-modal-title" className="text-xl font-semibold text-primary truncate">
+              <h2 id="base-api-modal-title" className="text-xl font-semibold text-primary truncate">
                 Developer
               </h2>
               <p className="text-sm text-secondary truncate">
-                Let developers build apps on {workspaceName} with APIs, SDKs and app user login.
+                Let developers build apps on {baseName} with APIs, SDKs and app user login.
               </p>
             </div>
           </div>
@@ -93,7 +93,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
               <button
                 type="button"
                 onClick={openDocs}
-                disabled={!selectedWorkspaceId}
+                disabled={!baseId}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 text-sm text-gray-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <BookOpen className="h-4 w-4" />
@@ -114,7 +114,7 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
         {showDocs ? (
           <div className="flex-1 min-h-0">
             <ApiDocsView
-              workspaceId={selectedWorkspaceId}
+              baseId={baseId}
               onBack={() => setShowDocs(false)}
               backLabel="Back to overview"
               embedded
@@ -148,8 +148,8 @@ export const WorkspaceApiModal: React.FC<WorkspaceApiModalProps> = ({ isOpen, on
             {/* Right panel: Overview */}
             <div className="flex-1 min-w-0 overflow-y-auto">
               <DeveloperOverview
-                workspaceId={selectedWorkspaceId}
-                workspaceName={workspaceName}
+                baseId={baseId}
+                baseName={baseName}
                 canEnable={isAdmin}
                 onCancel={close}
                 onOpenDocs={openDocs}

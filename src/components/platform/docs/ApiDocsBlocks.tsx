@@ -312,7 +312,7 @@ export const ExamplesPanel: React.FC<Readonly<ExamplesPanelProps>> = ({ examples
 
 // ---- Endpoint page ----
 
-// The method and path, with {base}, {table} and the like picked out, and a copy button
+// The method and path, with {table}, {record} and the like picked out, and a copy button
 const EndpointBar: React.FC<Readonly<{ method: HttpMethod; path: string; baseUrl: string }>> = ({ method, path, baseUrl }) => (
   <div className="flex items-center gap-3 py-2 pl-3 pr-2 rounded-xl border border-[var(--color-border-primary)] bg-gray-50">
     <MethodBadge method={method} />

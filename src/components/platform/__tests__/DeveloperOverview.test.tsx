@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import DeveloperOverview from '../DeveloperOverview';
-import { useWorkspaceApi } from '../useWorkspaceApi';
+import { useBaseApi } from '../useBaseApi';
 
 const mutateAsync = vi.fn();
 const refetch = vi.fn();
@@ -9,9 +9,9 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 let isPending = false;
 
-vi.mock('../useWorkspaceApi', () => ({
-  useWorkspaceApi: vi.fn(),
-  useEnableWorkspaceApi: () => ({ mutateAsync, isPending }),
+vi.mock('../useBaseApi', () => ({
+  useBaseApi: vi.fn(),
+  useEnableBaseApi: () => ({ mutateAsync, isPending }),
 }));
 
 vi.mock('../../common/Toast', () => ({
@@ -22,16 +22,16 @@ vi.mock('../../../service/clientService', () => ({
   getApiOrigin: () => 'https://api.example.com',
 }));
 
-const useWorkspaceApiMock = vi.mocked(useWorkspaceApi);
+const useBaseApiMock = vi.mocked(useBaseApi);
 
 const mockStatus = (data: unknown, extra: Record<string, unknown> = {}) => {
-  useWorkspaceApiMock.mockReturnValue({ data, isLoading: false, error: null, refetch, ...extra } as any);
+  useBaseApiMock.mockReturnValue({ data, isLoading: false, error: null, refetch, ...extra } as any);
 };
 
 const renderOverview = (props: Partial<React.ComponentProps<typeof DeveloperOverview>> = {}) => {
   const onCancel = vi.fn();
   render(
-    <DeveloperOverview workspaceId="ws-1" workspaceName="Acme Workspace" canEnable onCancel={onCancel} {...props} />
+    <DeveloperOverview baseId="base-1" baseName="Acme CRM" canEnable onCancel={onCancel} {...props} />
   );
   return { onCancel };
 };
@@ -54,48 +54,48 @@ describe('DeveloperOverview', () => {
   });
 
   it('asks to enable the API with the Stage 1 checklist', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    mockStatus({ base_id: 'base-1', enabled: false });
     renderOverview();
 
     expect(screen.getByText('Enable API & app login?')).toBeInTheDocument();
-    expect(screen.getByText('Acme Workspace')).toBeInTheDocument();
+    expect(screen.getByText('Acme CRM')).toBeInTheDocument();
     expect(screen.getByText(/permanent API address/)).toBeInTheDocument();
     expect(screen.getByText(/API keys, app login and access rules/)).toBeInTheDocument();
-    expect(screen.getByText(/Every table stays locked/)).toBeInTheDocument();
+    expect(screen.getByText(/Every call starts from this address/)).toBeInTheDocument();
     expect(screen.queryByText(/turn it off/i)).not.toBeInTheDocument();
   });
 
-  it('enables the API for the workspace and confirms with a toast', async () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+  it('enables the API for the base and confirms with a toast', async () => {
+    mockStatus({ base_id: 'base-1', enabled: false });
     mutateAsync.mockResolvedValue({ data: { enabled: true } });
     renderOverview();
 
     fireEvent.click(screen.getByRole('button', { name: 'Enable API & app login' }));
 
-    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('ws-1'));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('base-1'));
     expect(toastSuccess).toHaveBeenCalled();
   });
 
   it('shows the backend message when enabling fails', async () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
-    mutateAsync.mockRejectedValue(Object.assign(new Error('The workspace API could not be turned on'), { code: 'WSA_1001' }));
+    mockStatus({ base_id: 'base-1', enabled: false });
+    mutateAsync.mockRejectedValue(Object.assign(new Error('The base API could not be turned on'), { code: 'WSA_1001' }));
     renderOverview();
 
     fireEvent.click(screen.getByRole('button', { name: 'Enable API & app login' }));
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('The workspace API could not be turned on', expect.anything()));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('The base API could not be turned on', expect.anything()));
   });
 
   it('lets only owners and co-owners enable it', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    mockStatus({ base_id: 'base-1', enabled: false });
     renderOverview({ canEnable: false });
 
     expect(screen.getByRole('button', { name: 'Enable API & app login' })).toBeDisabled();
-    expect(screen.getByText('Only workspace owners and co-owners can turn this on.')).toBeInTheDocument();
+    expect(screen.getByText('Only base owners and co-owners can turn this on.')).toBeInTheDocument();
   });
 
   it('closes the popup on Cancel', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    mockStatus({ base_id: 'base-1', enabled: false });
     const { onCancel } = renderOverview();
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -105,28 +105,29 @@ describe('DeveloperOverview', () => {
 
   it('shows the base API URL once enabled and copies it', async () => {
     mockStatus({
-      workspace_id: 'ws-1',
+      base_id: 'base-1',
       enabled: true,
-      public_id: 'ws_8f3k2m9qx7',
-      base_path: '/api/v1/ws_8f3k2m9qx7',
+      public_id: 'bs_8f3k2m9qx7',
+      base_path: '/api/v1/bs_8f3k2m9qx7',
       enabled_at: '2026-11-03T10:00:00Z',
     });
     renderOverview();
 
     expect(screen.getByText('Base API')).toBeInTheDocument();
-    expect(screen.getByText('https://api.example.com/api/v1/ws_8f3k2m9qx7')).toBeInTheDocument();
-    expect(screen.getByText('ws_8f3k2m9qx7')).toBeInTheDocument();
+    expect(screen.getByText('https://api.example.com/api/v1/bs_8f3k2m9qx7')).toBeInTheDocument();
+    expect(screen.getByText('bs_8f3k2m9qx7')).toBeInTheDocument();
+    expect(screen.getByText('curl https://api.example.com/api/v1/bs_8f3k2m9qx7/tables')).toBeInTheDocument();
     expect(screen.queryByText('Enable API & app login?')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy Base URL' }));
 
     await waitFor(() =>
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://api.example.com/api/v1/ws_8f3k2m9qx7')
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://api.example.com/api/v1/bs_8f3k2m9qx7')
     );
   });
 
   it('links to the API docs once enabled', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: true, public_id: 'ws_8f3k2m9qx7', base_path: '/api/v1/ws_8f3k2m9qx7' });
+    mockStatus({ base_id: 'base-1', enabled: true, public_id: 'bs_8f3k2m9qx7', base_path: '/api/v1/bs_8f3k2m9qx7' });
     const onOpenDocs = vi.fn();
     renderOverview({ onOpenDocs });
 
@@ -136,23 +137,23 @@ describe('DeveloperOverview', () => {
   });
 
   it('links to the live Swagger UI and ReDoc pages and the OpenAPI spec once enabled', async () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: true, public_id: 'ws_8f3k2m9qx7', base_path: '/api/v1/ws_8f3k2m9qx7' });
+    mockStatus({ base_id: 'base-1', enabled: true, public_id: 'bs_8f3k2m9qx7', base_path: '/api/v1/bs_8f3k2m9qx7' });
     renderOverview();
 
     const swagger = screen.getByRole('link', { name: /Open Swagger UI/ });
-    expect(swagger).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_8f3k2m9qx7/docs');
+    expect(swagger).toHaveAttribute('href', 'https://api.example.com/api/v1/bs_8f3k2m9qx7/docs');
     expect(swagger).toHaveAttribute('target', '_blank');
     expect(swagger).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.getByRole('link', { name: /Open ReDoc/ })).toHaveAttribute('href', 'https://api.example.com/api/v1/ws_8f3k2m9qx7/redoc');
+    expect(screen.getByRole('link', { name: /Open ReDoc/ })).toHaveAttribute('href', 'https://api.example.com/api/v1/bs_8f3k2m9qx7/redoc');
 
     fireEvent.click(screen.getByRole('button', { name: /Copy OpenAPI spec/ }));
     await waitFor(() =>
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://api.example.com/api/v1/ws_8f3k2m9qx7/openapi.json')
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://api.example.com/api/v1/bs_8f3k2m9qx7/openapi.json')
     );
   });
 
   it('does not link to the live docs before the API is on', () => {
-    mockStatus({ workspace_id: 'ws-1', enabled: false });
+    mockStatus({ base_id: 'base-1', enabled: false });
     renderOverview();
 
     expect(screen.queryByRole('link', { name: /Open Swagger UI/ })).not.toBeInTheDocument();
@@ -162,7 +163,7 @@ describe('DeveloperOverview', () => {
     mockStatus(undefined, { error: new Error('network down') });
     renderOverview();
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not load the API status for this workspace.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load the API status for this base.');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalled();
   });
