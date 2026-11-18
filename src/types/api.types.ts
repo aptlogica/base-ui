@@ -59,6 +59,7 @@ export interface Base {
   tables?: unknown[] | null;
   name?: string; // alias for title
   logo?: string; // alias for image
+  api_enabled?: boolean;
 }
 
 export type BasesResponse = ApiResponse<Base[]>;

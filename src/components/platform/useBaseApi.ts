@@ -23,6 +23,8 @@ export const useEnableBaseApi = () => {
     mutationFn: (baseId: string) => enableBaseApiService(baseId),
     onSuccess: (res, baseId) => {
       queryClient.setQueryData(baseApiQueryKey(baseId), res);
+      // refresh base lists so the card's API badge updates
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
   });
 };

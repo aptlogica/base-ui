@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
   /* eslint-disable sonarjs/cognitive-complexity */
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
+import { ApiEnabledBadge } from '../components/platform/ApiEnabledBadge';
 import { Plus, Import, Search, Zap, Database, ChevronDown } from 'lucide-react';
 import { useWorkspaceBases, useCreateBase, useUpdateBase, useDeleteBase, useBaseTables, useCreateTable, useWorkspaces } from '../hooks/useApi';
 import { useNavigationStore } from '../stores/navigationStore';
@@ -674,16 +675,19 @@ const HomePage: React.FC = () => {
 
                 {/* Bottom Section: Last Modified */}
                 <div
-                  className="text-xs text-gray-600 p-5"
+                  className="text-xs text-gray-600 p-5 flex items-center justify-between gap-2"
                 >
-                  {timePart ? (
-                    <>
-                      <span className="text-gray-600">Last modified </span>
-                      <span className="font-semibold text-gray-700">{timePart}</span>
-                    </>
-                  ) : (
-                    <span>{lastModified}</span>
-                  )}
+                  <div>
+                    {timePart ? (
+                      <>
+                        <span className="text-gray-600">Last modified </span>
+                        <span className="font-semibold text-gray-700">{timePart}</span>
+                      </>
+                    ) : (
+                      <span>{lastModified}</span>
+                    )}
+                  </div>
+                  {base.api_enabled && <ApiEnabledBadge />}
                 </div>
               </div>
             );
