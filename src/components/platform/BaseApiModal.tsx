@@ -4,7 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Code, KeyRound, LayoutDashboard, LogIn, ScrollText, ShieldCheck, UserCheck, Users, X } from 'lucide-react';
+import { BookOpen, Code, KeyRound, LayoutDashboard, LogIn, Maximize2, Minimize2, ScrollText, ShieldCheck, UserCheck, Users, X } from 'lucide-react';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import DeveloperOverview from './DeveloperOverview';
 import ApiDocsView from './docs/ApiDocsView';
@@ -32,6 +32,8 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
   const { isAdmin } = useWorkspaceAccess();
   // The docs open inside the popup, in place of the sections; Back returns to Overview
   const [showDocs, setShowDocs] = useState(false);
+  // Wide by default; the expand button makes the popup fill the whole screen
+  const [isFullWidth, setIsFullWidth] = useState(false);
 
   if (!isOpen) return null;
 
@@ -44,6 +46,7 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
   // The popup opens on Overview next time
   const close = () => {
     setShowDocs(false);
+    setIsFullWidth(false);
     onClose();
   };
 
@@ -56,7 +59,7 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
   // Portal to body: the card's stacking context would otherwise trap the overlay below the app header
   return createPortal(
     <div // NOSONAR
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.169] backdrop-blur-sm transition-all duration-200 p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/[0.169] backdrop-blur-sm transition-all duration-200 ${isFullWidth ? 'p-0' : 'p-4'}`}
       onKeyDown={handleKeyDown}
     >
       <button
@@ -69,7 +72,7 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
         role="dialog"
         aria-modal="true"
         aria-labelledby="base-api-modal-title"
-        className="bg-[var(--color-card)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl w-[94vw] max-w-6xl h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
+        className={`bg-[var(--color-card)] border border-[var(--color-border-primary)] ${isFullWidth ? 'w-screen h-screen max-w-none rounded-none' : 'rounded-xl w-[96vw] max-w-[1500px] h-[94vh]'} shadow-2xl flex flex-col relative overflow-hidden transform transition-all duration-200`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -100,6 +103,15 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
                 API docs
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setIsFullWidth((v) => !v)}
+              className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
+              aria-label={isFullWidth ? 'Exit full width' : 'Full width'}
+              title={isFullWidth ? 'Exit full width' : 'Full width'}
+            >
+              {isFullWidth ? <Minimize2 className="text-gray-500 h-4 w-4" /> : <Maximize2 className="text-gray-500 h-4 w-4" />}
+            </button>
             <button
               type="button"
               onClick={close}
