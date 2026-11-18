@@ -714,6 +714,7 @@ const HomePage: React.FC = () => {
       <ImportSbaseModal
         isOpen={showImportSbase}
         workspaceId={selectedWorkspaceId || ''}
+        existingBases={allBases || []}
         onClose={() => setShowImportSbase(false)}
         onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
       />

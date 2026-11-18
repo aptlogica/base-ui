@@ -24,11 +24,11 @@ export function useBaseExport() {
   const toast = useToast();
   const [filterBase, setFilterBase] = useState<{ id: string; title?: string; name?: string } | null>(null);
   const [exp, setExp] = useState<ExportState | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  // True once the user closed the progress dialog while the export was still running: the export carries on, and the
-  // result is shown as a message instead
-  const [hidden, setHidden] = useState(false);
-  const hiddenRef = useRef(false);
+  // Every export is followed by its own run. Only the run the progress dialog shows is "attached": closing the dialog
+  // while an export runs detaches it, so it carries on in the background (a message tells the result) and another
+  // export can be started.
+  const runCounter = useRef(0);
+  const attachedRun = useRef<number | null>(null);
 
   const exportBase = useCallback((base: { id: string; title?: string; name?: string }, format: BaseExportFormat) => {
     if (format !== 'sbase') {
@@ -44,41 +44,37 @@ export function useBaseExport() {
     const base = filterBase;
     setFilterBase(null);
 
-    const controller = new AbortController();
-    abortRef.current = controller;
     const title = base.title || base.name || 'base';
-    hiddenRef.current = false;
-    setHidden(false);
+    const runId = ++runCounter.current;
+    attachedRun.current = runId;
+    const attached = () => attachedRun.current === runId;
     setExp({ title, percent: 0, state: 'running' });
     try {
-      await exportBaseAsSbase(base.id, { ...options, title: base.title || base.name }, (percent) => setExp((e) => (e ? { ...e, percent } : e)), controller.signal);
-      if (hiddenRef.current) {
+      await exportBaseAsSbase(
+        base.id,
+        { ...options, title: base.title || base.name },
+        (percent) => { if (attached()) setExp((e) => (e ? { ...e, percent } : e)); },
+      );
+      if (!attached()) {
         toast.success(`Export of “${title}” is ready. The download has started.`);
-        setExp(null);
         return;
       }
       setExp((e) => (e ? { ...e, percent: 100, state: 'done' } : e));
-      setTimeout(() => setExp(null), 1500);
+      setTimeout(() => { if (attached()) setExp(null); }, 1500);
     } catch (error: any) {
       if (error?.name === 'AbortError') return;
-      if (hiddenRef.current) {
+      if (!attached()) {
         toast.error(`Export of “${title}” failed: ${error?.message || 'Export failed'}`);
-        setExp(null);
         return;
       }
       setExp((e) => (e ? { ...e, state: 'failed', error: error?.message || 'Export failed' } : e));
     }
   }, [filterBase, toast]);
 
-  // While the export runs on the server, closing the dialog only hides it: the export carries on and the file
-  // downloads when it is ready. A finished or failed export is simply dismissed.
+  // While the export runs on the server, closing the dialog detaches it: the export carries on and the file downloads
+  // when it is ready. A finished or failed export is simply dismissed.
   const closeProgress = useCallback(() => {
-    if (exp?.state === 'running') {
-      hiddenRef.current = true;
-      setHidden(true);
-      return;
-    }
-    abortRef.current?.abort();
+    if (exp?.state === 'running') attachedRun.current = null;
     setExp(null);
   }, [exp?.state]);
 
@@ -96,7 +92,7 @@ export function useBaseExport() {
           onExport={startExportWithOptions}
         />
       )}
-      {exp && !hidden && (
+      {exp && (
         <ExportProgressModal
           baseTitle={exp.title}
           percent={exp.percent}

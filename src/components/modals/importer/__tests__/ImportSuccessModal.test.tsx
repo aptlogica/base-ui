@@ -194,4 +194,35 @@ describe('ImportSuccessModal', () => {
       clickSpy.mockRestore();
     });
   });
+
+  describe('For an import that is not a table of rows (a Sereni Base import)', () => {
+    const baseSummary = () =>
+      createSummary({
+        stats: [
+          { label: 'Tables', value: 3 },
+          { label: 'Fields', value: 20 },
+          { label: 'Rows', value: 1200 },
+        ],
+        hideDataQuality: true,
+      });
+
+    it('shows its own figures instead of Total Rows and Columns', () => {
+      render(<ImportSuccessModal open summary={baseSummary()} onClose={mockOnClose} />);
+      expect(screen.getByText('Tables')).toBeTruthy();
+      expect(screen.getByText('1,200')).toBeTruthy();
+      expect(screen.queryByText('Total Rows')).toBeNull();
+    });
+
+    it('leaves out the data quality section when asked to', () => {
+      render(<ImportSuccessModal open summary={baseSummary()} onClose={mockOnClose} />);
+      expect(screen.queryByText('Data Quality')).toBeNull();
+      expect(screen.queryByText(/rows with errors/)).toBeNull();
+      expect(screen.queryByText('View data import log')).toBeNull();
+    });
+
+    it('keeps the data quality section for a CSV import', () => {
+      render(<ImportSuccessModal open summary={createSummary()} onClose={mockOnClose} />);
+      expect(screen.getByText('Data Quality')).toBeTruthy();
+    });
+  });
 });

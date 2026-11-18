@@ -17,6 +17,12 @@ export type ImportSuccessSummary = {
   duplicatesRemoved: number;
   errorRowsFilePath?: string;
   errorRowsFileContent?: string;
+  // The following are for imports that are not a table of rows (a Sereni Base import). When they are not set the popup
+  // looks and works as it does for a CSV import.
+  /** Figures for the top card, instead of Total Rows and Columns */
+  stats?: { label: string; value: number }[];
+  /** Leaves out the "Data Quality" section (the counts of rows with errors, empty rows and duplicate rows) */
+  hideDataQuality?: boolean;
 };
 
 type Props = {
@@ -76,37 +82,50 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
 
         <div className="mt-8 flex justify-center">
           <div className="w-full max-w-[720px] rounded-2xl border bg-background p-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <div className="text-xs text-secondary">Total Rows</div>
-                <div className="mt-1 text-2xl font-semibold text-primary">{summary.totalRows.toLocaleString()}</div>
+            {summary.stats ? (
+              <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${summary.stats.length}, minmax(0, 1fr))` }}>
+                {summary.stats.map((stat, index) => (
+                  <div key={stat.label} className={index > 0 ? 'border-l pl-6' : ''}>
+                    <div className="text-xs text-secondary">{stat.label}</div>
+                    <div className="mt-1 text-2xl font-semibold text-primary">{stat.value.toLocaleString()}</div>
+                  </div>
+                ))}
               </div>
-              <div className="border-l pl-6">
-                <div className="text-xs text-secondary">Columns</div>
-                <div className="mt-1 text-2xl font-semibold text-primary">{summary.columns.toLocaleString()}</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <div className="text-xs text-secondary">Total Rows</div>
+                  <div className="mt-1 text-2xl font-semibold text-primary">{summary.totalRows.toLocaleString()}</div>
+                </div>
+                <div className="border-l pl-6">
+                  <div className="text-xs text-secondary">Columns</div>
+                  <div className="mt-1 text-2xl font-semibold text-primary">{summary.columns.toLocaleString()}</div>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="mt-6 border-t pt-5">
-              <div className="flex items-center justify-between text-sm font-medium text-primary mb-3">
-                <span>Data Quality</span>
-                {(summary.errorRowsFileContent || summary.errorRowsFilePath) && (
-                  <button
-                    type="button"
-                    onClick={handleDownloadImportLog}
-                    className="text-blue-700 hover:underline"
-                  >
-                    View data import log
-                    <ArrowRight className="inline-block h-5 w-5 ml-2" />
-                  </button>
-                )}
+            {!summary.hideDataQuality && (
+              <div className="mt-6 border-t pt-5">
+                <div className="flex items-center justify-between text-sm font-medium text-primary mb-3">
+                  <span>Data Quality</span>
+                  {(summary.errorRowsFileContent || summary.errorRowsFilePath) && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadImportLog}
+                      className="text-blue-700 hover:underline"
+                    >
+                      View data import log
+                      <ArrowRight className="inline-block h-5 w-5 ml-2" />
+                    </button>
+                  )}
+                </div>
+                <ul className="flex flex-col gap-y-2 text-sm text-primary">
+                  <li>{summary.errorRows.toLocaleString()} rows with errors</li>
+                  <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
+                  <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>
+                </ul>
               </div>
-              <ul className="flex flex-col gap-y-2 text-sm text-primary">
-                <li>{summary.errorRows.toLocaleString()} rows with errors</li>
-                <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
-                <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>
-              </ul>
-            </div>
+            )}
           </div>
         </div>
 

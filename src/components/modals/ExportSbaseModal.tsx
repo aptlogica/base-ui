@@ -156,7 +156,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div className="bg-modal max-w-[720px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label="Export SereniBase">
+      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label="Export SereniBase">
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-primary truncate">Export “{baseTitle}”</h2>
@@ -167,7 +167,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
           </button>
         </div>
 
-        <div className="p-6 flex flex-col gap-y-4 max-h-[70vh] overflow-y-auto overflow-x-hidden">
+        <div className="p-6 flex flex-col gap-y-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

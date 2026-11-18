@@ -6,10 +6,14 @@ import React, { useRef, useState } from 'react';
 import { useToast } from '../common/Toast';
 import { X, Upload, FileArchive, AlertTriangle, Loader2 } from 'lucide-react';
 import { importBaseFromSbase, type ImportJob } from '../../service/baseExportService';
+import { isNameDuplicate, type ExistingItem } from '../../utils/nameValidation';
+import { ImportSuccessModal, type ImportSuccessSummary } from './importer/ImportSuccessModal';
 
 interface ImportSbaseModalProps {
   isOpen: boolean;
   workspaceId: string;
+  /** The bases of the workspace: a name typed for the new base must not be one of them */
+  existingBases?: ExistingItem[];
   onClose: () => void;
   /** Called once the new base exists (so the list can refresh) */
   onImported: (job: ImportJob) => void;
@@ -25,7 +29,7 @@ const stageLabel = (percent: number): string => {
   return 'Finishing up…';
 };
 
-export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, onClose, onImported }) => {
+export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported }) => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [includeData, setIncludeData] = useState(true);
@@ -41,20 +45,30 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const toast = useToast();
-  // The import goes on after the dialog is closed; the code that follows it asks this whether to show a message
-  const isOpenRef = useRef(isOpen);
-  isOpenRef.current = isOpen;
+  // Every import is followed by its own run. Only the run the dialog shows is "attached"; closing the dialog while an
+  // import runs detaches it: it carries on in the background and a message tells the result, and the dialog is free
+  // for another import.
+  const runCounter = useRef(0);
+  const attachedRun = useRef<number | null>(null);
 
   if (!isOpen) return null;
 
+  // A name typed for the new base must be free (case does not matter). An empty name uses the name in the file.
+  const nameError =
+    title.trim() && isNameDuplicate(title, existingBases)
+      ? 'Base name already exists'
+      : '';
+
   const resetForm = () => {
-    setFile(null); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);
+    setFile(null); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
   };
 
-  // While the import runs on the server, closing only hides the dialog: the import carries on and a message tells
-  // the result. Otherwise the dialog is closed and cleared.
+  // While an import runs on the server, closing the dialog detaches it and clears the form, so another import can be
+  // started; the import itself carries on. Otherwise the dialog is just closed and cleared.
   const close = () => {
     if (phase === 'running') {
+      attachedRun.current = null;
+      resetForm();
       onClose();
       return;
     }
@@ -76,25 +90,32 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   };
 
   const start = async () => {
-    if (!file || !workspaceId) return;
+    if (!file || !workspaceId || nameError) return;
     const controller = new AbortController();
     abortRef.current = controller;
-    setPhase('running'); setPercent(0); setError(''); setProblems([]);
+    const runId = ++runCounter.current;
+    attachedRun.current = runId;
+    const attached = () => attachedRun.current === runId;
+    setPhase('running'); setPercent(0); setError(''); setProblems([]);;
     try {
-      const finished = await importBaseFromSbase(workspaceId, file, { title, includeData, includeAttachments, includeAutomations }, setPercent, controller.signal);
+      const finished = await importBaseFromSbase(
+        workspaceId,
+        file,
+        { title, includeData, includeAttachments, includeAutomations },
+        (value) => { if (attached()) setPercent(value); },
+        controller.signal,
+      );
       if (finished.status === 'completed') {
         onImported(finished);
-        if (!isOpenRef.current) {
+        if (!attached()) {
           toast.success(`“${finished.base_title || 'The base'}” was imported.`);
-          resetForm();
           return;
         }
         setJob(finished); setPercent(100); setPhase('done');
       } else {
         const message = finished.error || 'Import failed';
-        if (!isOpenRef.current) {
+        if (!attached()) {
           toast.error(`Import failed: ${message}`);
-          resetForm();
           return;
         }
         setError(message);
@@ -103,9 +124,8 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
-      if (!isOpenRef.current) {
+      if (!attached()) {
         toast.error(`Import failed: ${e?.message || 'Import failed'}`);
-        resetForm();
         return;
       }
       setError(e?.message || 'Import failed');
@@ -114,16 +134,28 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     }
   };
 
-  const result = job?.result;
-  const summary = result
-    ? [
-        result.tables != null && `${result.tables} tables`,
-        result.fields != null && `${result.fields} fields`,
-        result.views != null && `${result.views} views`,
-        result.rows ? `${result.rows} rows` : null,
-        result.attachments ? `${result.attachments} files` : null,
-      ].filter(Boolean).join(', ')
-    : '';
+  // When the import is done, the same popup as for a CSV import shows what was created
+  if (phase === 'done' && job) {
+    const result = job.result;
+    const summary: ImportSuccessSummary = {
+      totalRows: result?.rows ?? 0,
+      columns: result?.fields ?? 0,
+      tableTitle: job.base_title,
+      errorRows: 0,
+      emptyRows: 0,
+      duplicateRows: 0,
+      emptyRowsSkipped: 0,
+      duplicatesRemoved: 0,
+      stats: [
+        { label: 'Tables', value: result?.tables ?? 0 },
+        { label: 'Fields', value: result?.fields ?? 0 },
+        { label: 'Views', value: result?.views ?? 0 },
+        { label: 'Rows', value: result?.rows ?? 0 },
+      ],
+      hideDataQuality: true,
+    };
+    return <ImportSuccessModal open summary={summary} onClose={close} />;
+  }
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && close()}>
@@ -191,9 +223,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Same as the name in the file"
-                  className="w-full text-sm px-3 h-10 border rounded-lg text-primary bg-card outline-none focus:border-primary"
+                  aria-invalid={!!nameError}
+                  className={`w-full text-sm px-3 h-10 border rounded-lg text-primary bg-card outline-none ${nameError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary'}`}
                 />
-                <p className="text-xs text-secondary mt-1">If left empty, the base is created with the name stored in the .zip file.</p>
+                {nameError ? (
+                  <p className="text-xs text-red-600 mt-1" role="alert">{nameError}</p>
+                ) : (
+                  <p className="text-xs text-secondary mt-1">If left empty, the base is created with the name stored in the .zip file.</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-y-2.5">
@@ -225,21 +262,15 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
             </>
           )}
 
-          {(phase === 'running' || phase === 'done') && (
+          {phase === 'running' && (
             <div>
               <div className="flex items-center justify-between text-sm mb-2 gap-4">
-                <span className="text-gray-700">{phase === 'done' ? `Imported “${job?.base_title || ''}”` : stageLabel(percent)}</span>
+                <span className="text-gray-700">{stageLabel(percent)}</span>
                 <span className="text-gray-700 shrink-0">{percent}%</span>
               </div>
               <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-green-500 transition-all duration-500" style={{ width: `${percent}%` }} />
               </div>
-              {phase === 'done' && summary && <p className="text-sm text-secondary mt-3">Created {summary}.</p>}
-              {phase === 'done' && !!result?.warnings?.length && (
-                <ul className="mt-3 text-sm text-amber-700 list-disc pl-5 space-y-1 max-h-40 overflow-y-auto">
-                  {result.warnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
-              )}
             </div>
           )}
 
@@ -272,7 +303,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
             <button
               type="button"
               onClick={start}
-              disabled={!file || !workspaceId}
+              disabled={!file || !workspaceId || !!nameError}
               className="px-10 py-2 rounded-xl btn-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Import Base
