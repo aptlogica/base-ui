@@ -253,3 +253,19 @@ describe('filter helper utilities', () => {
   });
 });
 
+
+
+describe('applyFilters joins conditions from first to last', () => {
+  const columns = [{ key: 'a', type: 'number' }, { key: 'b', type: 'number' }];
+  const rows = [{ a: 1, b: 1 }];
+
+  it('a later OR can still match after an AND that failed', () => {
+    // (a > 5 AND b > 0) OR b < 10  ->  false OR true
+    const filters = [
+      { column: 'a', operator: 'greater than', value: '5' },
+      { column: 'b', operator: 'greater than', value: '0', logic: 'AND' },
+      { column: 'b', operator: 'less than', value: '10', logic: 'OR' },
+    ];
+    expect(applyFilters(rows, filters, columns)).toHaveLength(1);
+  });
+});

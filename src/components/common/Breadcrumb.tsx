@@ -14,6 +14,7 @@ import { getViewIconInfo } from '../../types/viewTypes';
 import { useNavigateToBaseFirstView } from '../../hooks/useNavigateToBaseFirstView';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
+import { useBaseExport } from '../../hooks/useBaseExport';
 import { BaseMenu } from './BaseMenu';
 import { EditItemModal } from '../modals/EditItemModal';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
@@ -51,6 +52,7 @@ const BaseMenuWrapper: React.FC<{
   onAddMembers: (base: Base) => void;
   onDelete: (base: Base) => void;
 }> = ({ base, onEdit, onAddMembers, onDelete }) => {
+  const { exportBase, exportProgressModal } = useBaseExport();
   const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
 
@@ -77,11 +79,13 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
+        onExport={exportBase}
         canEdit={canEdit}
         canDelete={canDelete}
         canAddMembers={canAddMembers}
         align={"left"}
       />
+      {exportProgressModal}
     </div>
   );
 };

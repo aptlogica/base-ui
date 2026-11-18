@@ -21,6 +21,13 @@ interface ImportOption {
 
 const IMPORT_OPTIONS: ImportOption[] = [
   {
+    id: 'sbase',
+    label: 'Sereni Base',
+    description: 'Import a .zip exported from Sereni Base',
+    iconPath: '/assets/sereni-logo.svg',
+    bgColor: 'bg-white',
+  },
+  {
     id: 'csv',
     label: 'CSV',
     iconPath: '/assets/csv.png',
@@ -75,14 +82,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   };
 
   const handleOptionClick = (optionId: string) => {
-    // Only allow CSV to be clicked
-    if (optionId !== 'csv') return;
+    // Only CSV and Sereni Base can be clicked
+    if (isOptionDisabled(optionId)) return;
     onSelectImportType(optionId);
     onClose();
   };
 
   const isOptionDisabled = (optionId: string) => {
-    return optionId !== 'csv';
+    return optionId !== 'csv' && optionId !== 'sbase';
   };
 
   if (!isOpen) return null;

@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { ChevronRight } from 'lucide-react';
 
 interface PopoverMenuItem {
   label: string;
@@ -11,6 +12,8 @@ interface PopoverMenuItem {
   icon?: React.ReactNode;
   danger?: boolean;
   disabled?: boolean;
+  // Items of a submenu: the item opens them on click instead of running onClick
+  children?: PopoverMenuItem[];
 }
 
 type Align = 'left' | 'right' | 'auto';
@@ -155,6 +158,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
   onOpenChange
 }) => {
   const [open, setOpen] = useState(false);
+  const [openSub, setOpenSub] = useState<string | null>(null);
   const [position, setPosition] = useState({ horizontal: 'left', vertical: 'down' });
   const [absolutePosition, setAbsolutePosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -208,6 +212,7 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
 
   useEffect(() => {
     onOpenChange?.(open);
+    if (!open) setOpenSub(null);
   }, [open, onOpenChange]);
 
   // Recalculate position after menu is rendered (to get actual dimensions)
@@ -320,6 +325,52 @@ export const PopoverMenu: React.FC<PopoverMenuProps> = ({
         const textColor = isDanger ? "text-red-600" : "text-gray-700";
         const bgColor = isDanger ? "hover:bg-red-50" : "hover:bg-gray-100";
         const disabledClass = item.disabled ? 'opacity-50 cursor-not-allowed' : '';
+
+        if (item.children?.length) {
+          const subOpen = openSub === item.label;
+          // open the submenu to the left when there is no room on the right
+          const menuRect = menuRef.current?.getBoundingClientRect();
+          const flip = !!menuRect && menuRect.right + 200 > window.innerWidth;
+          return (
+            <div key={item.label} className="relative">
+              <button
+                className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-xl ${textColor} ${bgColor} transition-colors duration-200 ${disabledClass}`}
+                onClick={() => setOpenSub(subOpen ? null : item.label)}
+                disabled={item.disabled}
+                aria-haspopup="menu"
+                aria-expanded={subOpen}
+              >
+                {item.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-600">{item.icon}</span>}
+                <span className="text-sm flex-1 text-left">{item.label}</span>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+              {subOpen && (
+                <div
+                  className={`absolute top-0 z-9999 flex flex-col min-w-[180px] p-2 gap-y-1 bg-card border rounded-xl shadow-lg ${flip ? 'right-full mr-1' : 'left-full ml-1'}`}
+                  data-popover-menu-portal={portaled ? 'true' : undefined}
+                >
+                  {item.children.map((child) => (
+                    <button
+                      key={child.label}
+                      className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-xl text-gray-700 hover:bg-gray-100 transition-colors duration-200 ${child.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={child.disabled}
+                      onClick={() => {
+                        if (!child.disabled) {
+                          setOpenSub(null);
+                          setOpen(false);
+                          child.onClick();
+                        }
+                      }}
+                    >
+                      {child.icon && <span className="w-5 h-5 flex items-center justify-center text-gray-600">{child.icon}</span>}
+                      <span className="text-sm">{child.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
 
         return (
           <button

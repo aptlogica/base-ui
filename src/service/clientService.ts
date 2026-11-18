@@ -163,7 +163,7 @@ const isTabLocked = (): boolean => {
   }
 };
 
-const getStoredToken = async (): Promise<string> => {
+export const getStoredToken = async (): Promise<string> => {
   if (isTabLocked()) {
     return '';
   }

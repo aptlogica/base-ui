@@ -3,15 +3,19 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React from 'react';
-import { Edit, Users, Trash2, MoreVertical } from 'lucide-react';
+import { Edit, Users, Trash2, MoreVertical, Download, Database, FileText, FileSpreadsheet, FileJson } from 'lucide-react';
 import { PopoverMenu } from './PopoverMenu';
 import type { Base } from '../../types/api.types';
+
+export type BaseExportFormat = 'sbase' | 'csv' | 'excel' | 'json';
 
 interface BaseMenuProps {
   base: Base;
   onEdit: (base: Base) => void;
   onAddMembers: (base: Base) => void;
   onDelete: (base: Base) => void;
+  onExport?: (base: Base, format: BaseExportFormat) => void;
+  canExport?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canAddMembers?: boolean;
@@ -23,6 +27,8 @@ export const BaseMenu: React.FC<BaseMenuProps> = ({
   onEdit,
   onAddMembers,
   onDelete,
+  onExport,
+  canExport = true,
   canEdit = true,
   canDelete = true,
   canAddMembers = true,
@@ -38,6 +44,17 @@ export const BaseMenu: React.FC<BaseMenuProps> = ({
       label: 'Add Members',
       icon: <Users className="w-5 h-5 text-gray-500" />,
       onClick: () => onAddMembers(base),
+    }] : []),
+    ...(canExport && onExport ? [{
+      label: 'Export',
+      icon: <Download className="w-5 h-5 text-gray-500" />,
+      onClick: () => undefined,
+      children: [
+        { label: 'Sereni Base', icon: <Database className="w-4 h-4" />, onClick: () => onExport(base, 'sbase') },
+        { label: 'CSV', icon: <FileText className="w-4 h-4" />, onClick: () => onExport(base, 'csv') },
+        { label: 'Excel', icon: <FileSpreadsheet className="w-4 h-4" />, onClick: () => onExport(base, 'excel') },
+        { label: 'JSON', icon: <FileJson className="w-4 h-4" />, onClick: () => onExport(base, 'json') },
+      ],
     }] : []),
     ...(canDelete ? [{
       label: 'Delete',

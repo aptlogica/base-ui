@@ -12,6 +12,7 @@ import { Loader } from '../components/ui/Loader';
 import { CreateBaseModal, type CreateBaseData } from '../components/modals/CreateBaseModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
 import { ImportModal } from '../components/modals/ImportModal';
+import { ImportSbaseModal } from '../components/modals/ImportSbaseModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
 import { AddBaseMembersModal } from '../components/modals/AddBaseMembersModal';
 import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
@@ -19,6 +20,7 @@ import { DeleteBaseModal } from '../components/modals/DeleteBaseModal';
 const CreateTableModal = lazy(() =>
   import('../components/modals/CreateTableModal').then(m => ({ default: m.CreateTableModal }))
 );
+import { useBaseExport } from '../hooks/useBaseExport';
 import { BaseMenu } from '../components/common/BaseMenu';
 import { useToast } from '../components/common/Toast';
 import { useWorkspaceAccess } from '../hooks/useWorkspaceAccess';
@@ -40,6 +42,7 @@ const BaseMenuWrapper: React.FC<{
   onAddMembers: (base: any) => void;
   onDelete: (base: any) => void;
 }> = ({ base, onEdit, onAddMembers, onDelete }) => {
+  const { exportBase, exportProgressModal } = useBaseExport();
   const { canUpdateBase: canUpdateBaseFromWorkspace, canDeleteBase: canDeleteBaseFromWorkspace, canAssignUsers } = useWorkspaceAccess(base.workspace_id);
   const { canUpdateBase: canUpdateBaseFromBase, canDeleteBase: canDeleteBaseFromBase, canManageBaseMembers, baseAccess } = useBaseAccess(base.id);
 
@@ -64,10 +67,12 @@ const BaseMenuWrapper: React.FC<{
         onEdit={onEdit}
         onAddMembers={onAddMembers}
         onDelete={onDelete}
+        onExport={exportBase}
         canEdit={canEdit}
         canDelete={canDelete}
         canAddMembers={canAddMembers}
       />
+      {exportProgressModal}
     </div>
   );
 };
@@ -118,6 +123,7 @@ const HomePage: React.FC = () => {
   const [showCreateBase, setShowCreateBase] = useState(false);
   const [showImportData, setShowImportData] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportSbase, setShowImportSbase] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<'recent' | 'a-z' | 'z-a'>('recent');
@@ -353,6 +359,8 @@ const HomePage: React.FC = () => {
     if (importType === 'csv') {
       setSelectedImportType('csv');
       setShowImportModal(true);
+    } else if (importType === 'sbase') {
+      setShowImportSbase(true);
     } else {
       toast.info(`${importType.toUpperCase()} import will be available soon`);
     }
@@ -701,6 +709,13 @@ const HomePage: React.FC = () => {
         isOpen={showImportData}
         onClose={() => setShowImportData(false)}
         onSelectImportType={handleImportTypeSelect}
+      />
+
+      <ImportSbaseModal
+        isOpen={showImportSbase}
+        workspaceId={selectedWorkspaceId || ''}
+        onClose={() => setShowImportSbase(false)}
+        onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
       />
 
       {selectedImportType && (

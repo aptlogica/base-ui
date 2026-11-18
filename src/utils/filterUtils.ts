@@ -115,7 +115,7 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
       if (op === 'is equal') return setEquals(rawArr, valArr);
       if (op === 'is not equal') return !setEquals(rawArr, valArr);
       if (op === 'contains any of') return hasAny(rawArr, valArr);
-      if (op === 'does not contain any of') return !hasAny(rawArr, valArr);
+      if (op === 'does not contain any of' || op === 'does not contains any of') return !hasAny(rawArr, valArr);
       return true;
     }
     case 'select': {
@@ -134,7 +134,7 @@ export const matchesFilter = (card: any, f: any, columns: any): boolean => {
       }
 
       if (op === 'contains any of') return values.some(v => s === String(v));
-      if (op === 'does not contain any of') return !values.some(v => s === String(v));
+      if (op === 'does not contain any of' || op === 'does not contains any of') return !values.some(v => s === String(v));
 
       return true;
     }
@@ -218,8 +218,7 @@ export const applyFilters = (cards: any[], filters: any[], columns: any) => {
         result = result && matches;
       }
 
-      // If result is false and we're in AND mode, we can break early
-      if (!result) break;
+      // No early stop when the result is false: a later OR condition can still make the row match
     }
 
     return result;
