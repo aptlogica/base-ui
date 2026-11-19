@@ -321,4 +321,35 @@ describe('AuditUser Component', () => {
       expect(screen.getByText('Editor...')).toBeInTheDocument();
     });
   });
+
+  describe('User stored in the record', () => {
+    it('shows the user of the record, not the logged-in user', () => {
+      vi.mocked(useCurrentUser).mockReturnValue({ id: 'me', display_name: 'Me Myself' } as any);
+      vi.mocked(useUserProfile).mockReturnValue({ data: { data: { display_name: 'Admin User' } } } as any);
+
+      render(<AuditUser value="other-id" />);
+
+      expect(vi.mocked(useUserProfile)).toHaveBeenCalledWith('other-id');
+      expect(screen.getByText('Admin User')).toBeInTheDocument();
+      expect(screen.queryByText('Me Myself')).not.toBeInTheDocument();
+    });
+
+    it('shows "Unknown user" when the record user cannot be read', () => {
+      vi.mocked(useCurrentUser).mockReturnValue({ id: 'me', display_name: 'Me Myself' } as any);
+      vi.mocked(useUserProfile).mockReturnValue({ data: undefined } as any);
+
+      render(<AuditUser value="other-id" />);
+
+      expect(screen.getByText('Unknown user')).toBeInTheDocument();
+    });
+
+    it('shows the logged-in user when the record holds that user', () => {
+      vi.mocked(useCurrentUser).mockReturnValue({ id: 'me', display_name: 'Me Myself' } as any);
+      vi.mocked(useUserProfile).mockReturnValue({ data: undefined } as any);
+
+      render(<AuditUser value="me" />);
+
+      expect(screen.getByText('Me Myself')).toBeInTheDocument();
+    });
+  });
 });

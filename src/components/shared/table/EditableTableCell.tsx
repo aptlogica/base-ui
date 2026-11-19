@@ -409,9 +409,9 @@ const EditableTableCellComponent: React.FC<EditableTableCellProps> = ({
       return <AuditLastModifiedTime {...commonProps} config={{ ...parsedConfig, timeZone: tz }} allowEdit={allowEdit} isBorder={isBorder} />;
     };
 
-    const renderCreatedBy = () => <AuditCreatedBy />;
+    const renderCreatedBy = () => <AuditCreatedBy value={value} />;
 
-    const renderLastModifiedBy = () => <AuditLastModifiedBy />;
+    const renderLastModifiedBy = () => <AuditLastModifiedBy value={value} />;
 
     const renderLinks = () => (
       <LinksField

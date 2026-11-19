@@ -60,6 +60,8 @@ export interface ExportBaseOptions {
   includeData?: boolean;
   includeAttachments?: boolean;
   includeAutomations?: boolean;
+  /** Writes the source columns (id, created / modified time and user) of every row. Needs includeData. */
+  includeSystemColumns?: boolean;
   tables?: string[];
   /** Keeps only the rows that match, per table id. Needs includeData. Sent as the body of a POST. */
   filters?: Record<string, ExportFilterCondition[]>;
@@ -134,6 +136,9 @@ export async function exportBaseAsSbase(
   if (options?.includeAutomations !== undefined) {
     params.set('include_automations', String(options.includeAutomations));
   }
+  if (options?.includeSystemColumns !== undefined) {
+    params.set('include_system_columns', String(options.includeSystemColumns));
+  }
   if (options?.tables && options.tables.length > 0) {
     params.set('tables', options.tables.join(','));
   }
@@ -149,6 +154,7 @@ export async function exportBaseAsSbase(
           include_data: options?.includeData ?? true,
           include_attachments: options?.includeAttachments,
           include_automations: options?.includeAutomations,
+          include_system_columns: options?.includeSystemColumns,
           tables: options?.tables,
           filters: Object.fromEntries(Object.entries(filters).map(([table, conditions]) => [table, { conditions }])),
         }),
@@ -211,7 +217,7 @@ export interface ImportJob {
 export async function importBaseFromSbase(
   workspaceId: string,
   file: File,
-  options: { title?: string; includeData?: boolean; includeAttachments?: boolean; includeAutomations?: boolean },
+  options: { title?: string; includeData?: boolean; includeAttachments?: boolean; includeAutomations?: boolean; includeSystemColumns?: boolean },
   onProgress?: (percent: number) => void,
   signal?: AbortSignal
 ): Promise<ImportJob> {
@@ -222,6 +228,8 @@ export async function importBaseFromSbase(
   form.append('include_attachments', String(options.includeAttachments ?? true));
   // needs the automations permission; the server refuses the import without it
   form.append('include_automations', String(options.includeAutomations ?? false));
+  // restores id, created / modified time and user of the rows; needs the data
+  form.append('include_system_columns', String((options.includeSystemColumns ?? false) && (options.includeData ?? true)));
 
   const res = await authFetch(`/workspace/${workspaceId}/import-base`, { method: 'POST', body: form }, signal);
   const body = await res.json().catch(() => ({}));

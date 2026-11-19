@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Search, AlertCircle, ChevronDown, Database, Paperclip, Zap, Filter } from 'lucide-react';
+import { X, Search, AlertCircle, ChevronDown, Database, Paperclip, Zap, Filter, Hash } from 'lucide-react';
 import { getTablesByBaseIdService } from '../../service/clientService';
 import { getExportDependencies, type ExportBaseOptions, type ExportDependency, type ExportFilterCondition, type ExportTableInfo } from '../../service/baseExportService';
 import { getDefaultOperator, isFilterComplete } from '../../utils/filterUtils';
@@ -45,6 +45,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
   const [includeData, setIncludeData] = useState(true);
   const [includeAttachments, setIncludeAttachments] = useState(true);
   const [includeAutomations, setIncludeAutomations] = useState(true);
+  const [includeSystemColumns, setIncludeSystemColumns] = useState(false);
   // The row filter of each table (by table id), and the table whose filter is open
   const [filters, setFilters] = useState<Record<string, ExportFilterCondition[]>>({});
   const [openFilterId, setOpenFilterId] = useState<string | null>(null);
@@ -149,6 +150,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
       includeData,
       includeAttachments,
       includeAutomations,
+      includeSystemColumns: includeData && includeSystemColumns,
       filters: Object.keys(rowFilters).length > 0 ? rowFilters : undefined,
       tables: allSelected ? undefined : Array.from(selectedTableIds),
     });
@@ -269,6 +271,13 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                   <div>
                     <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Database className="w-4 h-4 text-gray-500" />Data (records / rows)</span>
                     <p className="text-xs text-secondary mt-0.5">Exports table records as part of the base file.</p>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-3 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                  <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Hash className="w-4 h-4 text-gray-500" />Source columns (Id, created / modified time and user)</span>
+                    <p className="text-xs text-secondary mt-0.5">Exports the system columns of every record. Needs Data.</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer select-none">

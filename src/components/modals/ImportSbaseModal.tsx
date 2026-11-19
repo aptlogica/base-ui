@@ -35,6 +35,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   const [includeData, setIncludeData] = useState(true);
   const [includeAttachments, setIncludeAttachments] = useState(true);
   const [includeAutomations, setIncludeAutomations] = useState(false);
+  const [includeSystemColumns, setIncludeSystemColumns] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [fileError, setFileError] = useState('');
   const [phase, setPhase] = useState<Phase>('pick');
@@ -60,7 +61,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       : '';
 
   const resetForm = () => {
-    setFile(null); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
+    setFile(null); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setIncludeSystemColumns(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
   };
 
   // While an import runs on the server, closing the dialog detaches it and clears the form, so another import can be
@@ -101,7 +102,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       const finished = await importBaseFromSbase(
         workspaceId,
         file,
-        { title, includeData, includeAttachments, includeAutomations },
+        { title, includeData, includeAttachments, includeAutomations, includeSystemColumns: includeData && includeSystemColumns },
         (value) => { if (attached()) setPercent(value); },
         controller.signal,
       );
@@ -243,6 +244,13 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   />
                   Import table data
                 </label>
+                <div>
+                  <label className={`flex items-center gap-2 text-sm text-gray-700 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                    <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} />
+                    Restore source columns
+                  </label>
+                  <p className="text-xs text-secondary mt-1 ml-6">Keeps the id, created / modified time and user of the file. Otherwise new records get a new id, the time of the import and your user.</p>
+                </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
                   <input
                     type="checkbox"
