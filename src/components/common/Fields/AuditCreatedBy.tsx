@@ -7,13 +7,10 @@ import { AuditUser } from './AuditUser';
 
 interface AuditCreatedByProps {
   placeholder?: string;
-  /** Id of the user stored in the record */
-  value?: unknown;
 }
 
 export const AuditCreatedBy: React.FC<AuditCreatedByProps> = ({
   placeholder = "Created by...",
-  value,
 }) => {
-  return <AuditUser placeholder={placeholder} value={value} />;
+  return <AuditUser placeholder={placeholder} />;
 };

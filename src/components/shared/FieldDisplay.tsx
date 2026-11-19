@@ -455,10 +455,10 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
       );
       break;
     case 'createdBy':
-      renderedComponent = <AuditCreatedBy value={value} />;
+      renderedComponent = <AuditCreatedBy />;
       break;
     case 'lastModifiedBy':
-      renderedComponent = <AuditLastModifiedBy value={value} />;
+      renderedComponent = <AuditLastModifiedBy />;
       break;
     case 'links':
       renderedComponent = (

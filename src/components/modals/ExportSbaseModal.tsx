@@ -273,13 +273,6 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                     <p className="text-xs text-secondary mt-0.5">Exports table records as part of the base file.</p>
                   </div>
                 </label>
-                <label className={`flex items-start gap-3 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
-                  <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
-                  <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Hash className="w-4 h-4 text-gray-500" />Source columns (Id, created / modified time and user)</span>
-                    <p className="text-xs text-secondary mt-0.5">Exports the system columns of every record. Needs Data.</p>
-                  </div>
-                </label>
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeAttachments} onChange={(e) => setIncludeAttachments(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
@@ -292,6 +285,13 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                   <div>
                     <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Zap className="w-4 h-4 text-gray-500" />Triggers &amp; Functions</span>
                     <p className="text-xs text-secondary mt-0.5">Exports database triggers and functions of the selected tables.</p>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-3 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                  <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Hash className="w-4 h-4 text-gray-500" />System columns (Id, created / modified time and user)</span>
+                    <p className="text-xs text-secondary mt-0.5">Exports the system columns of every record. Needs Data.</p>
                   </div>
                 </label>
               </div>

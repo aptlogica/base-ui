@@ -7,13 +7,10 @@ import { AuditUser } from './AuditUser';
 
 interface AuditLastModifiedByProps {
   placeholder?: string;
-  /** Id of the user stored in the record */
-  value?: unknown;
 }
 
 export const AuditLastModifiedBy: React.FC<AuditLastModifiedByProps> = ({
   placeholder = "Last Modified by...",
-  value,
 }) => {
-  return <AuditUser placeholder={placeholder} value={value} />;
+  return <AuditUser placeholder={placeholder} />;
 };
