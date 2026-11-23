@@ -28,6 +28,13 @@ const IMPORT_OPTIONS: ImportOption[] = [
     bgColor: 'bg-white',
   },
   {
+    id: 'csvzip',
+    label: 'Sereni Base CSV',
+    description: 'Import a .zip of CSV files exported from Sereni Base',
+    iconPath: '/assets/csv.png',
+    bgColor: 'bg-white',
+  },
+  {
     id: 'csv',
     label: 'CSV',
     iconPath: '/assets/csv.png',
@@ -82,14 +89,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   };
 
   const handleOptionClick = (optionId: string) => {
-    // Only CSV and Sereni Base can be clicked
+    // Only CSV, Sereni Base and Sereni Base CSV can be clicked
     if (isOptionDisabled(optionId)) return;
     onSelectImportType(optionId);
     onClose();
   };
 
   const isOptionDisabled = (optionId: string) => {
-    return optionId !== 'csv' && optionId !== 'sbase';
+    return optionId !== 'csv' && optionId !== 'sbase' && optionId !== 'csvzip';
   };
 
   if (!isOpen) return null;

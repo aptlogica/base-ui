@@ -5,8 +5,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Search, AlertCircle, ChevronDown, Database, Paperclip, Zap, Filter, Hash } from 'lucide-react';
 import { getTablesByBaseIdService } from '../../service/clientService';
-import { getExportDependencies, type ExportBaseOptions, type ExportDependency, type ExportFilterCondition, type ExportTableInfo } from '../../service/baseExportService';
+import { getExportDependencies, type CsvDelimiter, type ExportBaseOptions, type ExportFormat, type ExportDependency, type ExportFilterCondition, type ExportTableInfo } from '../../service/baseExportService';
 import { getDefaultOperator, isFilterComplete } from '../../utils/filterUtils';
+import { InfoTip } from './InfoTip';
 import { ExportTableFilterEditor } from './ExportTableFilterEditor';
 
 interface ExportSbaseModalProps {
@@ -14,7 +15,16 @@ interface ExportSbaseModalProps {
   base: { id: string; title?: string; name?: string };
   onClose: () => void;
   onExport: (options: ExportBaseOptions) => void;
+  /** sbase (default) or csv. A csv has no triggers or system columns, and adds a delimiter. */
+  format?: ExportFormat;
 }
+
+const DELIMITERS: { value: CsvDelimiter; label: string; hint: string }[] = [
+  { value: 'comma', label: 'Comma ( , )', hint: 'The default; works almost everywhere' },
+  { value: 'semicolon', label: 'Semicolon ( ; )', hint: 'For spreadsheets that use a comma as the decimal mark' },
+  { value: 'tab', label: 'Tab ( \\t )', hint: 'Columns are separated by a tab; files are still .csv' },
+  { value: 'pipe', label: 'Pipe ( | )', hint: 'Several values in one cell are joined with “;”' },
+];
 
 const KIND_LABEL: Record<ExportDependency['kind'], string> = {
   link: 'link',
@@ -35,7 +45,9 @@ interface MissingReference {
 const textItems = (m: MissingReference) => m.items.filter((i) => i.kind !== 'trigger');
 const triggerItems = (m: MissingReference) => m.items.filter((i) => i.kind === 'trigger');
 
-export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base, onClose, onExport }) => {
+export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base, onClose, onExport, format = 'sbase' }) => {
+  const isCsv = format === 'csv';
+  const [delimiter, setDelimiter] = useState<CsvDelimiter>('comma');
   const [tables, setTables] = useState<ExportTableInfo[]>([]);
   const [dependencies, setDependencies] = useState<ExportDependency[]>([]);
   const [selectedTableIds, setSelectedTableIds] = useState<Set<string>>(new Set());
@@ -94,7 +106,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
     const byPair = new Map<string, MissingReference>();
     for (const d of dependencies) {
       if (!selectedTableIds.has(d.table_id) || selectedTableIds.has(d.depends_on_id)) continue;
-      if (d.kind === 'trigger' && !includeAutomations) continue;
+      if (d.kind === 'trigger' && (isCsv || !includeAutomations)) continue;
       const key = `${d.table_id}|${d.depends_on_id}`;
       const entry = byPair.get(key) || {
         tableId: d.table_id,
@@ -107,14 +119,24 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
       byPair.set(key, entry);
     }
     return Array.from(byPair.values());
-  }, [dependencies, selectedTableIds, includeAutomations]);
+  }, [dependencies, selectedTableIds, includeAutomations, isCsv]);
 
   // A table is filtered when its filter has conditions (only counts when rows are exported)
   const filteredIds = useMemo(
     () => new Set(includeData ? Object.entries(filters).filter(([id, c]) => c.length > 0 && selectedTableIds.has(id)).map(([id]) => id) : []),
     [filters, selectedTableIds, includeData],
   );
-  const incompleteFilter = Array.from(filteredIds).some((id) => (filters[id] || []).some((c) => !isFilterComplete(c)));
+  // per table: the filters that still need a value, named by their position and column
+  const incompleteByTable = useMemo(() => {
+    const result: Record<string, string> = {};
+    for (const t of tables) {
+      if (!filteredIds.has(t.id)) continue;
+      const incomplete = (filters[t.id] || []).filter((c) => !isFilterComplete(c)).length;
+      if (incomplete > 0) result[t.id] = incomplete === 1 ? 'A filter has no value. Enter a value or remove it.' : `${incomplete} filters have no value. Enter a value or remove them.`;
+    }
+    return result;
+  }, [tables, filters, filteredIds]);
+  const incompleteFilter = Object.keys(incompleteByTable).length > 0;
 
   if (!isOpen) return null;
 
@@ -149,8 +171,11 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
     onExport({
       includeData,
       includeAttachments,
-      includeAutomations,
-      includeSystemColumns: includeData && includeSystemColumns,
+      // a csv cannot hold triggers or system columns
+      includeAutomations: !isCsv && includeAutomations,
+      includeSystemColumns: !isCsv && includeData && includeSystemColumns,
+      format,
+      delimiter: isCsv ? delimiter : undefined,
       filters: Object.keys(rowFilters).length > 0 ? rowFilters : undefined,
       tables: allSelected ? undefined : Array.from(selectedTableIds),
     });
@@ -158,11 +183,11 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label="Export SereniBase">
+      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Export CSV' : 'Export SereniBase'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-primary truncate">Export “{baseTitle}”</h2>
-            <p className="text-sm text-secondary truncate">Choose the tables and what to include (.sbase).</p>
+            <p className="text-sm text-secondary truncate">Choose the tables and what to include ({isCsv ? '.csv' : '.sbase'}).</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -225,7 +250,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                             }
                             setOpenFilterId(isOpenFilter ? null : t.id);
                           }}
-                          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl focus:outline-none shrink-0 ${conditions.length > 0 && includeData ? 'bg-green-50 text-green-700 border-green-300' : 'bg-card text-tertiary border-border'} ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl focus:outline-none shrink-0 ${incompleteByTable[t.id] ? 'bg-red-50 text-red-700 border-red-300' : conditions.length > 0 && includeData ? 'bg-green-50 text-green-700 border-green-300' : 'bg-card text-tertiary border-border'} ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                         >
                           <Filter className="w-4 h-4" />
                           Filter
@@ -235,6 +260,14 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                         </button>
                       )}
                     </div>
+                    {incompleteByTable[t.id] && (
+                      <div role="alert" className="ml-6 flex items-start gap-1.5 text-xs text-red-600">
+                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <div>
+                          <p>{incompleteByTable[t.id]}</p>
+                        </div>
+                      </div>
+                    )}
                     {isOpenFilter && (
                       <div className="ml-6 min-w-0">
                         <ExportTableFilterEditor
@@ -254,6 +287,39 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
           )}
           {!someSelected && tables.length > 0 && <p className="text-xs text-red-600">Please select at least one table to export.</p>}
 
+          {isCsv && (
+            <div className="flex flex-col gap-y-3">
+              <div role="radiogroup" aria-labelledby="csv-separator-label">
+                <span id="csv-separator-label" className="text-sm font-medium text-gray-800 inline-flex items-center gap-1.5">Column separator<InfoTip label="column separator" text="Character placed between columns." /></span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {DELIMITERS.map((d) => {
+                    const selected = delimiter === d.value;
+                    return (
+                      <label
+                        key={d.value}
+                        title={d.hint}
+                        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium cursor-pointer select-none ${selected ? 'border-green-500 bg-green-500/10 text-green-600' : 'border-(--color-border-primary) bg-card text-foreground hover:bg-(--color-hover-bg)'}`}
+                      >
+                        <input
+                          type="radio"
+                          name="csv-separator"
+                          value={d.value}
+                          checked={selected}
+                          onChange={() => setDelimiter(d.value)}
+                          className="h-3.5 w-3.5"
+                        />
+                        {d.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-800">Encoding <span className="ml-2 px-2 py-0.5 rounded-full bg-(--color-muted-bg) text-xs text-secondary">UTF-8</span> <InfoTip label="encoding" text="Standard UTF-8, no byte-order mark." /></span>
+              </div>
+            </div>
+          )}
+
           <div>
             <button
               type="button"
@@ -269,38 +335,34 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeData} onChange={(e) => setIncludeData(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Database className="w-4 h-4 text-gray-500" />Data (records / rows)</span>
-                    <p className="text-xs text-secondary mt-0.5">Exports table records as part of the base file.</p>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Database className="w-4 h-4 text-gray-500" />Data (records / rows)<InfoTip label="data" text={isCsv ? 'Include all data rows. Turn off to export headers only.' : 'Include all records. Turn off to export empty tables.'} /></span>
                   </div>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeAttachments} onChange={(e) => setIncludeAttachments(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />Attachments &amp; Cover Image</span>
-                    <p className="text-xs text-secondary mt-0.5">Packs file uploads and the base cover into a .sbase.zip archive.</p>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />{isCsv ? 'Attachments' : 'Attachments & Cover Image'}<InfoTip label="attachments" text={isCsv ? 'Saves files in attachments/.' : 'Includes files and the base cover.'} /></span>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input type="checkbox" checked={includeAutomations} onChange={(e) => setIncludeAutomations(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
-                  <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Zap className="w-4 h-4 text-gray-500" />Triggers &amp; Functions</span>
-                    <p className="text-xs text-secondary mt-0.5">Exports database triggers and functions of the selected tables.</p>
-                  </div>
-                </label>
-                <label className={`flex items-start gap-3 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
-                  <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
-                  <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Hash className="w-4 h-4 text-gray-500" />System columns (Id, created / modified time and user)</span>
-                    <p className="text-xs text-secondary mt-0.5">Exports the system columns of every record. Needs Data.</p>
-                  </div>
-                </label>
+                {!isCsv && (
+                  <>
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox" checked={includeAutomations} onChange={(e) => setIncludeAutomations(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Zap className="w-4 h-4 text-gray-500" />Triggers &amp; Functions<InfoTip label="triggers and functions" text="Includes triggers and functions." /></span>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                    <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Hash className="w-4 h-4 text-gray-500" />System columns (Id, created / modified time and user)<InfoTip label="system columns" text="Adds id, dates and users. Needs Data." /></span>
+                    </div>
+                  </label>
+                  </>
+                )}
               </div>
             )}
           </div>
-
-          {incompleteFilter && (
-            <p className="text-xs text-red-600">Complete or remove the filters that have no value.</p>
-          )}
 
           {missing.map((m) => (
             <div key={`${m.tableId}|${m.dependsOnId}`} className="rounded-xl border border-amber-300 bg-amber-50 p-4" role="alert">
@@ -344,7 +406,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
             disabled={(tables.length > 0 && !someSelected) || incompleteFilter}
             className="px-6 py-2 rounded-xl btn-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Export Base
+            {isCsv ? 'Export CSV' : 'Export Base'}
           </button>
         </div>
       </div>

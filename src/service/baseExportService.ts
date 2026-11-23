@@ -56,12 +56,19 @@ export interface ExportFilterCondition {
   logic?: 'AND' | 'OR';
 }
 
+export type ExportFormat = 'sbase' | 'csv';
+export type CsvDelimiter = 'comma' | 'semicolon' | 'tab' | 'pipe';
+
 export interface ExportBaseOptions {
   includeData?: boolean;
   includeAttachments?: boolean;
   includeAutomations?: boolean;
   /** Writes the source columns (id, created / modified time and user) of every row. Needs includeData. */
   includeSystemColumns?: boolean;
+  /** The file format: sbase (default) or csv (a zip with one file per table; links are written as text) */
+  format?: ExportFormat;
+  /** The field separator of a csv: comma (default), semicolon, tab or pipe. The text is always UTF-8. */
+  delimiter?: CsvDelimiter;
   tables?: string[];
   /** Keeps only the rows that match, per table id. Needs includeData. Sent as the body of a POST. */
   filters?: Record<string, ExportFilterCondition[]>;
@@ -69,10 +76,10 @@ export interface ExportBaseOptions {
   title?: string;
 }
 
-/** "My Base: 2026" -> "My_Base_2026.sbase.zip", the same cleaning the server does for its file name */
-function exportFileName(title?: string): string {
+/** "My Base: 2026" -> "My_Base_2026.sbase.zip" (or ".csv.zip"), the same cleaning the server does for its file name */
+function exportFileName(title?: string, format: ExportFormat = 'sbase'): string {
   const name = (title || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
-  return `${name || 'base'}.sbase.zip`;
+  return `${name || 'base'}.${format}.zip`;
 }
 
 /** A field of a table that a row filter can use */
@@ -139,6 +146,10 @@ export async function exportBaseAsSbase(
   if (options?.includeSystemColumns !== undefined) {
     params.set('include_system_columns', String(options.includeSystemColumns));
   }
+  if (options?.format && options.format !== 'sbase') {
+    params.set('format', options.format);
+    if (options.delimiter) params.set('delimiter', options.delimiter);
+  }
   if (options?.tables && options.tables.length > 0) {
     params.set('tables', options.tables.join(','));
   }
@@ -155,6 +166,8 @@ export async function exportBaseAsSbase(
           include_attachments: options?.includeAttachments,
           include_automations: options?.includeAutomations,
           include_system_columns: options?.includeSystemColumns,
+          format: options?.format && options.format !== 'sbase' ? options.format : undefined,
+          delimiter: options?.format && options.format !== 'sbase' ? options.delimiter : undefined,
           tables: options?.tables,
           filters: Object.fromEntries(Object.entries(filters).map(([table, conditions]) => [table, { conditions }])),
         }),
@@ -162,11 +175,11 @@ export async function exportBaseAsSbase(
     : await authFetch(`/base/${baseId}/export${query}`, {}, signal);
   if (initialRes.status === 200) {
     // A direct file download (no background job; a job is always answered with 202). The file is always a
-    // .sbase.zip. It is named here from the base title, because a browser hides the Content-Disposition header of a
+    // zip (.sbase.zip, or .csv.zip for a csv). It is named here from the base title, because a browser hides the Content-Disposition header of a
     // cross-origin response.
     const blob = await initialRes.blob();
     onProgress?.(100);
-    saveBlob(blob, exportFileName(options?.title));
+    saveBlob(blob, exportFileName(options?.title, options?.format));
     return;
   }
 
@@ -187,7 +200,7 @@ export async function exportBaseAsSbase(
   if (!res.ok) {
     throw new Error('Could not download the export');
   }
-  saveBlob(await res.blob(), job.file_name || 'base.sbase.zip');
+  saveBlob(await res.blob(), job.file_name || exportFileName(undefined, options?.format));
 }
 
 export interface ImportJob {
@@ -206,6 +219,12 @@ export interface ImportJob {
     attachments?: number;
     warnings?: string[];
     problems?: string[];
+    /** A csv import leaves out the rows the database refuses: how many, how many blank and repeated rows the files had,
+     * and the text of the error log that names each skipped row and says why */
+    skipped_rows?: number;
+    empty_rows?: number;
+    duplicate_rows?: number;
+    error_log?: string;
   };
 }
 
@@ -217,7 +236,15 @@ export interface ImportJob {
 export async function importBaseFromSbase(
   workspaceId: string,
   file: File,
-  options: { title?: string; includeData?: boolean; includeAttachments?: boolean; includeAutomations?: boolean; includeSystemColumns?: boolean },
+  options: {
+    title?: string;
+    includeData?: boolean;
+    includeAttachments?: boolean;
+    includeAutomations?: boolean;
+    includeSystemColumns?: boolean;
+    /** sbase (default), or csv for a zip of .csv files, which becomes a base with one table per file */
+    format?: ExportFormat;
+  },
   onProgress?: (percent: number) => void,
   signal?: AbortSignal
 ): Promise<ImportJob> {
@@ -226,10 +253,15 @@ export async function importBaseFromSbase(
   if (options.title?.trim()) form.append('title', options.title.trim());
   form.append('include_data', String(options.includeData ?? true));
   form.append('include_attachments', String(options.includeAttachments ?? true));
-  // needs the automations permission; the server refuses the import without it
-  form.append('include_automations', String(options.includeAutomations ?? false));
-  // restores id, created / modified time and user of the rows; needs the data
-  form.append('include_system_columns', String((options.includeSystemColumns ?? false) && (options.includeData ?? true)));
+  if (options.format && options.format !== 'sbase') {
+    // a csv has no triggers and no system columns, so those options are not sent
+    form.append('format', options.format);
+  } else {
+    // needs the automations permission; the server refuses the import without it
+    form.append('include_automations', String(options.includeAutomations ?? false));
+    // restores id, created / modified time and user of the rows; needs the data
+    form.append('include_system_columns', String((options.includeSystemColumns ?? false) && (options.includeData ?? true)));
+  }
 
   const res = await authFetch(`/workspace/${workspaceId}/import-base`, { method: 'POST', body: form }, signal);
   const body = await res.json().catch(() => ({}));

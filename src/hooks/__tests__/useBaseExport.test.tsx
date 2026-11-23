@@ -8,7 +8,9 @@ const { exportMock, toast } = vi.hoisted(() => ({
 vi.mock('../../service/baseExportService', () => ({ exportBaseAsSbase: exportMock }));
 vi.mock('../../components/common/Toast', () => ({ useToast: () => toast }));
 vi.mock('../../components/modals/ExportSbaseModal', () => ({
-  ExportSbaseModal: ({ onExport }: { onExport: (o: object) => void }) => <button onClick={() => onExport({ includeData: true })}>start export</button>,
+  ExportSbaseModal: ({ onExport, format }: { onExport: (o: object) => void; format?: string }) => (
+    <button onClick={() => onExport({ includeData: true })}>{`start export ${format ?? ''}`.trim()}</button>
+  ),
 }));
 vi.mock('../../components/modals/ExportProgressModal', () => ({
   ExportProgressModal: ({ state, baseTitle, onClose }: { state: string; baseTitle: string; onClose: () => void }) => (
@@ -27,6 +29,8 @@ const Host = () => {
     <>
       <button onClick={() => exportBase({ id: 'b1', title: 'First' }, 'sbase')}>export first</button>
       <button onClick={() => exportBase({ id: 'b2', title: 'Second' }, 'sbase')}>export second</button>
+      <button onClick={() => exportBase({ id: 'b3', title: 'Third' }, 'csv')}>export csv</button>
+      <button onClick={() => exportBase({ id: 'b4', title: 'Fourth' }, 'excel')}>export excel</button>
       {exportProgressModal}
     </>
   );
@@ -46,7 +50,7 @@ describe('useBaseExport runs exports in the background', () => {
 
   const startExport = (label: string) => {
     fireEvent.click(screen.getByText(label));
-    fireEvent.click(screen.getByText('start export'));
+    fireEvent.click(screen.getByText('start export sbase'));
   };
 
   it('closing a running export frees the way for another one', () => {
@@ -94,5 +98,19 @@ describe('useBaseExport runs exports in the background', () => {
     await act(async () => runs[0].resolve());
     expect(screen.getByText('progress First done')).toBeTruthy();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('CSV opens the same dialog in csv format, and the export runs with that format', () => {
+    render(<Host />);
+    fireEvent.click(screen.getByText('export csv'));
+    fireEvent.click(screen.getByText('start export csv'));
+    expect(exportMock).toHaveBeenCalledWith('b3', expect.objectContaining({ format: 'csv' }), expect.any(Function));
+  });
+
+  it('Excel is still coming soon', () => {
+    render(<Host />);
+    fireEvent.click(screen.getByText('export excel'));
+    expect(toast.info).toHaveBeenCalledWith('Excel export is coming soon');
+    expect(screen.queryByText(/start export/)).toBeNull();
   });
 });

@@ -21,7 +21,8 @@ export type ImportSuccessSummary = {
   // looks and works as it does for a CSV import.
   /** Figures for the top card, instead of Total Rows and Columns */
   stats?: { label: string; value: number }[];
-  /** Leaves out the "Data Quality" section (the counts of rows with errors, empty rows and duplicate rows) */
+  /** Leaves out the "Data Quality" section (the counts of rows with errors, empty rows and duplicate rows). When rows
+   * were left out and there is a log (errorRows, errorRowsFileContent), a line says so with a link to download the log. */
   hideDataQuality?: boolean;
 };
 
@@ -101,6 +102,22 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
                   <div className="text-xs text-secondary">Columns</div>
                   <div className="mt-1 text-2xl font-semibold text-primary">{summary.columns.toLocaleString()}</div>
                 </div>
+              </div>
+            )}
+
+            {summary.hideDataQuality && summary.errorRows > 0 && (summary.errorRowsFileContent || summary.errorRowsFilePath) && (
+              <div className="mt-6 border-t pt-5 flex items-center justify-between gap-4 text-sm" role="alert">
+                <span className="text-amber-700">
+                  {summary.errorRows.toLocaleString()} {summary.errorRows === 1 ? 'row was' : 'rows were'} not imported.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDownloadImportLog}
+                  className="text-blue-700 hover:underline shrink-0"
+                >
+                  Download error log
+                  <ArrowRight className="inline-block h-5 w-5 ml-2" />
+                </button>
               </div>
             )}
 

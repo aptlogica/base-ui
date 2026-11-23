@@ -5,8 +5,9 @@
 import React, { useRef, useState } from 'react';
 import { useToast } from '../common/Toast';
 import { X, Upload, FileArchive, AlertTriangle, Loader2 } from 'lucide-react';
-import { importBaseFromSbase, type ImportJob } from '../../service/baseExportService';
+import { importBaseFromSbase, type ExportFormat, type ImportJob } from '../../service/baseExportService';
 import { isNameDuplicate, type ExistingItem } from '../../utils/nameValidation';
+import { InfoTip } from './InfoTip';
 import { ImportSuccessModal, type ImportSuccessSummary } from './importer/ImportSuccessModal';
 
 interface ImportSbaseModalProps {
@@ -17,6 +18,8 @@ interface ImportSbaseModalProps {
   onClose: () => void;
   /** Called once the new base exists (so the list can refresh) */
   onImported: (job: ImportJob) => void;
+  /** sbase (default), or csv: a .zip of .csv files, one table per file. A csv has no triggers or system columns. */
+  format?: ExportFormat;
 }
 
 type Phase = 'pick' | 'running' | 'done' | 'failed';
@@ -29,7 +32,8 @@ const stageLabel = (percent: number): string => {
   return 'Finishing up…';
 };
 
-export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported }) => {
+export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported, format = 'sbase' }) => {
+  const isCsv = format === 'csv';
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [includeData, setIncludeData] = useState(true);
@@ -102,7 +106,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       const finished = await importBaseFromSbase(
         workspaceId,
         file,
-        { title, includeData, includeAttachments, includeAutomations, includeSystemColumns: includeData && includeSystemColumns },
+        { title, includeData, includeAttachments, includeAutomations: !isCsv && includeAutomations, includeSystemColumns: !isCsv && includeData && includeSystemColumns, format },
         (value) => { if (attached()) setPercent(value); },
         controller.signal,
       );
@@ -142,11 +146,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       totalRows: result?.rows ?? 0,
       columns: result?.fields ?? 0,
       tableTitle: job.base_title,
-      errorRows: 0,
+      // a csv import skips the rows the database refuses: the popup is the same as for a Sereni Base import, and when
+      // rows were skipped it says so and offers the error log as a text file
+      errorRows: result?.skipped_rows ?? 0,
       emptyRows: 0,
       duplicateRows: 0,
       emptyRowsSkipped: 0,
       duplicatesRemoved: 0,
+      errorRowsFileContent: result?.error_log,
       stats: [
         { label: 'Tables', value: result?.tables ?? 0 },
         { label: 'Fields', value: result?.fields ?? 0 },
@@ -160,11 +167,11 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && close()}>
-      <div className="bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label="Import Sereni Base">
+      <div className="bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Import Sereni Base CSV' : 'Import Sereni Base'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-primary truncate">Import Sereni Base</h2>
-            <p className="text-sm text-secondary truncate">Create a new base from a .sbase.zip file.</p>
+            <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : 'Import Sereni Base'}</h2>
+            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files, one table per file.' : 'Create a new base from a .sbase.zip file.'}</p>
           </div>
           <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -209,7 +216,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                     <span className="text-sm text-gray-700">
                       Drag &amp; Drop your zip file here, or <span className="text-green-600 font-medium">click to add</span>
                     </span>
-                    <span className="text-xs text-gray-500">Only .zip files are supported</span>
+                    <span className="text-xs text-gray-500">{isCsv ? 'A .zip with one .csv file per table. The first row holds the field names.' : 'Only .zip files are supported'}</span>
                   </>
                 )}
               </div>
@@ -223,14 +230,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Same as the name in the file"
+                  placeholder={isCsv ? 'Same as the name of the zip file' : 'Same as the name in the file'}
                   aria-invalid={!!nameError}
                   className={`w-full text-sm px-3 h-10 border rounded-lg text-primary bg-card outline-none ${nameError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary'}`}
                 />
                 {nameError ? (
                   <p className="text-xs text-red-600 mt-1" role="alert">{nameError}</p>
                 ) : (
-                  <p className="text-xs text-secondary mt-1">If left empty, the base is created with the name stored in the .zip file.</p>
+                  <p className="text-xs text-secondary mt-1">{isCsv ? 'If left empty, the base is named after the .zip file.' : 'If left empty, the base is created with the name stored in the .zip file.'}</p>
                 )}
               </div>
 
@@ -242,30 +249,33 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                     checked={includeData}
                     onChange={(e) => setIncludeData(e.target.checked)}
                   />
-                  Import table data
+                  Import table data<InfoTip label="import table data" text="Off creates empty tables." />
                 </label>
-                <div>
-                  <label className={`flex items-center gap-2 text-sm text-gray-700 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
-                    <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} />
-                    Restore source columns
-                  </label>
-                  <p className="text-xs text-secondary mt-1 ml-6">Keeps the id, created / modified time and user of the file. Otherwise new records get a new id, the time of the import and your user.</p>
-                </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={includeAttachments}
                     onChange={(e) => setIncludeAttachments(e.target.checked)}
                   />
-                  Import attachment
+                  Import attachment<InfoTip label="import attachment" text="Restores the uploaded files." />
                 </label>
+                {!isCsv && (
+                  <>
                 <div>
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
                     <input type="checkbox" checked={includeAutomations} onChange={(e) => setIncludeAutomations(e.target.checked)} />
-                    Import triggers and functions
+                    Import triggers and functions<InfoTip label="import triggers and functions" text="Restores triggers and functions." />
                   </label>
-                  <p className="text-xs text-secondary mt-1 ml-6">They run SQL from the file. Needs the automations permission.</p>
+                
                 </div>
+                <div>
+                  <label className={`flex items-center gap-2 text-sm text-gray-700 select-none ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                    <input type="checkbox" checked={includeData && includeSystemColumns} disabled={!includeData} onChange={(e) => setIncludeSystemColumns(e.target.checked)} />
+                    Import system columns<InfoTip label="import system columns" text="Keeps original id, dates and users. Needs table data." />
+                  </label>
+                </div>
+                  </>
+                )}
               </div>
             </>
           )}

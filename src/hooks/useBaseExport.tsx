@@ -4,7 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { useCallback, useRef, useState } from 'react';
 import { useToast } from '../components/common/Toast';
-import { exportBaseAsSbase, type ExportBaseOptions } from '../service/baseExportService';
+import { exportBaseAsSbase, type ExportBaseOptions, type ExportFormat } from '../service/baseExportService';
 import { ExportProgressModal } from '../components/modals/ExportProgressModal';
 import { ExportSbaseModal } from '../components/modals/ExportSbaseModal';
 import type { BaseExportFormat } from '../components/common/BaseMenu';
@@ -23,6 +23,7 @@ interface ExportState {
 export function useBaseExport() {
   const toast = useToast();
   const [filterBase, setFilterBase] = useState<{ id: string; title?: string; name?: string } | null>(null);
+  const [filterFormat, setFilterFormat] = useState<ExportFormat>('sbase');
   const [exp, setExp] = useState<ExportState | null>(null);
   // Every export is followed by its own run. Only the run the progress dialog shows is "attached": closing the dialog
   // while an export runs detaches it, so it carries on in the background (a message tells the result) and another
@@ -31,11 +32,12 @@ export function useBaseExport() {
   const attachedRun = useRef<number | null>(null);
 
   const exportBase = useCallback((base: { id: string; title?: string; name?: string }, format: BaseExportFormat) => {
-    if (format !== 'sbase') {
-      toast.info(`${format === 'csv' ? 'CSV' : format === 'excel' ? 'Excel' : 'JSON'} export is coming soon`);
+    if (format !== 'sbase' && format !== 'csv') {
+      toast.info(`${format === 'excel' ? 'Excel' : 'JSON'} export is coming soon`);
       return;
     }
     // Open the filter modal instead of exporting directly
+    setFilterFormat(format);
     setFilterBase(base);
   }, [toast]);
 
@@ -52,7 +54,7 @@ export function useBaseExport() {
     try {
       await exportBaseAsSbase(
         base.id,
-        { ...options, title: base.title || base.name },
+        { ...options, format: filterFormat, title: base.title || base.name },
         (percent) => { if (attached()) setExp((e) => (e ? { ...e, percent } : e)); },
       );
       if (!attached()) {
@@ -69,7 +71,7 @@ export function useBaseExport() {
       }
       setExp((e) => (e ? { ...e, state: 'failed', error: error?.message || 'Export failed' } : e));
     }
-  }, [filterBase, toast]);
+  }, [filterBase, filterFormat, toast]);
 
   // While the export runs on the server, closing the dialog detaches it: the export carries on and the file downloads
   // when it is ready. A finished or failed export is simply dismissed.
@@ -88,6 +90,7 @@ export function useBaseExport() {
         <ExportSbaseModal
           isOpen={!!filterBase}
           base={filterBase}
+          format={filterFormat}
           onClose={closeFilterModal}
           onExport={startExportWithOptions}
         />

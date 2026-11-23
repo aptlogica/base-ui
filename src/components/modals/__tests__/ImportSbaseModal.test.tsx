@@ -7,6 +7,8 @@ const { importMock, toast } = vi.hoisted(() => ({
 }));
 vi.mock('../../../service/baseExportService', () => ({ importBaseFromSbase: importMock }));
 vi.mock('../../common/Toast', () => ({ useToast: () => toast }));
+const { download } = vi.hoisted(() => ({ download: vi.fn() }));
+vi.mock('../importer/importDownload', () => ({ downloadTextContent: download, downloadLinkedFile: vi.fn() }));
 
 import { ImportSbaseModal } from '../ImportSbaseModal';
 
@@ -164,5 +166,107 @@ describe('ImportSbaseModal runs imports in the background', () => {
       expect(screen.queryByRole('alert')).toBeNull();
       expect((screen.getByText('Import Base') as HTMLButtonElement).disabled).toBe(false);
     });
+  });
+});
+
+describe('ImportSbaseModal in csv format', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    importMock.mockImplementation(() => new Promise(() => {}));
+  });
+
+  it('says it imports a zip of CSV files, and hides triggers and system columns', () => {
+    render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    expect(screen.getByText('Import Sereni Base CSV')).toBeTruthy();
+    expect(screen.getByText(/one table per file/)).toBeTruthy();
+    expect(screen.getByText('Import table data')).toBeTruthy();
+    expect(screen.getByText('Import attachment')).toBeTruthy();
+    expect(screen.queryByText('Import triggers and functions')).toBeNull();
+    expect(screen.queryByText('Import system columns')).toBeNull();
+  });
+
+  it('imports with format csv and without automations or system columns', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Sales.csv.zip');
+    expect(importMock).toHaveBeenCalledTimes(1);
+    const [workspace, file, options] = importMock.mock.calls[0];
+    expect(workspace).toBe('ws');
+    expect((file as File).name).toBe('Sales.csv.zip');
+    expect(options).toMatchObject({ format: 'csv', includeData: true, includeAutomations: false, includeSystemColumns: false });
+  });
+
+  it('puts the descriptions of the import options behind an info icon', () => {
+    render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    for (const name of [/About import table data/, /About import attachment/, /About import triggers and functions/, /About import system columns/]) {
+      expect(screen.getByRole('button', { name })).toBeTruthy();
+    }
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.focus(screen.getByRole('button', { name: /About import table data/ }));
+    expect(screen.getByRole('tooltip').textContent).toContain('Off creates empty tables.');
+  });
+
+  it('the default dialog is unchanged: sbase, with triggers and system columns', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    expect(screen.getByText('Import Sereni Base')).toBeTruthy();
+    expect(screen.getByText('Import triggers and functions')).toBeTruthy();
+    expect(screen.getByText('Import system columns')).toBeTruthy();
+    pickAndStart(container);
+    expect(importMock.mock.calls[0][2]).toMatchObject({ format: 'sbase' });
+  });
+});
+
+describe('ImportSbaseModal shows what a csv import skipped', () => {
+  const finished = (result: object) => ({ id: 'j1', status: 'completed', progress: 100, base_title: 'Shop', result });
+  const startCsv = () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Shop.csv.zip');
+  };
+
+  beforeEach(() => {
+    importMock.mockReset();
+    download.mockReset();
+  });
+
+  it('is the Sereni Base popup, and offers the error log as a text file when rows were skipped', async () => {
+    importMock.mockResolvedValue(finished({
+      tables: 2, fields: 5, rows: 98, skipped_rows: 2, empty_rows: 3, duplicate_rows: 1,
+      error_log: 'Import Issues Report\n[Error 1] Orders.csv, line 3\nReason: value out of range for type integer',
+    }));
+    startCsv();
+
+    expect(await screen.findByText('Data Imported Successfully')).toBeTruthy();
+    for (const label of ['Tables', 'Fields', 'Views', 'Rows']) expect(screen.getByText(label)).toBeTruthy();
+    // not the pattern of the old CSV import
+    expect(screen.queryByText('Data Quality')).toBeNull();
+    expect(screen.queryByText(/empty rows found/)).toBeNull();
+    expect(screen.queryByText(/View data import log/)).toBeNull();
+
+    expect(screen.getByText('2 rows were not imported.')).toBeTruthy();
+    fireEvent.click(screen.getByText(/Download error log/));
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(download.mock.calls[0][0]).toContain('Orders.csv, line 3');
+    expect(download.mock.calls[0][1]).toMatch(/\.txt$/);
+  });
+
+  it('says "1 row was" for one skipped row', async () => {
+    importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5, skipped_rows: 1, error_log: 'log' }));
+    startCsv();
+    expect(await screen.findByText('1 row was not imported.')).toBeTruthy();
+  });
+
+  it('without an error there is no log and no notice', async () => {
+    importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5, empty_rows: 2, duplicate_rows: 1 }));
+    startCsv();
+    expect(await screen.findByText('Data Imported Successfully')).toBeTruthy();
+    expect(screen.queryByText(/not imported/)).toBeNull();
+    expect(screen.queryByText(/Download error log/)).toBeNull();
+  });
+
+  it('a Sereni Base import is as before', async () => {
+    importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5 }));
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container);
+    expect(await screen.findByText('Data Imported Successfully')).toBeTruthy();
+    expect(screen.queryByText(/not imported/)).toBeNull();
   });
 });
