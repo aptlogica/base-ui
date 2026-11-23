@@ -30,7 +30,6 @@ const NOTES_ID = 'fld_0b1c2d3e4f5a46b7c8d9e0f1a2b3c4d5';
 const CONSTRAINT_ID = 'con_5c6d7e8f9a0b41c2d3e4f5a6b7c8d9e0';
 
 const FEATURE_OFF = fail('feature_disabled', 'Base management is off for this base. Turn it on in the Developer settings.');
-const NEEDS_KEY = fail('forbidden', 'Changing the schema needs a secret key, and secret keys are not available yet.');
 
 const CREATE_TABLE: DocEndpoint = {
   id: 'create-table',
@@ -42,7 +41,7 @@ const CREATE_TABLE: DocEndpoint = {
   params: [IDEMPOTENCY],
   notes: [
     'Base management is off by default. An owner or co-owner turns it on in Developer settings; until then every write on this page answers 403 feature_disabled.',
-    'Every schema write needs a secret key and is made in the name of the user who turned base management on (the base owner, if that user has left).',
+    'Every schema write is made in the name of the user who turned base management on (the base owner, if that user has left). There is no secret key check yet; it comes with the security work.',
     'A table name that is already used in the base answers 409 conflict. All validation problems are returned together as 422 validation_failed.',
   ],
   examples: [
@@ -94,14 +93,6 @@ const CREATE_TABLE: DocEndpoint = {
       body: { name: 'Invoices' },
       status: 403,
       response: FEATURE_OFF,
-    },
-    {
-      title: 'No secret key',
-      method: 'POST',
-      path: '/tables',
-      body: { name: 'Invoices' },
-      status: 403,
-      response: NEEDS_KEY,
     },
   ],
 };
@@ -622,7 +613,6 @@ export const MANAGEMENT_SUMMARY: { method: DocEndpoint['method']; path: string; 
 ];
 
 export const MANAGEMENT_ERROR_CODES: { code: string; status: number; when: string }[] = [
-  { code: 'forbidden', status: 403, when: 'Changing the schema needs a secret key' },
   { code: 'feature_disabled', status: 403, when: 'Base management is off for this base; an owner or co-owner turns it on in Developer settings' },
   { code: 'system_column', status: 403, when: 'System columns cannot be changed, moved or deleted' },
   { code: 'in_use', status: 409, when: 'Other tables, constraints or lookups depend on what you are deleting; details lists them' },

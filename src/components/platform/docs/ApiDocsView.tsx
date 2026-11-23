@@ -160,7 +160,7 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ baseId, onBack, bac
             <WarningNote>
               Base management is off by default. An owner or co-owner turns it on in Developer &gt; Overview. Until
               then its endpoints answer <InlineCode>403 feature_disabled</InlineCode> and the live docs do not list
-              them. Every schema change needs a secret key, is made in the name of the user who turned the feature
+              them. Every schema change is made in the name of the user who turned the feature
               on, and cannot touch system columns.
             </WarningNote>
             <div className="space-y-2">
