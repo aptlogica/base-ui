@@ -339,6 +339,11 @@ export const buildFieldMeta = (params: BuildFieldMetaParams): BuildFieldMetaResu
       config.ratingColor = params.ratingColor;
       config.ratingMax = params.ratingMax;
       config.ratingDefault = params.ratingDefault;
+      // The backend only reads meta.defaultValue, so it needs the default under that key too.
+      // 0 means no default, so the key is left out.
+      if (params.ratingDefault > 0) {
+        config.defaultValue = params.ratingDefault;
+      }
       config.ratingDescription = params.description;
     },
     datetime: () => {

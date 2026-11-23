@@ -66,6 +66,26 @@ describe('exportBaseAsSbase', () => {
     vi.restoreAllMocks();
   });
 
+  it('an xlsx export is a plain .xlsx, or a .xlsx.zip when the file is a zip', async () => {
+    const names: string[] = [];
+    vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+      const el = document.createElementNS('http://www.w3.org/1999/xhtml', tag) as HTMLElement;
+      if (tag === 'a') Object.defineProperty(el, 'download', { set: (v: string) => names.push(v), get: () => '' });
+      return el;
+    }) as typeof document.createElement);
+    const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    fetchMock.mockResolvedValueOnce(new Response(new Blob(['x'], { type: xlsxType }), { status: 200, headers: { 'Content-Type': xlsxType } }));
+    await exportBaseAsSbase('b1', { includeData: false, format: 'xlsx', title: 'Sales CRM' });
+    const [url] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain('format=xlsx');
+    expect(String(url)).not.toContain('delimiter');
+
+    fetchMock.mockResolvedValueOnce(fileResponse());
+    await exportBaseAsSbase('b1', { includeData: false, format: 'xlsx', includeAttachments: true, title: 'Sales CRM' });
+    expect(names).toEqual(['Sales_CRM.xlsx', 'Sales_CRM.xlsx.zip']);
+    vi.restoreAllMocks();
+  });
+
   it('a csv POST sends the format and the delimiter with the filters; sbase sends neither', async () => {
     fetchMock.mockImplementation(async () => fileResponse());
     const filters = { t1: [{ column: 'f1', operator: 'is equal', value: 'Paid' }] };
@@ -125,6 +145,15 @@ describe('importBaseFromSbase', () => {
     const { url, form } = sent();
     expect(url).toContain('/workspace/ws1/import-base');
     expect(form.get('format')).toBe('csv');
+    expect(form.get('include_automations')).toBeNull();
+    expect(form.get('include_system_columns')).toBeNull();
+    expect(form.get('include_data')).toBe('true');
+  });
+
+  it('an xlsx import sends the format and no triggers or system columns', async () => {
+    await importBaseFromSbase('ws1', new File(['x'], 'a.xlsx'), { format: 'xlsx', includeAutomations: true, includeSystemColumns: true });
+    const { form } = sent();
+    expect(form.get('format')).toBe('xlsx');
     expect(form.get('include_automations')).toBeNull();
     expect(form.get('include_system_columns')).toBeNull();
     expect(form.get('include_data')).toBe('true');

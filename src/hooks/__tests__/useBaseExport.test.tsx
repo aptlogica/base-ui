@@ -31,6 +31,7 @@ const Host = () => {
       <button onClick={() => exportBase({ id: 'b2', title: 'Second' }, 'sbase')}>export second</button>
       <button onClick={() => exportBase({ id: 'b3', title: 'Third' }, 'csv')}>export csv</button>
       <button onClick={() => exportBase({ id: 'b4', title: 'Fourth' }, 'excel')}>export excel</button>
+      <button onClick={() => exportBase({ id: 'b5', title: 'Fifth' }, 'json')}>export json</button>
       {exportProgressModal}
     </>
   );
@@ -107,10 +108,17 @@ describe('useBaseExport runs exports in the background', () => {
     expect(exportMock).toHaveBeenCalledWith('b3', expect.objectContaining({ format: 'csv' }), expect.any(Function));
   });
 
-  it('Excel is still coming soon', () => {
+  it('Excel opens the same dialog in xlsx format, and the export runs with that format', () => {
     render(<Host />);
     fireEvent.click(screen.getByText('export excel'));
-    expect(toast.info).toHaveBeenCalledWith('Excel export is coming soon');
+    fireEvent.click(screen.getByText('start export xlsx'));
+    expect(exportMock).toHaveBeenCalledWith('b4', expect.objectContaining({ format: 'xlsx' }), expect.any(Function));
+  });
+
+  it('JSON is still coming soon', () => {
+    render(<Host />);
+    fireEvent.click(screen.getByText('export json'));
+    expect(toast.info).toHaveBeenCalledWith('JSON export is coming soon');
     expect(screen.queryByText(/start export/)).toBeNull();
   });
 });

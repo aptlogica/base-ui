@@ -9,7 +9,7 @@ import { ExportSbaseModal } from '../ExportSbaseModal';
 
 const base = { id: 'b1', title: 'Sales CRM' };
 
-const open = async (format?: 'sbase' | 'csv') => {
+const open = async (format?: 'sbase' | 'csv' | 'xlsx') => {
   const onExport = vi.fn();
   render(<ExportSbaseModal isOpen base={base} onClose={() => {}} onExport={onExport} format={format} />);
   await screen.findByText('Customers');
@@ -98,5 +98,32 @@ describe('ExportSbaseModal in the default (sbase) format', () => {
     expect(screen.queryByRole('tooltip')).toBeNull();
     fireEvent.focus(screen.getByRole('button', { name: /About system columns/ }));
     expect(screen.getByRole('tooltip').textContent).toContain('Adds id, dates and users. Needs Data.');
+  });
+});
+
+describe('ExportSbaseModal in xlsx format', () => {
+  beforeEach(() => {
+    deps.mockReset();
+    deps.mockResolvedValue({
+      tables: [{ id: 't1', title: 'Customers', fields: [] }, { id: 't2', title: 'Orders', fields: [] }],
+      dependencies: [{ table_id: 't2', table_title: 'Orders', depends_on_id: 't1', depends_on_title: 'Customers', kind: 'trigger', item: 'on_insert' }],
+    });
+  });
+
+  it('has no delimiter, triggers or system columns, and says Excel', async () => {
+    await open('xlsx');
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByText(/Triggers & Functions/)).toBeNull();
+    expect(screen.queryByText(/System columns/)).toBeNull();
+    expect(screen.getByText('Export Excel')).toBeTruthy();
+    expect(screen.getByText('Attachments')).toBeTruthy();
+  });
+
+  it('exports with format xlsx, no delimiter, and without automations or system columns', async () => {
+    const onExport = await open('xlsx');
+    fireEvent.click(screen.getByText('Export Excel'));
+    expect(onExport).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'xlsx', delimiter: undefined, includeData: true, includeAutomations: false, includeSystemColumns: false,
+    }));
   });
 });

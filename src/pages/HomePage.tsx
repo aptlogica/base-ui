@@ -125,6 +125,7 @@ const HomePage: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showImportSbase, setShowImportSbase] = useState(false);
   const [showImportCsvZip, setShowImportCsvZip] = useState(false);
+  const [showImportXlsx, setShowImportXlsx] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<'recent' | 'a-z' | 'z-a'>('recent');
@@ -364,6 +365,8 @@ const HomePage: React.FC = () => {
       setShowImportSbase(true);
     } else if (importType === 'csvzip') {
       setShowImportCsvZip(true);
+    } else if (importType === 'xlsxbase') {
+      setShowImportXlsx(true);
     } else {
       toast.info(`${importType.toUpperCase()} import will be available soon`);
     }
@@ -728,6 +731,15 @@ const HomePage: React.FC = () => {
         workspaceId={selectedWorkspaceId || ''}
         existingBases={allBases || []}
         onClose={() => setShowImportCsvZip(false)}
+        onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
+      />
+
+      <ImportSbaseModal
+        isOpen={showImportXlsx}
+        format="xlsx"
+        workspaceId={selectedWorkspaceId || ''}
+        existingBases={allBases || []}
+        onClose={() => setShowImportXlsx(false)}
         onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
       />
 

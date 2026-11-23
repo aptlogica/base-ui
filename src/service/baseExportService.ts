@@ -56,7 +56,10 @@ export interface ExportFilterCondition {
   logic?: 'AND' | 'OR';
 }
 
-export type ExportFormat = 'sbase' | 'csv';
+export type ExportFormat = 'sbase' | 'csv' | 'xlsx';
+/** the content type of a plain workbook; a zip of the workbook and its files has another */
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 export type CsvDelimiter = 'comma' | 'semicolon' | 'tab' | 'pipe';
 
 export interface ExportBaseOptions {
@@ -65,7 +68,8 @@ export interface ExportBaseOptions {
   includeAutomations?: boolean;
   /** Writes the source columns (id, created / modified time and user) of every row. Needs includeData. */
   includeSystemColumns?: boolean;
-  /** The file format: sbase (default) or csv (a zip with one file per table; links are written as text) */
+  /** The file format: sbase (default), csv (a zip with one file per table) or xlsx (one workbook, one sheet per table;
+   * a zip of the workbook and attachments/ when files are included). In csv and xlsx links are written as text. */
   format?: ExportFormat;
   /** The field separator of a csv: comma (default), semicolon, tab or pipe. The text is always UTF-8. */
   delimiter?: CsvDelimiter;
@@ -76,10 +80,15 @@ export interface ExportBaseOptions {
   title?: string;
 }
 
-/** "My Base: 2026" -> "My_Base_2026.sbase.zip" (or ".csv.zip"), the same cleaning the server does for its file name */
-function exportFileName(title?: string, format: ExportFormat = 'sbase'): string {
-  const name = (title || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
-  return `${name || 'base'}.${format}.zip`;
+/**
+ * "My Base: 2026" -> "My_Base_2026.sbase.zip" (or ".csv.zip"), the same cleaning the server does for its file name. An
+ * xlsx export is the plain workbook (".xlsx"), or a zip of the workbook and its attachments/ (".xlsx.zip") when files
+ * are included: `zipped` says which.
+ */
+function exportFileName(title?: string, format: ExportFormat = 'sbase', zipped = true): string {
+  const name = (title || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'base';
+  if (format === 'xlsx') return zipped ? `${name}.xlsx.zip` : `${name}.xlsx`;
+  return `${name}.${format}.zip`;
 }
 
 /** A field of a table that a row filter can use */
@@ -174,12 +183,13 @@ export async function exportBaseAsSbase(
       }, signal)
     : await authFetch(`/base/${baseId}/export${query}`, {}, signal);
   if (initialRes.status === 200) {
-    // A direct file download (no background job; a job is always answered with 202). The file is always a
-    // zip (.sbase.zip, or .csv.zip for a csv). It is named here from the base title, because a browser hides the Content-Disposition header of a
-    // cross-origin response.
+    // A direct file download (no background job; a job is always answered with 202). The file is a zip (.sbase.zip,
+    // or .csv.zip for a csv), except an xlsx, which is a plain workbook unless it carries files (a zip, which the
+    // content type says). It is named here from the base title, because a browser hides the Content-Disposition
+    // header of a cross-origin response.
     const blob = await initialRes.blob();
     onProgress?.(100);
-    saveBlob(blob, exportFileName(options?.title, options?.format));
+    saveBlob(blob, exportFileName(options?.title, options?.format, blob.type !== XLSX_TYPE));
     return;
   }
 
@@ -200,7 +210,7 @@ export async function exportBaseAsSbase(
   if (!res.ok) {
     throw new Error('Could not download the export');
   }
-  saveBlob(await res.blob(), job.file_name || exportFileName(undefined, options?.format));
+  saveBlob(await res.blob(), job.file_name || exportFileName(undefined, options?.format, options?.includeAttachments !== false));
 }
 
 export interface ImportJob {
@@ -229,7 +239,7 @@ export interface ImportJob {
 }
 
 /**
- * Imports a .sbase.zip file as a new base in the workspace: starts the background job and follows it
+ * Imports a .sbase.zip file (or a csv zip, or an .xlsx workbook) as a new base in the workspace: starts the background job and follows it
  * until it is completed or failed. onProgress gets the job percent (0 to 100). Resolves with the finished job; a failed
  * job resolves too (check status), so the caller can show its error and problems.
  */
@@ -242,7 +252,7 @@ export async function importBaseFromSbase(
     includeAttachments?: boolean;
     includeAutomations?: boolean;
     includeSystemColumns?: boolean;
-    /** sbase (default), or csv for a zip of .csv files, which becomes a base with one table per file */
+    /** sbase (default), csv for a zip of .csv files (one table per file), or xlsx for a workbook (one table per sheet) or a zip of one */
     format?: ExportFormat;
   },
   onProgress?: (percent: number) => void,
@@ -254,7 +264,7 @@ export async function importBaseFromSbase(
   form.append('include_data', String(options.includeData ?? true));
   form.append('include_attachments', String(options.includeAttachments ?? true));
   if (options.format && options.format !== 'sbase') {
-    // a csv has no triggers and no system columns, so those options are not sent
+    // a csv or xlsx has no triggers and no system columns, so those options are not sent
     form.append('format', options.format);
   } else {
     // needs the automations permission; the server refuses the import without it

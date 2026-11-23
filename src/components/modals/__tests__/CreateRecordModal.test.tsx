@@ -358,6 +358,25 @@ describe('CreateRecordModal', () => {
       expect(onClose).toHaveBeenCalled();
     });
 
+    it('leaves untouched checkbox and rating fields out so the backend default applies', async () => {
+      const fields = [
+        ...mockFields,
+        { id: 'field-check', name: 'done', title: 'Done', uidt: 'checkbox', type: 'checkbox', meta: { defaultValue: true } },
+        { id: 'field-rate', name: 'score', title: 'Score', uidt: 'rating', type: 'rating', meta: { defaultValue: 3 } },
+      ];
+      renderWithQueryClient(
+        <CreateRecordModal {...defaultProps} fields={fields as any} layout="record" submitLabel="Save Record" />
+      );
+
+      fireEvent.change(screen.getByTestId('field-input-field-1'), { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Record' }));
+
+      await waitFor(() => expect(upsertRowMutateAsyncMock).toHaveBeenCalledWith({
+        model_id: 'table-123',
+        values: { 'field-1': 'Hello' },
+      }));
+    });
+
     it('shows hidden fields and the required field error in the record layout', async () => {
       const fields = [
         { id: 'field-1', name: 'title', title: 'Title', uidt: 'SingleLineText' },

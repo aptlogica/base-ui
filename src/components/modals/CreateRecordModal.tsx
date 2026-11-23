@@ -8,7 +8,7 @@ import FieldRenderer from '../../plugins/FormViewPlugin/components/shared/FieldR
 import { useUpsertRow, useAddAttachment, useInsertRelationData } from '../../hooks/useApi';
 import { useRequiredKeyFields } from '../../hooks/useRequiredKeyFields';
 import { missingKeyColumnIds, missingKeyMessage } from '../../utils/primaryKeyFields';
-import { getFieldDisplayName, getFieldDefaultValue, createFieldRendererProps } from '../../utils/standardFieldUtils';
+import { getFieldDisplayName, getFieldDefaultValue, getStandardFieldType, createFieldRendererProps } from '../../utils/standardFieldUtils';
 import { isFormulaField } from '../../utils/fieldUtils';
 import { useBaseAccess } from '../../hooks/useBaseAccess';
 import { useToast } from '../common/Toast';
@@ -97,7 +97,11 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
         [fields, keyColumnIds]
     );
 
+    // Checkbox and rating start unset (not false / 0) so they are left out of the payload
+    // and the column default is applied by the backend, like every other field type.
     const getDefaultValueFromConfig = (field: any): any => {
+        const type = getStandardFieldType(field);
+        if (type === 'boolean' || type === 'checkbox' || type === 'rating') return null;
         return getFieldDefaultValue(field);
     };
 

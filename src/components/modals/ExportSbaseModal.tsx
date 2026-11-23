@@ -15,7 +15,7 @@ interface ExportSbaseModalProps {
   base: { id: string; title?: string; name?: string };
   onClose: () => void;
   onExport: (options: ExportBaseOptions) => void;
-  /** sbase (default) or csv. A csv has no triggers or system columns, and adds a delimiter. */
+  /** sbase (default), csv or xlsx. A csv or xlsx has no triggers or system columns; a csv also has a delimiter. */
   format?: ExportFormat;
 }
 
@@ -47,6 +47,9 @@ const triggerItems = (m: MissingReference) => m.items.filter((i) => i.kind === '
 
 export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base, onClose, onExport, format = 'sbase' }) => {
   const isCsv = format === 'csv';
+  const isXlsx = format === 'xlsx';
+  // a csv and an xlsx have no triggers or system columns, and write links as text
+  const isFlat = isCsv || isXlsx;
   const [delimiter, setDelimiter] = useState<CsvDelimiter>('comma');
   const [tables, setTables] = useState<ExportTableInfo[]>([]);
   const [dependencies, setDependencies] = useState<ExportDependency[]>([]);
@@ -106,7 +109,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
     const byPair = new Map<string, MissingReference>();
     for (const d of dependencies) {
       if (!selectedTableIds.has(d.table_id) || selectedTableIds.has(d.depends_on_id)) continue;
-      if (d.kind === 'trigger' && (isCsv || !includeAutomations)) continue;
+      if (d.kind === 'trigger' && (isFlat || !includeAutomations)) continue;
       const key = `${d.table_id}|${d.depends_on_id}`;
       const entry = byPair.get(key) || {
         tableId: d.table_id,
@@ -119,7 +122,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
       byPair.set(key, entry);
     }
     return Array.from(byPair.values());
-  }, [dependencies, selectedTableIds, includeAutomations, isCsv]);
+  }, [dependencies, selectedTableIds, includeAutomations, isFlat]);
 
   // A table is filtered when its filter has conditions (only counts when rows are exported)
   const filteredIds = useMemo(
@@ -171,9 +174,9 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
     onExport({
       includeData,
       includeAttachments,
-      // a csv cannot hold triggers or system columns
-      includeAutomations: !isCsv && includeAutomations,
-      includeSystemColumns: !isCsv && includeData && includeSystemColumns,
+      // a csv or an xlsx cannot hold triggers or system columns
+      includeAutomations: !isFlat && includeAutomations,
+      includeSystemColumns: !isFlat && includeData && includeSystemColumns,
       format,
       delimiter: isCsv ? delimiter : undefined,
       filters: Object.keys(rowFilters).length > 0 ? rowFilters : undefined,
@@ -183,11 +186,11 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Export CSV' : 'Export SereniBase'}>
+      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : 'Export SereniBase'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-primary truncate">Export “{baseTitle}”</h2>
-            <p className="text-sm text-secondary truncate">Choose the tables and what to include ({isCsv ? '.csv' : '.sbase'}).</p>
+            <p className="text-sm text-secondary truncate">Choose the tables and what to include ({isCsv ? '.csv' : isXlsx ? '.xlsx' : '.sbase'}).</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -335,16 +338,16 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeData} onChange={(e) => setIncludeData(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Database className="w-4 h-4 text-gray-500" />Data (records / rows)<InfoTip label="data" text={isCsv ? 'Include all data rows. Turn off to export headers only.' : 'Include all records. Turn off to export empty tables.'} /></span>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Database className="w-4 h-4 text-gray-500" />Data (records / rows)<InfoTip label="data" text={isFlat ? 'Include all data rows. Turn off to export headers only.' : 'Include all records. Turn off to export empty tables.'} /></span>
                   </div>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeAttachments} onChange={(e) => setIncludeAttachments(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />{isCsv ? 'Attachments' : 'Attachments & Cover Image'}<InfoTip label="attachments" text={isCsv ? 'Saves files in attachments/.' : 'Includes files and the base cover.'} /></span>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />{isFlat ? 'Attachments' : 'Attachments & Cover Image'}<InfoTip label="attachments" text={isCsv ? 'Saves files in attachments/.' : isXlsx ? 'Saves files in attachments/ and downloads a .xlsx.zip. Without it you get a plain .xlsx.' : 'Includes files and the base cover.'} /></span>
                   </div>
                 </label>
-                {!isCsv && (
+                {!isFlat && (
                   <>
                   <label className="flex items-start gap-3 cursor-pointer select-none">
                     <input type="checkbox" checked={includeAutomations} onChange={(e) => setIncludeAutomations(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
@@ -406,7 +409,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
             disabled={(tables.length > 0 && !someSelected) || incompleteFilter}
             className="px-6 py-2 rounded-xl btn-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCsv ? 'Export CSV' : 'Export Base'}
+            {isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : 'Export Base'}
           </button>
         </div>
       </div>

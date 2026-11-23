@@ -32,12 +32,12 @@ export function useBaseExport() {
   const attachedRun = useRef<number | null>(null);
 
   const exportBase = useCallback((base: { id: string; title?: string; name?: string }, format: BaseExportFormat) => {
-    if (format !== 'sbase' && format !== 'csv') {
-      toast.info(`${format === 'excel' ? 'Excel' : 'JSON'} export is coming soon`);
+    if (format !== 'sbase' && format !== 'csv' && format !== 'excel') {
+      toast.info('JSON export is coming soon');
       return;
     }
-    // Open the filter modal instead of exporting directly
-    setFilterFormat(format);
+    // Open the filter modal instead of exporting directly. The Excel item exports an .xlsx.
+    setFilterFormat(format === 'excel' ? 'xlsx' : format);
     setFilterBase(base);
   }, [toast]);
 

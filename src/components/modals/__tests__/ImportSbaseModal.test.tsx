@@ -169,6 +169,49 @@ describe('ImportSbaseModal runs imports in the background', () => {
   });
 });
 
+describe('ImportSbaseModal in xlsx format', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    importMock.mockImplementation(() => new Promise(() => {}));
+  });
+
+  it('says it imports a workbook, and hides triggers and system columns', () => {
+    render(<ImportSbaseModal isOpen workspaceId="ws" format="xlsx" onClose={vi.fn()} onImported={vi.fn()} />);
+    expect(screen.getByText('Import Sereni Base Excel')).toBeTruthy();
+    expect(screen.getByText(/one table per sheet/)).toBeTruthy();
+    expect(screen.queryByText('Import triggers and functions')).toBeNull();
+    expect(screen.queryByText('Import system columns')).toBeNull();
+  });
+
+  it('takes an .xlsx or a .zip, and sends format xlsx without automations or system columns', () => {
+    for (const name of ['Sales.xlsx', 'Sales.xlsx.zip']) {
+      importMock.mockClear();
+      const { container, unmount } = render(<ImportSbaseModal isOpen workspaceId="ws" format="xlsx" onClose={vi.fn()} onImported={vi.fn()} />);
+      expect((container.querySelector('input[type="file"]') as HTMLInputElement).accept).toBe('.xlsx,.zip');
+      pickAndStart(container, name);
+      expect(importMock).toHaveBeenCalledTimes(1);
+      const [, file, options] = importMock.mock.calls[0];
+      expect((file as File).name).toBe(name);
+      expect(options).toMatchObject({ format: 'xlsx', includeData: true, includeAutomations: false, includeSystemColumns: false });
+      unmount();
+    }
+  });
+
+  it('refuses any other file', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="xlsx" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Sales.csv');
+    expect(screen.getByText('Only .xlsx or .zip files are supported.')).toBeTruthy();
+    expect(importMock).not.toHaveBeenCalled();
+  });
+
+  it('an .xlsx is not a file of the other formats', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Sales.xlsx');
+    expect(screen.getByText('Only .zip files are supported.')).toBeTruthy();
+    expect(importMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('ImportSbaseModal in csv format', () => {
   beforeEach(() => {
     importMock.mockReset();

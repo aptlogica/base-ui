@@ -18,7 +18,8 @@ interface ImportSbaseModalProps {
   onClose: () => void;
   /** Called once the new base exists (so the list can refresh) */
   onImported: (job: ImportJob) => void;
-  /** sbase (default), or csv: a .zip of .csv files, one table per file. A csv has no triggers or system columns. */
+  /** sbase (default), csv (a .zip of .csv files, one table per file) or xlsx (an .xlsx workbook, one table per sheet, or a
+   * .zip of one). A csv or xlsx has no triggers or system columns. */
   format?: ExportFormat;
 }
 
@@ -34,6 +35,8 @@ const stageLabel = (percent: number): string => {
 
 export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported, format = 'sbase' }) => {
   const isCsv = format === 'csv';
+  const isXlsx = format === 'xlsx';
+  const isFlat = isCsv || isXlsx;
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [includeData, setIncludeData] = useState(true);
@@ -82,12 +85,13 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     onClose();
   };
 
-  // Only a .sbase.zip can be imported (an export is always one)
+  // Only a .zip can be imported (an export is always one), or for xlsx an .xlsx workbook as well
   const pickFile = (picked: File | null) => {
     if (inputRef.current) inputRef.current.value = '';
-    if (picked && !picked.name.toLowerCase().endsWith('.zip')) {
+    const lower = picked?.name.toLowerCase() || '';
+    if (picked && !lower.endsWith('.zip') && !(isXlsx && lower.endsWith('.xlsx'))) {
       setFile(null);
-      setFileError('Only .zip files are supported.');
+      setFileError(isXlsx ? 'Only .xlsx or .zip files are supported.' : 'Only .zip files are supported.');
       return;
     }
     setFileError('');
@@ -106,7 +110,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       const finished = await importBaseFromSbase(
         workspaceId,
         file,
-        { title, includeData, includeAttachments, includeAutomations: !isCsv && includeAutomations, includeSystemColumns: !isCsv && includeData && includeSystemColumns, format },
+        { title, includeData, includeAttachments, includeAutomations: !isFlat && includeAutomations, includeSystemColumns: !isFlat && includeData && includeSystemColumns, format },
         (value) => { if (attached()) setPercent(value); },
         controller.signal,
       );
@@ -167,11 +171,11 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && close()}>
-      <div className="bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Import Sereni Base CSV' : 'Import Sereni Base'}>
+      <div className="bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : 'Import Sereni Base'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : 'Import Sereni Base'}</h2>
-            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files, one table per file.' : 'Create a new base from a .sbase.zip file.'}</p>
+            <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : 'Import Sereni Base'}</h2>
+            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files, one table per file.' : isXlsx ? 'Create a new base from an .xlsx workbook, one table per sheet.' : 'Create a new base from a .sbase.zip file.'}</p>
           </div>
           <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -184,7 +188,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
               <input
                 ref={inputRef}
                 type="file"
-                accept=".zip"
+                accept={isXlsx ? '.xlsx,.zip' : '.zip'}
                 className="hidden"
                 onChange={(e) => pickFile(e.target.files?.[0] || null)}
               />
@@ -216,7 +220,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                     <span className="text-sm text-gray-700">
                       Drag &amp; Drop your zip file here, or <span className="text-green-600 font-medium">click to add</span>
                     </span>
-                    <span className="text-xs text-gray-500">{isCsv ? 'A .zip with one .csv file per table. The first row holds the field names.' : 'Only .zip files are supported'}</span>
+                    <span className="text-xs text-gray-500">{isCsv ? 'A .zip with one .csv file per table. The first row holds the field names.' : isXlsx ? 'An .xlsx with one sheet per table, or a .zip of it with an attachments/ folder. The first row holds the field names.' : 'Only .zip files are supported'}</span>
                   </>
                 )}
               </div>
@@ -230,14 +234,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={isCsv ? 'Same as the name of the zip file' : 'Same as the name in the file'}
+                  placeholder={isFlat ? 'Same as the name of the file' : 'Same as the name in the file'}
                   aria-invalid={!!nameError}
                   className={`w-full text-sm px-3 h-10 border rounded-lg text-primary bg-card outline-none ${nameError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary'}`}
                 />
                 {nameError ? (
                   <p className="text-xs text-red-600 mt-1" role="alert">{nameError}</p>
                 ) : (
-                  <p className="text-xs text-secondary mt-1">{isCsv ? 'If left empty, the base is named after the .zip file.' : 'If left empty, the base is created with the name stored in the .zip file.'}</p>
+                  <p className="text-xs text-secondary mt-1">{isFlat ? 'If left empty, the base is named after the file.' : 'If left empty, the base is created with the name stored in the .zip file.'}</p>
                 )}
               </div>
 
@@ -259,7 +263,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   />
                   Import attachment<InfoTip label="import attachment" text="Restores the uploaded files." />
                 </label>
-                {!isCsv && (
+                {!isFlat && (
                   <>
                 <div>
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">

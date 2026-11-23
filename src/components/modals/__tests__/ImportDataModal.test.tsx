@@ -65,7 +65,7 @@ describe('ImportDataModal', () => {
     it('Excel option is disabled', () => {
       render(<ImportDataModal {...defaultProps} />);
 
-      const excelButton = screen.getByRole('button', { name: /Excel/i });
+      const excelButton = (screen.getByText('Excel').closest('button') as HTMLElement);
       expect(excelButton).toBeDisabled();
     });
 
@@ -113,7 +113,7 @@ describe('ImportDataModal', () => {
       );
 
       // Try to click disabled Excel button
-      await user.click(screen.getByRole('button', { name: /Excel/i }));
+      await user.click((screen.getByText('Excel').closest('button') as HTMLElement));
 
       expect(onSelectImportType).not.toHaveBeenCalled();
     });
@@ -188,7 +188,7 @@ describe('ImportDataModal', () => {
     it('applies disabled styling to disabled options', () => {
       render(<ImportDataModal {...defaultProps} />);
 
-      const excelButton = screen.getByRole('button', { name: /Excel/i });
+      const excelButton = (screen.getByText('Excel').closest('button') as HTMLElement);
       expect(excelButton).toHaveClass('opacity-50', 'cursor-not-allowed');
     });
 
@@ -235,6 +235,21 @@ describe('ImportDataModal', () => {
 
       await user.click(screen.getByText('CSV').closest('button') as HTMLElement);
       expect(onSelectImportType).toHaveBeenLastCalledWith('csv');
+    });
+  });
+
+  describe('Sereni Base Excel option', () => {
+    it('is enabled and selects xlsxbase, while the plain Excel option stays disabled', async () => {
+      const user = userEvent.setup();
+      const onSelectImportType = vi.fn();
+      render(<ImportDataModal {...defaultProps} onSelectImportType={onSelectImportType} />);
+
+      const option = screen.getByText('Sereni Base Excel').closest('button') as HTMLElement;
+      expect(option).not.toBeDisabled();
+      await user.click(option);
+      expect(onSelectImportType).toHaveBeenLastCalledWith('xlsxbase');
+
+      expect(screen.getByText('Excel').closest('button')).toHaveClass('opacity-50', 'cursor-not-allowed');
     });
   });
 });

@@ -109,9 +109,12 @@ const buildFieldMeta = (fieldType: string, defaultValue: string): Record<string,
 
   if (normalizedType === 'rating') {
     const parsed = Number.parseInt(defaultValue, 10);
+    const ratingDefault = Number.isFinite(parsed) ? Math.max(0, Math.min(parsed, 5)) : 0;
     return {
       ...baseMeta,
-      ratingDefault: Number.isFinite(parsed) ? Math.max(0, Math.min(parsed, 5)) : 0,
+      ratingDefault,
+      // The backend only reads defaultValue; 0 means no default
+      ...(ratingDefault > 0 ? { defaultValue: ratingDefault } : {}),
     };
   }
 
