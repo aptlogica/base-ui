@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { enableBaseApiService, getBaseApiService } from '../../service/clientService';
+import { enableBaseApiService, getBaseApiService, updateBaseApiSettingsService } from '../../service/clientService';
 
 export const baseApiQueryKey = (baseId: string) => ['base', baseId, 'api'];
 
@@ -25,6 +25,18 @@ export const useEnableBaseApi = () => {
       queryClient.setQueryData(baseApiQueryKey(baseId), res);
       // refresh base lists so the card's API badge updates
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+};
+
+// Turns base management (the schema write APIs) on or off; the response is the new status
+export const useUpdateBaseApiSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ baseId, enabled }: { baseId: string; enabled: boolean }) =>
+      updateBaseApiSettingsService(baseId, { base_management: { enabled } }),
+    onSuccess: (res, { baseId }) => {
+      queryClient.setQueryData(baseApiQueryKey(baseId), res);
     },
   });
 };

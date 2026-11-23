@@ -154,8 +154,15 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ baseId, onBack, bac
           <>
             <Text>
               The base API lets your own apps, sites and scripts read and write the records of this base.
-              Tables and fields are still set up in SereniBase; the API works with the data inside them.
+              Tables and fields can be set up in SereniBase, or through the Manage tables, columns, constraints
+              and Primary key endpoints once base management is turned on for the base.
             </Text>
+            <WarningNote>
+              Base management is off by default. An owner or co-owner turns it on in Developer &gt; Overview. Until
+              then its endpoints answer <InlineCode>403 feature_disabled</InlineCode> and the live docs do not list
+              them. Every schema change needs a secret key, is made in the name of the user who turned the feature
+              on, and cannot touch system columns.
+            </WarningNote>
             <div className="space-y-2">
               <CodePanel code={baseUrl} kind="plain" label="base URL" lineNumbers={false} header={<PanelTitle>Base URL</PanelTitle>} />
               <p className="text-xs text-secondary">

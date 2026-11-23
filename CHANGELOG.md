@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Initial open-source hygiene files added.
 
 ### Added
+- Developer > Overview has a **Base management API** switch (owners and co-owners) that turns the schema write APIs on or off for a base.
+- API docs page documents the base management endpoints: manage tables, columns, constraints and the primary key, with request and response examples, and the new error codes (`forbidden`, `feature_disabled`, `system_column`, `in_use`, `conversion_not_allowed`, `type_not_supported`, `unavailable`).
 - Import success summary now supports downloading the import log directly from inline response content (`error_rows_file_content`) as a `.txt` file.
 - Import preview now displays filtered row counts so cleanup-option impact is visible immediately.
 

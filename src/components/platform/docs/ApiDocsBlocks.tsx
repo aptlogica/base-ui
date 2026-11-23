@@ -20,6 +20,7 @@ export const WarningNote: React.FC<Readonly<{ children: React.ReactNode }>> = ({
 const METHOD_CLASS: Record<HttpMethod, string> = {
   GET: 'api-docs-get',
   POST: 'api-docs-post',
+  PUT: 'api-docs-patch',
   PATCH: 'api-docs-patch',
   DELETE: 'api-docs-delete',
   QUERY: 'api-docs-query',

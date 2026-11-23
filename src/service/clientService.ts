@@ -677,6 +677,20 @@ export interface BaseApiStatus {
   public_id?: string;
   base_path?: string;
   enabled_at?: string;
+  // Per-feature settings; the base management switch lives here
+  settings?: BaseApiSettings;
+}
+
+// Base management: the schema write APIs (tables, columns, constraints, primary key). Off by default.
+export interface BaseManagementSettings {
+  enabled: boolean;
+  // The user who turned it on; schema writes through the API are made in this user's name
+  enabled_by?: string;
+  enabled_at?: string;
+}
+
+export interface BaseApiSettings {
+  base_management: BaseManagementSettings;
 }
 
 // The SDK has no methods for the base API endpoints yet, so they go through the base service's HTTP client.
@@ -684,6 +698,7 @@ const baseHttp = () => (client.baseService as unknown as {
   http: {
     get: <T>(url: string) => Promise<StandardResponse<T>>;
     post: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
+    patch: <T>(url: string, data?: unknown) => Promise<StandardResponse<T>>;
   };
 }).http;
 
@@ -695,6 +710,11 @@ export async function getBaseApiService(id: string) {
 // POST /base/:id/api/enable; owner and co-owner only
 export async function enableBaseApiService(id: string) {
   return await makeAuthenticatedCall(() => baseHttp().post<BaseApiStatus>(`/base/${id}/api/enable`));
+}
+
+// PATCH /base/:id/api/settings; owner and co-owner only. Only the features sent change.
+export async function updateBaseApiSettingsService(id: string, settings: { base_management?: { enabled: boolean } }) {
+  return await makeAuthenticatedCall(() => baseHttp().patch<BaseApiStatus>(`/base/${id}/api/settings`, settings));
 }
 
 // Origin the backend is served from; VITE_API_BASE_URL is empty when nginx serves both on one origin

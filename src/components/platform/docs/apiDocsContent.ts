@@ -8,7 +8,9 @@
 // (returned inside the link's objects). Customers in turn link to "Companies" (Company), for the expand
 // examples. Responses and messages are what the server returns (internal/platform in the backend).
 
-export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'QUERY';
+import { MANAGEMENT_ERROR_CODES, MANAGEMENT_GROUPS, MANAGEMENT_SUMMARY } from './apiDocsManagement';
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'QUERY';
 
 export interface DocExample {
   title: string;
@@ -1537,6 +1539,8 @@ const DELETE_RECORDS: DocEndpoint = {
 export const ENDPOINT_GROUPS: DocGroup[] = [
   { id: 'tables', title: 'Tables', endpoints: [LIST_TABLES, GET_TABLE, LIST_COLUMNS] },
   { id: 'records', title: 'Records', endpoints: [LIST_RECORDS, QUERY_RECORDS, QUERY_RECORDS_WITH_QUERY, AGGREGATE_RECORDS, GET_RECORD, CREATE_RECORDS, UPDATE_RECORDS, DELETE_RECORDS] },
+  // Base management: create, change and delete tables, columns, constraints and the primary key (off by default)
+  ...MANAGEMENT_GROUPS,
 ];
 
 // ---- Reference ----
@@ -1555,6 +1559,7 @@ export const ENDPOINT_SUMMARY: { method: HttpMethod; path: string; does: string 
   { method: 'PATCH', path: '/tables/{table}/records', does: 'Update many records' },
   { method: 'DELETE', path: '/tables/{table}/records/{record}', does: 'Delete a record' },
   { method: 'POST', path: '/tables/{table}/records/delete', does: 'Delete many records' },
+  ...MANAGEMENT_SUMMARY,
 ];
 
 export const ID_PREFIXES: { prefix: string; what: string; example: string }[] = [
@@ -1598,6 +1603,7 @@ export const READ_ONLY_VALUES: { type: string; read: string }[] = [
 ];
 
 export const ERROR_CODES: { code: string; status: number; when: string }[] = [
+  ...MANAGEMENT_ERROR_CODES,
   { code: 'bad_request', status: 400, when: 'Malformed JSON, a bad query parameter or where tree, a limit passed (conditions, in values, sort fields), an option sent in the URL of a body endpoint, a bad aggregate (metrics, group_by), a formula field named, a cursor reused with another filter or sort or edited, a value in the wrong format (the message says which), an unknown timezone, the same ID twice in a bulk request, or an Idempotency-Key longer than 255 characters' },
   { code: 'not_found', status: 404, when: 'The base, table, field or record doesn\'t exist, or the base API is off' },
   { code: 'ambiguous_name', status: 409, when: 'A name matches more than one base, table or field; details lists their IDs' },

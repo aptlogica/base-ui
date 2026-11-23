@@ -8,7 +8,7 @@ import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
 import { formatDate } from '../../utils/dateUtils';
 import { getApiOrigin, type BaseApiStatus } from '../../service/clientService';
-import { useBaseApi, useEnableBaseApi } from './useBaseApi';
+import { useBaseApi, useEnableBaseApi, useUpdateBaseApiSettings } from './useBaseApi';
 import LiveDocsLinks, { liveDocsUrls } from './LiveDocsLinks';
 import { WarningNote } from './docs/ApiDocsBlocks';
 
@@ -27,6 +27,7 @@ const ENABLE_CHECKLIST = [
   'Your base gets a permanent API address (bs_…) that never changes.',
   'Every call starts from this address, with tables at /tables. Other bases are not reachable from it.',
   'API keys, app login and access rules are set up in the next steps.',
+  'Base management (creating tables and columns through the API) stays off until you switch it on here.',
 ];
 
 const CANCEL_BUTTON_CLASS = 'px-6 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-card)] hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 transition-all disabled:opacity-50 text-gray-700';
@@ -59,7 +60,57 @@ const CopyField: React.FC<Readonly<{ label: string; value: string }>> = ({ label
   );
 };
 
-const EnabledApi: React.FC<Readonly<{ status: BaseApiStatus; baseName: string; onOpenDocs?: () => void }>> = ({ status, baseName, onOpenDocs }) => {
+// The base management switch: lets developers create, change and delete tables, columns, constraints and the
+// primary key through the API. Off by default; only owners and co-owners can change it.
+export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; status: BaseApiStatus; canChange: boolean }>> = ({ baseId, status, canChange }) => {
+  const toast = useToast();
+  const update = useUpdateBaseApiSettings();
+  const on = status.settings?.base_management.enabled ?? false;
+
+  const toggle = async () => {
+    if (!baseId) return;
+    try {
+      await update.mutateAsync({ baseId, enabled: !on });
+      toast.success(on ? 'Base management is off.' : 'Base management is on.', { title: 'Base management' });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not change base management. Please try again.'), { title: 'Change failed' });
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-primary">Base management API</div>
+          <p className="mt-1 text-sm text-secondary">
+            Lets your server create, change and delete tables, columns, constraints and the primary key through the
+            API. Needs a secret key. Changes are made in the name of the user who turns this on.
+            {on && status.settings?.base_management.enabled_at && ` On since ${formatDate(status.settings.base_management.enabled_at)}.`}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Base management API"
+          onClick={toggle}
+          disabled={!canChange || !baseId || update.isPending}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${on ? 'bg-green-600' : 'bg-gray-300'}`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </button>
+      </div>
+      {!canChange && <p className="text-xs text-secondary">Only base owners and co-owners can change this.</p>}
+      {on && (
+        <p className="text-xs text-secondary">
+          While this is off, the write endpoints answer 403 feature_disabled and the live docs do not list them.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const EnabledApi: React.FC<Readonly<{ status: BaseApiStatus; baseId: string | null; baseName: string; canChange: boolean; onOpenDocs?: () => void }>> = ({ status, baseId, baseName, canChange, onOpenDocs }) => {
   const baseUrl = `${getApiOrigin()}${status.base_path ?? ''}`;
   return (
     <div className="p-6 space-y-5 max-w-3xl">
@@ -84,6 +135,7 @@ const EnabledApi: React.FC<Readonly<{ status: BaseApiStatus; baseName: string; o
         <LiveDocsLinks baseUrl={baseUrl} />
       </div>
       <CopyField label="OpenAPI spec (for Postman or code generators)" value={liveDocsUrls(baseUrl).spec} />
+      <BaseManagementSwitch baseId={baseId} status={status} canChange={canChange} />
       {onOpenDocs && (
         <button
           type="button"
@@ -140,7 +192,7 @@ const DeveloperOverview: React.FC<DeveloperOverviewProps> = ({ baseId, baseName,
   }
 
   if (status.enabled) {
-    return <EnabledApi status={status} baseName={baseName} onOpenDocs={onOpenDocs} />;
+    return <EnabledApi status={status} baseId={baseId} baseName={baseName} canChange={canEnable} onOpenDocs={onOpenDocs} />;
   }
 
   return (
