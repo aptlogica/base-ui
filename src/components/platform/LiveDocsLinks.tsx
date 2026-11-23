@@ -22,12 +22,10 @@ const LiveDocsLinks: React.FC<Readonly<{ baseUrl: string }>> = ({ baseUrl }) => 
       <a href={urls.swagger} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
         <ExternalLink className="w-4 h-4" />
         Open Swagger UI
-        <span className="font-normal text-secondary">try requests</span>
       </a>
       <a href={urls.redoc} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
         <ExternalLink className="w-4 h-4" />
         Open ReDoc
-        <span className="font-normal text-secondary">reference</span>
       </a>
     </div>
   );

@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { BookOpen, Check, Copy, Loader2 } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, Copy, FileJson, Hash, Info, Layers, Loader2, Play, ShieldCheck } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { apiErrorMessage } from '../../utils/apiErrors';
 import { formatDate } from '../../utils/dateUtils';
@@ -34,7 +34,7 @@ const CANCEL_BUTTON_CLASS = 'px-6 py-2 rounded-xl border border-[var(--color-bor
 const COPY_BUTTON_CLASS = 'shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-card)] text-[var(--text-color-tertiary)] hover:text-[var(--text-color-primary)]';
 
 // A read-only value with a copy button that shows a tick for a moment
-const CopyField: React.FC<Readonly<{ label: string; value: string }>> = ({ label, value }) => {
+const CopyField: React.FC<Readonly<{ label: string; value: string; hideLabel?: boolean }>> = ({ label, value, hideLabel }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -49,7 +49,7 @@ const CopyField: React.FC<Readonly<{ label: string; value: string }>> = ({ label
 
   return (
     <div className="space-y-1">
-      <div className="text-sm font-medium text-primary">{label}</div>
+      {!hideLabel && <div className="text-sm font-medium text-primary">{label}</div>}
       <div className="flex items-center gap-2 rounded-xl border bg-gray-50 px-3 py-2">
         <code className="flex-1 min-w-0 font-mono text-sm text-primary truncate">{value}</code>
         <button type="button" onClick={handleCopy} aria-label={`Copy ${label}`} className={COPY_BUTTON_CLASS}>
@@ -60,9 +60,32 @@ const CopyField: React.FC<Readonly<{ label: string; value: string }>> = ({ label
   );
 };
 
+// A card of the overview: a tinted icon tile, a title and content
+const CARD_TONES = {
+  green: 'bg-green-50 text-green-600',
+  blue: 'bg-blue-50 text-blue-600',
+  purple: 'bg-purple-50 text-purple-600',
+} as const;
+
+const InfoCard: React.FC<Readonly<{ icon: React.ElementType; tone: keyof typeof CARD_TONES; title: string; badge?: string; description?: string; children?: React.ReactNode }>> = ({ icon: Icon, tone, title, badge, description, children }) => (
+  <div className="rounded-xl border bg-card p-4 flex gap-3 min-w-0 shadow-xs">
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${CARD_TONES[tone]}`}>
+      <Icon className="w-5 h-5" />
+    </div>
+    <div className="flex-1 min-w-0 space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="text-base font-semibold text-primary">{title}</div>
+        {badge && <span className="badge-brand rounded-full px-2 py-0.5 text-xs font-medium">{badge}</span>}
+      </div>
+      {description && <p className="text-sm text-secondary">{description}</p>}
+      {children}
+    </div>
+  </div>
+);
+
 // The base management switch: lets developers create, change and delete tables, columns, constraints and the
 // primary key through the API. Off by default; only owners and co-owners can change it.
-export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; status: BaseApiStatus; canChange: boolean }>> = ({ baseId, status, canChange }) => {
+export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; status: BaseApiStatus; canChange: boolean; onOpenDocs?: () => void }>> = ({ baseId, status, canChange, onOpenDocs }) => {
   const toast = useToast();
   const update = useUpdateBaseApiSettings();
   const on = status.settings?.base_management.enabled ?? false;
@@ -78,15 +101,18 @@ export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; st
   };
 
   return (
-    <div className="space-y-2 rounded-xl border p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-primary">Base management API</div>
+    <div className="rounded-xl border border-green-200 bg-green-50/50 overflow-hidden">
+      <div className="p-4 flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${CARD_TONES.green}`}>
+          <ShieldCheck className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold text-primary">Base management API</div>
           <p className="mt-1 text-sm text-secondary">
-            Lets your server create, change and delete tables, columns, constraints and the primary key through the
-            API. Needs a secret key. Changes are made in the name of the user who turns this on.
+            Create, update and delete tables, columns and constraints using the management API.
             {on && status.settings?.base_management.enabled_at && ` On since ${formatDate(status.settings.base_management.enabled_at)}.`}
           </p>
+          {!canChange && <p className="mt-1 text-xs text-secondary">Only base owners and co-owners can change this.</p>}
         </div>
         <button
           type="button"
@@ -95,16 +121,21 @@ export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; st
           aria-label="Base management API"
           onClick={toggle}
           disabled={!canChange || !baseId || update.isPending}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${on ? 'bg-green-600' : 'bg-gray-300'}`}
+          className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${on ? 'bg-green-600' : 'bg-gray-300'}`}
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
         </button>
       </div>
-      {!canChange && <p className="text-xs text-secondary">Only base owners and co-owners can change this.</p>}
-      {on && (
-        <p className="text-xs text-secondary">
-          While this is off, the write endpoints answer 403 feature_disabled and the live docs do not list them.
-        </p>
+      {onOpenDocs && (
+        <button
+          type="button"
+          onClick={onOpenDocs}
+          className="w-full flex items-center gap-3 px-4 py-3 border-t border-green-200 bg-green-50 text-sm text-green-800 hover:bg-green-100 transition-colors text-left"
+        >
+          <Info className="w-5 h-5 flex-shrink-0" />
+          <span className="flex-1">Read the API docs: every endpoint with request and response examples.</span>
+          <ChevronRight className="w-4 h-4 flex-shrink-0" />
+        </button>
       )}
     </div>
   );
@@ -113,39 +144,25 @@ export const BaseManagementSwitch: React.FC<Readonly<{ baseId: string | null; st
 const EnabledApi: React.FC<Readonly<{ status: BaseApiStatus; baseId: string | null; baseName: string; canChange: boolean; onOpenDocs?: () => void }>> = ({ status, baseId, baseName, canChange, onOpenDocs }) => {
   const baseUrl = `${getApiOrigin()}${status.base_path ?? ''}`;
   return (
-    <div className="p-6 space-y-5 max-w-3xl">
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-primary">Base API</h3>
-          <span className="badge-brand rounded-full px-2 py-0.5 text-xs font-medium">Enabled</span>
-        </div>
-        <p className="mt-1 text-sm text-secondary">
-          {baseName}'s API address. It stays the same, even if you rename the base.
-          {status.enabled_at && ` Enabled on ${formatDate(status.enabled_at)}.`}
-        </p>
+    <div className="p-6 space-y-4">
+      <InfoCard icon={Layers} tone="green" title="Base API" badge="Enabled" description={`${baseName}'s API address. It stays the same, even if you rename the base.${status.enabled_at ? ` Enabled on ${formatDate(status.enabled_at)}.` : ''}`}>
+        <CopyField label="Base URL" value={baseUrl} />
+      </InfoCard>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <InfoCard icon={Hash} tone="blue" title="Base API ID">
+          <CopyField label="Base API ID" value={status.public_id ?? ''} hideLabel />
+        </InfoCard>
+        <InfoCard icon={Play} tone="purple" title="Try it: list this base's tables">
+          <CopyField label="Try it: list this base's tables" value={`curl ${baseUrl}/tables`} hideLabel />
+        </InfoCard>
+        <InfoCard icon={BookOpen} tone="blue" title="Live docs for your base" description="Explore and test your base's tables and fields.">
+          <LiveDocsLinks baseUrl={baseUrl} />
+        </InfoCard>
+        <InfoCard icon={FileJson} tone="green" title="OpenAPI spec" description="For Postman or code generators.">
+          <CopyField label="OpenAPI spec" value={liveDocsUrls(baseUrl).spec} hideLabel />
+        </InfoCard>
       </div>
-      <CopyField label="Base URL" value={baseUrl} />
-      <CopyField label="Base API ID" value={status.public_id ?? ''} />
-      <CopyField label="Try it: list this base's tables" value={`curl ${baseUrl}/tables`} />
-      <div className="space-y-2">
-        <div className="text-sm font-medium text-primary">Live docs for your tables</div>
-        <p className="text-sm text-secondary">
-          Built from this base's real tables and fields, and updated within seconds when they change.
-        </p>
-        <LiveDocsLinks baseUrl={baseUrl} />
-      </div>
-      <CopyField label="OpenAPI spec (for Postman or code generators)" value={liveDocsUrls(baseUrl).spec} />
-      <BaseManagementSwitch baseId={baseId} status={status} canChange={canChange} />
-      {onOpenDocs && (
-        <button
-          type="button"
-          onClick={onOpenDocs}
-          className="flex items-center gap-2 text-sm font-medium text-green-700 hover:underline"
-        >
-          <BookOpen className="w-4 h-4" />
-          Read the API docs: every endpoint with request and response examples
-        </button>
-      )}
+      <BaseManagementSwitch baseId={baseId} status={status} canChange={canChange} onOpenDocs={onOpenDocs} />
       <WarningNote>
         Development only: there are no API keys yet, so anyone with this URL can read and change this base's
         data. The API answers only on servers started with PUBLIC_API_OPEN_ACCESS=true.
