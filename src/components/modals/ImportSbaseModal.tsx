@@ -177,7 +177,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}</h2>
-            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files, one table per file.' : isXlsx ? 'Create a new base from an .xlsx workbook, one table per sheet.' : isJson ? 'Create a new base from a .zip of JSON files, one table per file, or from one .json file.' : 'Create a new base from a .sbase.zip file.'}</p>
+            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files.' : isXlsx ? 'Create a new base from an .xlsx file or a .zip of it.' : isJson ? 'Create a new base from .json files or a .zip of them.' : 'Create a new base from a .sbase.zip file.'}</p>
           </div>
           <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -222,7 +222,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                     <span className="text-sm text-gray-700">
                       Drag &amp; Drop your zip file here, or <span className="text-green-600 font-medium">click to add</span>
                     </span>
-                    <span className="text-xs text-gray-500">{isCsv ? 'A .zip with one .csv file per table. The first row holds the field names.' : isXlsx ? 'An .xlsx with one sheet per table, or a .zip of it with an attachments/ folder. The first row holds the field names.' : isJson ? 'A .zip with one .json file per table, or one .json file for one table. Each file is an array of rows, each row an object keyed by field name.' : 'Only .zip files are supported'}</span>
+                    <span className="text-xs text-gray-500">{isCsv ? 'Only a .zip of .csv files is supported' : isXlsx ? 'Only an .xlsx file or a .zip of it is supported' : isJson ? 'Only .json files or a .zip of them are supported' : 'Only .zip files are supported'}</span>
                   </>
                 )}
               </div>

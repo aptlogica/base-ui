@@ -178,7 +178,7 @@ describe('ImportSbaseModal in xlsx format', () => {
   it('says it imports a workbook, and hides triggers and system columns', () => {
     render(<ImportSbaseModal isOpen workspaceId="ws" format="xlsx" onClose={vi.fn()} onImported={vi.fn()} />);
     expect(screen.getByText('Import Sereni Base Excel')).toBeTruthy();
-    expect(screen.getByText(/one table per sheet/)).toBeTruthy();
+    expect(screen.getByText('Create a new base from an .xlsx file or a .zip of it.')).toBeTruthy();
     expect(screen.queryByText('Import triggers and functions')).toBeNull();
     expect(screen.queryByText('Import system columns')).toBeNull();
   });
@@ -221,7 +221,7 @@ describe('ImportSbaseModal in csv format', () => {
   it('says it imports a zip of CSV files, and hides triggers and system columns', () => {
     render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
     expect(screen.getByText('Import Sereni Base CSV')).toBeTruthy();
-    expect(screen.getByText(/one table per file/)).toBeTruthy();
+    expect(screen.getByText('Create a new base from a .zip of CSV files.')).toBeTruthy();
     expect(screen.getByText('Import table data')).toBeTruthy();
     expect(screen.getByText('Import attachment')).toBeTruthy();
     expect(screen.queryByText('Import triggers and functions')).toBeNull();
