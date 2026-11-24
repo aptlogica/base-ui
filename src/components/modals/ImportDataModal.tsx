@@ -47,6 +47,13 @@ const IMPORT_OPTIONS: ImportOption[] = [
     iconPath: '/assets/docx.png', // Using docx icon as placeholder for Excel
     bgColor: 'bg-white',
   },
+  {
+    id: 'jsonbase',
+    label: 'JSON',
+    description: 'Import a .zip of JSON files, or one .json file',
+    iconPath: '/assets/json.png',
+    bgColor: 'bg-white',
+  },
   // {
   //   id: 'excel',
   //   label: 'Excel',
@@ -59,12 +66,12 @@ const IMPORT_OPTIONS: ImportOption[] = [
     iconPath: '/assets/sql.png',
     bgColor: 'bg-white',
   },
-  {
-    id: 'json',
-    label: 'Json',
-    iconPath: '/assets/json.png',
-    bgColor: 'bg-white',
-  },
+  // {
+  //   id: 'json',
+  //   label: 'Json',
+  //   iconPath: '/assets/json.png',
+  //   bgColor: 'bg-white',
+  // },
 ];
 
 const OPTIONAL_IMPORT_OPTIONS: ImportOption[] = [
@@ -96,14 +103,14 @@ export const ImportDataModal: React.FC<ImportDataModalProps> = ({
   };
 
   const handleOptionClick = (optionId: string) => {
-    // Only CSV, Sereni Base, Sereni Base CSV and Sereni Base Excel can be clicked
+    // Only CSV, Sereni Base, Sereni Base CSV, Sereni Base Excel and Sereni Base JSON can be clicked
     if (isOptionDisabled(optionId)) return;
     onSelectImportType(optionId);
     onClose();
   };
 
   const isOptionDisabled = (optionId: string) => {
-    return optionId !== 'csv' && optionId !== 'sbase' && optionId !== 'csvzip' && optionId !== 'xlsxbase';
+    return optionId !== 'csv' && optionId !== 'sbase' && optionId !== 'csvzip' && optionId !== 'xlsxbase' && optionId !== 'jsonbase';
   };
 
   if (!isOpen) return null;

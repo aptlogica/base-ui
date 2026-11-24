@@ -3,7 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Search, AlertCircle, ChevronDown, Database, Paperclip, Zap, Filter, Hash } from 'lucide-react';
+import { X, Search, AlertCircle, ChevronDown, Database, Paperclip, Zap, Filter, Hash, Settings } from 'lucide-react';
 import { getTablesByBaseIdService } from '../../service/clientService';
 import { getExportDependencies, type CsvDelimiter, type ExportBaseOptions, type ExportFormat, type ExportDependency, type ExportFilterCondition, type ExportTableInfo } from '../../service/baseExportService';
 import { getDefaultOperator, isFilterComplete } from '../../utils/filterUtils';
@@ -15,7 +15,7 @@ interface ExportSbaseModalProps {
   base: { id: string; title?: string; name?: string };
   onClose: () => void;
   onExport: (options: ExportBaseOptions) => void;
-  /** sbase (default), csv or xlsx. A csv or xlsx has no triggers or system columns; a csv also has a delimiter. */
+  /** sbase (default), csv, xlsx or json. A csv, xlsx or json has no triggers or system columns; a csv also has a delimiter. */
   format?: ExportFormat;
 }
 
@@ -48,8 +48,9 @@ const triggerItems = (m: MissingReference) => m.items.filter((i) => i.kind === '
 export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base, onClose, onExport, format = 'sbase' }) => {
   const isCsv = format === 'csv';
   const isXlsx = format === 'xlsx';
-  // a csv and an xlsx have no triggers or system columns, and write links as text
-  const isFlat = isCsv || isXlsx;
+  const isJson = format === 'json';
+  // a csv, an xlsx and a json have no triggers or system columns, and write links as text
+  const isFlat = isCsv || isXlsx || isJson;
   const [delimiter, setDelimiter] = useState<CsvDelimiter>('comma');
   const [tables, setTables] = useState<ExportTableInfo[]>([]);
   const [dependencies, setDependencies] = useState<ExportDependency[]>([]);
@@ -186,11 +187,11 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
 
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : 'Export SereniBase'}>
+      <div className="bg-modal max-w-[900px]! h-[85vh]! max-h-[780px]! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : isJson ? 'Export JSON' : 'Export SereniBase'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-primary truncate">Export “{baseTitle}”</h2>
-            <p className="text-sm text-secondary truncate">Choose the tables and what to include ({isCsv ? '.csv' : isXlsx ? '.xlsx' : '.sbase'}).</p>
+            <p className="text-sm text-secondary truncate">Choose the tables and what to include ({isCsv ? '.csv' : isXlsx ? '.xlsx' : isJson ? '.json' : '.sbase'}).</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
             <X className="text-gray-400 h-5 w-5" />
@@ -253,12 +254,12 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                             }
                             setOpenFilterId(isOpenFilter ? null : t.id);
                           }}
-                          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border shadow-xs rounded-xl focus:outline-none shrink-0 ${incompleteByTable[t.id] ? 'bg-red-50 text-red-700 border-red-300' : conditions.length > 0 && includeData ? 'bg-green-50 text-green-700 border-green-300' : 'bg-card text-tertiary border-border'} ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                          className={`flex items-center gap-1 px-2 py-1.5 text-[13px] font-medium border shadow-xs rounded-xl focus:outline-none shrink-0 ${incompleteByTable[t.id] ? 'bg-red-50 text-red-700 border-red-300' : conditions.length > 0 && includeData ? 'bg-green-50 text-green-700 border-green-300' : 'bg-card text-tertiary border-border'} ${includeData ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                         >
                           <Filter className="w-4 h-4" />
                           Filter
                           {conditions.length > 0 && includeData && (
-                            <span className="ml-1 w-8 rounded-xl bg-green-500 text-white text-xs font-bold">{conditions.length}</span>
+                            <span className="ml-1 min-w-4 px-1 rounded-xl bg-green-500 text-white text-[10px] leading-4 font-bold text-center">{conditions.length}</span>
                           )}
                         </button>
                       )}
@@ -328,10 +329,11 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-expanded={showAdvanced}
-              className="w-full flex items-center justify-between text-sm font-medium text-green-700 cursor-pointer"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-green-700 bg-card border border-green-200 rounded-lg cursor-pointer hover:bg-gray-50"
             >
+              <Settings className="w-5 h-5 text-green-600" />
               Advanced Options
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-green-600 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
             </button>
             {showAdvanced && (
               <div className="mt-3 flex flex-col gap-y-3">
@@ -344,7 +346,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" checked={includeAttachments} onChange={(e) => setIncludeAttachments(e.target.checked)} className="mt-0.5 rounded h-4 w-4" />
                   <div>
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />{isFlat ? 'Attachments' : 'Attachments & Cover Image'}<InfoTip label="attachments" text={isCsv ? 'Saves files in attachments/.' : isXlsx ? 'Saves files in attachments/ and downloads a .xlsx.zip. Without it you get a plain .xlsx.' : 'Includes files and the base cover.'} /></span>
+                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><Paperclip className="w-4 h-4 text-gray-500" />{isFlat ? 'Attachments' : 'Attachments & Cover Image'}<InfoTip label="attachments" text={isCsv ? 'Saves files in attachments/.' : isXlsx ? 'Saves files in attachments/ and downloads a .xlsx.zip. Without it you get a plain .xlsx.' : isJson ? 'Saves files in attachments/.' : 'Includes files and the base cover.'} /></span>
                   </div>
                 </label>
                 {!isFlat && (
@@ -409,7 +411,7 @@ export const ExportSbaseModal: React.FC<ExportSbaseModalProps> = ({ isOpen, base
             disabled={(tables.length > 0 && !someSelected) || incompleteFilter}
             className="px-6 py-2 rounded-xl btn-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : 'Export Base'}
+            {isCsv ? 'Export CSV' : isXlsx ? 'Export Excel' : isJson ? 'Export JSON' : 'Export Base'}
           </button>
         </div>
       </div>

@@ -313,3 +313,38 @@ describe('ImportSbaseModal shows what a csv import skipped', () => {
     expect(screen.queryByText(/not imported/)).toBeNull();
   });
 });
+
+describe('ImportSbaseModal in json format', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    importMock.mockImplementation(() => new Promise(() => {}));
+  });
+
+  it('takes a .zip or one .json file, and sends format json without automations or system columns', () => {
+    for (const name of ['Sales.json.zip', 'Customers.json']) {
+      importMock.mockClear();
+      const { container, unmount } = render(<ImportSbaseModal isOpen workspaceId="ws" format="json" onClose={vi.fn()} onImported={vi.fn()} />);
+      expect((container.querySelector('input[type="file"]') as HTMLInputElement).accept).toBe('.json,.zip');
+      pickAndStart(container, name);
+      expect(importMock).toHaveBeenCalledTimes(1);
+      const [, file, options] = importMock.mock.calls[0];
+      expect((file as File).name).toBe(name);
+      expect(options).toMatchObject({ format: 'json', includeData: true, includeAutomations: false, includeSystemColumns: false });
+      unmount();
+    }
+  });
+
+  it('refuses any other file', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="json" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Sales.xlsx');
+    expect(screen.getByText('Only .zip or .json files are supported.')).toBeTruthy();
+    expect(importMock).not.toHaveBeenCalled();
+  });
+
+  it('a .json is not a file of the sbase format', () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Customers.json');
+    expect(screen.getByText('Only .zip files are supported.')).toBeTruthy();
+    expect(importMock).not.toHaveBeenCalled();
+  });
+});

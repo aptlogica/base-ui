@@ -115,10 +115,11 @@ describe('useBaseExport runs exports in the background', () => {
     expect(exportMock).toHaveBeenCalledWith('b4', expect.objectContaining({ format: 'xlsx' }), expect.any(Function));
   });
 
-  it('JSON is still coming soon', () => {
+  it('JSON opens the same dialog in json format, and the export runs with that format', () => {
     render(<Host />);
     fireEvent.click(screen.getByText('export json'));
-    expect(toast.info).toHaveBeenCalledWith('JSON export is coming soon');
-    expect(screen.queryByText(/start export/)).toBeNull();
+    expect(toast.info).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('start export json'));
+    expect(exportMock).toHaveBeenCalledWith('b5', expect.objectContaining({ format: 'json' }), expect.any(Function));
   });
 });

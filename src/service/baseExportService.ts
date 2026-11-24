@@ -56,7 +56,7 @@ export interface ExportFilterCondition {
   logic?: 'AND' | 'OR';
 }
 
-export type ExportFormat = 'sbase' | 'csv' | 'xlsx';
+export type ExportFormat = 'sbase' | 'csv' | 'xlsx' | 'json';
 /** the content type of a plain workbook; a zip of the workbook and its files has another */
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -69,7 +69,8 @@ export interface ExportBaseOptions {
   /** Writes the source columns (id, created / modified time and user) of every row. Needs includeData. */
   includeSystemColumns?: boolean;
   /** The file format: sbase (default), csv (a zip with one file per table) or xlsx (one workbook, one sheet per table;
-   * a zip of the workbook and attachments/ when files are included). In csv and xlsx links are written as text. */
+   * a zip of the workbook and attachments/ when files are included) or json (a zip with one file per table).
+   * In csv, xlsx and json links are written as text. */
   format?: ExportFormat;
   /** The field separator of a csv: comma (default), semicolon, tab or pipe. The text is always UTF-8. */
   delimiter?: CsvDelimiter;
@@ -83,7 +84,7 @@ export interface ExportBaseOptions {
 /**
  * "My Base: 2026" -> "My_Base_2026.sbase.zip" (or ".csv.zip"), the same cleaning the server does for its file name. An
  * xlsx export is the plain workbook (".xlsx"), or a zip of the workbook and its attachments/ (".xlsx.zip") when files
- * are included: `zipped` says which.
+ * are included; csv and json exports are always zips (".csv.zip", ".json.zip").
  */
 function exportFileName(title?: string, format: ExportFormat = 'sbase', zipped = true): string {
   const name = (title || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'base';
@@ -239,7 +240,7 @@ export interface ImportJob {
 }
 
 /**
- * Imports a .sbase.zip file (or a csv zip, or an .xlsx workbook) as a new base in the workspace: starts the background job and follows it
+ * Imports a .sbase.zip file (or a csv or json zip, an .xlsx workbook, or one .json file) as a new base in the workspace: starts the background job and follows it
  * until it is completed or failed. onProgress gets the job percent (0 to 100). Resolves with the finished job; a failed
  * job resolves too (check status), so the caller can show its error and problems.
  */
@@ -252,7 +253,7 @@ export async function importBaseFromSbase(
     includeAttachments?: boolean;
     includeAutomations?: boolean;
     includeSystemColumns?: boolean;
-    /** sbase (default), csv for a zip of .csv files (one table per file), or xlsx for a workbook (one table per sheet) or a zip of one */
+    /** sbase (default), csv for a zip of .csv files (one table per file), xlsx for a workbook (one table per sheet) or a zip of one, or json for a zip of .json files (one table per file) */
     format?: ExportFormat;
   },
   onProgress?: (percent: number) => void,
@@ -264,7 +265,7 @@ export async function importBaseFromSbase(
   form.append('include_data', String(options.includeData ?? true));
   form.append('include_attachments', String(options.includeAttachments ?? true));
   if (options.format && options.format !== 'sbase') {
-    // a csv or xlsx has no triggers and no system columns, so those options are not sent
+    // a csv, xlsx or json has no triggers and no system columns, so those options are not sent
     form.append('format', options.format);
   } else {
     // needs the automations permission; the server refuses the import without it
