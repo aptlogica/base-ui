@@ -24,16 +24,33 @@ export type ImportSuccessSummary = {
   /** Leaves out the "Data Quality" section (the counts of rows with errors, empty rows and duplicate rows). When rows
    * were left out and there is a log (errorRows, errorRowsFileContent), a line says so with a link to download the log. */
   hideDataQuality?: boolean;
+  /** "failed" shows the popup for an import that did not finish (a red cross, "Import Failed", and the errors). */
+  variant?: 'success' | 'failed';
+  /** The line under the title; the default is the "Your import is complete for ..." line of a finished import */
+  subtitle?: string;
+  /** How many warnings the import has; when set, the Data Quality list has a line for them */
+  warnings?: number;
+  /** The errors of a failed import: the first of them are listed, and the rest are counted (they are all in the log) */
+  errors?: string[];
 };
+
+/** How many errors of a failed import the popup lists; the others are in the log */
+export const MAX_LISTED_ERRORS = 3;
 
 type Props = {
   open: boolean;
   summary: ImportSuccessSummary | null;
   onClose: () => void;
+  /** Shows a "Try again" button next to "Close" on the failed popup */
+  onRetry?: () => void;
 };
 
-export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) => {
+export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose, onRetry }) => {
   if (!open || !summary) return null;
+
+  const failed = summary.variant === 'failed';
+  const errors = summary.errors ?? [];
+  const hasLog = Boolean(summary.errorRowsFileContent || summary.errorRowsFilePath);
 
   const handleDownloadImportLog = () => {
     const textContent = summary.errorRowsFileContent?.trim();
@@ -72,12 +89,12 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
         </button>
 
         <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center mb-6">
-            <Check className="w-10 h-10 text-white" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${failed ? 'bg-red-600' : 'bg-green-600'}`}>
+            {failed ? <X className="w-10 h-10 text-white" /> : <Check className="w-10 h-10 text-white" />}
           </div>
-          <h3 id="import-success-title" className="text-3xl font-semibold text-primary">Data Imported Successfully</h3>
+          <h3 id="import-success-title" className="text-3xl font-semibold text-primary">{failed ? 'Import Failed' : 'Data Imported Successfully'}</h3>
           <p className="mt-2 text-secondary">
-            Your import is complete{summary.tableTitle ? ` for "${summary.tableTitle}".` : '.'}
+            {summary.subtitle ?? `Your import is complete${summary.tableTitle ? ` for "${summary.tableTitle}".` : '.'}`}
           </p>
         </div>
 
@@ -125,7 +142,7 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
               <div className="mt-6 border-t pt-5">
                 <div className="flex items-center justify-between text-sm font-medium text-primary mb-3">
                   <span>Data Quality</span>
-                  {(summary.errorRowsFileContent || summary.errorRowsFilePath) && (
+                  {hasLog && (
                     <button
                       type="button"
                       onClick={handleDownloadImportLog}
@@ -136,24 +153,61 @@ export const ImportSuccessModal: React.FC<Props> = ({ open, summary, onClose }) 
                     </button>
                   )}
                 </div>
-                <ul className="flex flex-col gap-y-2 text-sm text-primary">
-                  <li>{summary.errorRows.toLocaleString()} rows with errors</li>
-                  <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
-                  <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>
-                </ul>
+                {failed ? (
+                  <ul className="flex flex-col gap-y-2 text-sm text-primary">
+                    <li className="text-red-700">{errors.length.toLocaleString()} {errors.length === 1 ? 'error' : 'errors'}</li>
+                    {errors.slice(0, MAX_LISTED_ERRORS).map((message, index) => (
+                      <li key={`${index}-${message}`} className="pl-4 text-red-700 break-words">{message}</li>
+                    ))}
+                    {errors.length > MAX_LISTED_ERRORS && (
+                      <li className="pl-4 text-secondary">… {(errors.length - MAX_LISTED_ERRORS).toLocaleString()} more (all of them are in the log)</li>
+                    )}
+                    <li>0 rows imported</li>
+                  </ul>
+                ) : (
+                  <ul className="flex flex-col gap-y-2 text-sm text-primary">
+                    <li>{summary.errorRows.toLocaleString()} rows with errors</li>
+                    <li>{summary.emptyRows.toLocaleString()} empty rows found</li>
+                    <li>{summary.duplicateRows.toLocaleString()} duplicate rows found</li>
+                    {summary.warnings !== undefined && (
+                      <li>{summary.warnings.toLocaleString()} {summary.warnings === 1 ? 'warning' : 'warnings'}</li>
+                    )}
+                  </ul>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 px-16 py-3 rounded-xl bg-brand-600 text-black font-medium transition-all hover:bg-brand-700"
-          >
-            Okay
-          </button>
+        <div className="mt-8 flex justify-center gap-3">
+          {failed ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-12 py-3 rounded-xl border bg-card hover:bg-gray-50 text-gray-700 font-medium transition-all"
+              >
+                Close
+              </button>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="px-12 py-3 rounded-xl bg-brand-600 text-black font-medium transition-all hover:bg-brand-700"
+                >
+                  Try again
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center justify-center gap-2 px-16 py-3 rounded-xl bg-brand-600 text-black font-medium transition-all hover:bg-brand-700"
+            >
+              Okay
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import { getStoredToken } from './clientService';
+import { downloadTextContent } from '../components/modals/importer/importDownload';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 const API = `${API_BASE_URL}/api/v1`;
@@ -221,6 +222,10 @@ export interface ImportJob {
   base_id?: string;
   base_title?: string;
   error?: string;
+  /** True when the import has an error log to download (rows were left out, there are warnings, or it failed) */
+  has_log?: boolean;
+  skipped_rows?: number;
+  warning_count?: number;
   /** For a completed import: what was created. For an invalid file: { problems: string[] } */
   result?: {
     tables?: number;
@@ -237,6 +242,22 @@ export interface ImportJob {
     duplicate_rows?: number;
     error_log?: string;
   };
+}
+
+/**
+ * Downloads the error log of an import job as a text file: the rows that were left out and the warnings of a finished
+ * import, or what went wrong in a failed one. Resolves when the browser has been handed the file.
+ */
+export async function downloadImportLog(jobId: string): Promise<void> {
+  const res = await authFetch(`/import-job/${jobId}/log`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message || body?.message || 'The error log could not be downloaded');
+  }
+  const text = await res.text();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const fileName = /filename="?([^";]+)"?/.exec(disposition)?.[1] || 'import_error_rows_report.txt';
+  downloadTextContent(text, fileName);
 }
 
 /**

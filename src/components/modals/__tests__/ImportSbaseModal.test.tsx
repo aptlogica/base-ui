@@ -111,7 +111,7 @@ describe('ImportSbaseModal runs imports in the background', () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it('the success popup shows what was created (no files, no notes), and Okay closes it', async () => {
+  it('the success popup shows what was created and the Data Quality counts, and Okay closes it', async () => {
     const onClose = vi.fn();
     const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={onClose} onImported={vi.fn()} />);
     pickAndStart(container);
@@ -123,11 +123,13 @@ describe('ImportSbaseModal runs imports in the background', () => {
     });
     for (const label of ['Tables', 'Fields', 'Views', 'Rows']) expect(screen.getByText(label)).toBeTruthy();
     expect(screen.getByText('1,200')).toBeTruthy();
-    // the files and the warnings are not shown
+    // the same Data Quality section as the import of a table from a CSV, with a line for the warnings
+    expect(screen.getByText('Data Quality')).toBeTruthy();
+    expect(screen.getByText('0 rows with errors')).toBeTruthy();
+    expect(screen.getByText('1 warning')).toBeTruthy();
     expect(screen.queryByText('Files')).toBeNull();
-    expect(screen.queryByText('Import Notes')).toBeNull();
-    expect(screen.queryByText('Data Quality')).toBeNull();
     expect(screen.queryByText('cover image was not imported')).toBeNull();
+    // no log came with the job, so there is nothing to view
     expect(screen.queryByText('View data import log')).toBeNull();
     fireEvent.click(screen.getByText('Okay'));
     expect(onClose).toHaveBeenCalled();
@@ -279,30 +281,32 @@ describe('ImportSbaseModal shows what a csv import skipped', () => {
 
     expect(await screen.findByText('Data Imported Successfully')).toBeTruthy();
     for (const label of ['Tables', 'Fields', 'Views', 'Rows']) expect(screen.getByText(label)).toBeTruthy();
-    // not the pattern of the old CSV import
-    expect(screen.queryByText('Data Quality')).toBeNull();
-    expect(screen.queryByText(/empty rows found/)).toBeNull();
-    expect(screen.queryByText(/View data import log/)).toBeNull();
+    // the Data Quality section of the import of a table from a CSV
+    expect(screen.getByText('Data Quality')).toBeTruthy();
+    expect(screen.getByText('2 rows with errors')).toBeTruthy();
+    expect(screen.getByText('3 empty rows found')).toBeTruthy();
+    expect(screen.getByText('1 duplicate rows found')).toBeTruthy();
 
-    expect(screen.getByText('2 rows were not imported.')).toBeTruthy();
-    fireEvent.click(screen.getByText(/Download error log/));
+    fireEvent.click(screen.getByText(/View data import log/));
     expect(download).toHaveBeenCalledTimes(1);
     expect(download.mock.calls[0][0]).toContain('Orders.csv, line 3');
     expect(download.mock.calls[0][1]).toMatch(/\.txt$/);
   });
 
-  it('says "1 row was" for one skipped row', async () => {
-    importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5, skipped_rows: 1, error_log: 'log' }));
+  it('a log with only warnings (no row was left out) still has the link', async () => {
+    importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5, warnings: ['a', 'b'], error_log: 'Import Issues Report\nWARNINGS:\n- a\n- b' }));
     startCsv();
-    expect(await screen.findByText('1 row was not imported.')).toBeTruthy();
+    expect(await screen.findByText('2 warnings')).toBeTruthy();
+    fireEvent.click(screen.getByText(/View data import log/));
+    expect(download.mock.calls[0][0]).toContain('WARNINGS:');
   });
 
   it('without an error there is no log and no notice', async () => {
     importMock.mockResolvedValue(finished({ tables: 1, fields: 2, rows: 5, empty_rows: 2, duplicate_rows: 1 }));
     startCsv();
     expect(await screen.findByText('Data Imported Successfully')).toBeTruthy();
-    expect(screen.queryByText(/not imported/)).toBeNull();
-    expect(screen.queryByText(/Download error log/)).toBeNull();
+    expect(screen.getByText('0 rows with errors')).toBeTruthy();
+    expect(screen.queryByText(/View data import log/)).toBeNull();
   });
 
   it('a Sereni Base import is as before', async () => {
@@ -346,5 +350,80 @@ describe('ImportSbaseModal in json format', () => {
     pickAndStart(container, 'Customers.json');
     expect(screen.getByText('Only .zip files are supported.')).toBeTruthy();
     expect(importMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ImportSbaseModal when the import fails', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    download.mockReset();
+  });
+
+  it('a file the server refuses at once shows the popup with one error, and the log is written in the browser', async () => {
+    importMock.mockRejectedValue(Object.assign(new Error('the zip has no base.sbase.json'), {}));
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Sales.sbase.zip');
+
+    expect(await screen.findByText('Import Failed')).toBeTruthy();
+    expect(screen.getByText('Your import of "Sales.sbase.zip" did not finish.')).toBeTruthy();
+    expect(screen.getByText('1 error')).toBeTruthy();
+    expect(screen.getByText('the zip has no base.sbase.json')).toBeTruthy();
+    expect(screen.getByText('0 rows imported')).toBeTruthy();
+
+    fireEvent.click(screen.getByText(/View data import log/));
+    expect(download).toHaveBeenCalledTimes(1);
+    const [text, name] = download.mock.calls[0];
+    expect(text).toContain('Import Issues Report');
+    expect(text).toContain('Format: Sereni Base      File: Sales.sbase.zip');
+    expect(text).toContain('ERROR:\nthe zip has no base.sbase.json');
+    expect(name).toMatch(/\.txt$/);
+  });
+
+  it('lists the first three problems and counts the rest, and the log has them all', async () => {
+    const problems = ['p1', 'p2', 'p3', 'p4', 'p5'];
+    importMock.mockRejectedValue(Object.assign(new Error('the base file is not valid'), { problems }));
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container, 'Shop.csv.zip');
+
+    expect(await screen.findByText('5 errors')).toBeTruthy();
+    for (const p of ['p1', 'p2', 'p3']) expect(screen.getByText(p)).toBeTruthy();
+    expect(screen.queryByText('p4')).toBeNull();
+    expect(screen.getByText('… 2 more (all of them are in the log)')).toBeTruthy();
+    fireEvent.click(screen.getByText(/View data import log/));
+    const text = download.mock.calls[0][0] as string;
+    expect(text).toContain('Format: CSV      File: Shop.csv.zip');
+    expect(text).toContain('PROBLEMS (5):');
+    expect(text).toContain('5. p5');
+  });
+
+  it('a job that failed brings its own log, which is the one downloaded', async () => {
+    importMock.mockResolvedValue({
+      id: 'j1', status: 'failed', progress: 10, error: 'the base file is not valid',
+      result: { problems: ['bad row'], error_log: 'LOG FROM THE SERVER' },
+    });
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    pickAndStart(container);
+    expect(await screen.findByText('Import Failed')).toBeTruthy();
+    expect(screen.getByText('1 error')).toBeTruthy();
+    expect(screen.getByText('bad row')).toBeTruthy();
+    fireEvent.click(screen.getByText(/View data import log/));
+    expect(download.mock.calls[0][0]).toBe('LOG FROM THE SERVER');
+  });
+
+  it('Try again goes back to the file picker, and Close closes the dialog', async () => {
+    importMock.mockRejectedValue(new Error('nope'));
+    const onClose = vi.fn();
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={onClose} onImported={vi.fn()} />);
+    pickAndStart(container);
+    await screen.findByText('Import Failed');
+
+    fireEvent.click(screen.getByText('Try again'));
+    expect(screen.getByText('Import Sereni Base')).toBeTruthy();
+    expect(screen.getByText('Import Base')).toBeTruthy();
+
+    pickAndStart(container);
+    await screen.findByText('Import Failed');
+    fireEvent.click(screen.getByText('Close'));
+    expect(onClose).toHaveBeenCalled();
   });
 });

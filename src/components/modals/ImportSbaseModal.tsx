@@ -4,11 +4,12 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useRef, useState } from 'react';
 import { useToast } from '../common/Toast';
-import { X, Upload, FileArchive, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Upload, FileArchive, Loader2 } from 'lucide-react';
 import { importBaseFromSbase, type ExportFormat, type ImportJob } from '../../service/baseExportService';
 import { isNameDuplicate, type ExistingItem } from '../../utils/nameValidation';
 import { InfoTip } from './InfoTip';
 import { ImportSuccessModal, type ImportSuccessSummary } from './importer/ImportSuccessModal';
+import { buildFailedImportLog } from './importer/importErrorLog';
 
 interface ImportSbaseModalProps {
   isOpen: boolean;
@@ -52,6 +53,8 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   const [job, setJob] = useState<ImportJob | null>(null);
   const [error, setError] = useState('');
   const [problems, setProblems] = useState<string[]>([]);
+  // the error log the server wrote for a failed job; an import refused at once has none, and the log is written here
+  const [serverLog, setServerLog] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const toast = useToast();
@@ -107,7 +110,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     const runId = ++runCounter.current;
     attachedRun.current = runId;
     const attached = () => attachedRun.current === runId;
-    setPhase('running'); setPercent(0); setError(''); setProblems([]);;
+    setPhase('running'); setPercent(0); setError(''); setProblems([]); setServerLog('');
     try {
       const finished = await importBaseFromSbase(
         workspaceId,
@@ -131,6 +134,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
         }
         setError(message);
         setProblems(finished.result?.problems || []);
+        setServerLog(finished.result?.error_log || '');
         setPhase('failed');
       }
     } catch (e: any) {
@@ -152,13 +156,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       totalRows: result?.rows ?? 0,
       columns: result?.fields ?? 0,
       tableTitle: job.base_title,
-      // a csv import skips the rows the database refuses: the popup is the same as for a Sereni Base import, and when
-      // rows were skipped it says so and offers the error log as a text file
+      // the rows the database refused (csv, xlsx, json), the blank and repeated rows of the files, and the warnings: the
+      // popup lists them as the one of a CSV table import does, and offers the error log as a text file
       errorRows: result?.skipped_rows ?? 0,
-      emptyRows: 0,
-      duplicateRows: 0,
+      emptyRows: result?.empty_rows ?? 0,
+      duplicateRows: result?.duplicate_rows ?? 0,
       emptyRowsSkipped: 0,
       duplicatesRemoved: 0,
+      warnings: result?.warnings?.length ?? 0,
       errorRowsFileContent: result?.error_log,
       stats: [
         { label: 'Tables', value: result?.tables ?? 0 },
@@ -166,9 +171,33 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
         { label: 'Views', value: result?.views ?? 0 },
         { label: 'Rows', value: result?.rows ?? 0 },
       ],
-      hideDataQuality: true,
     };
     return <ImportSuccessModal open summary={summary} onClose={close} />;
+  }
+
+  // When the import failed, the same popup shows what went wrong, with the log to download and a way to try again
+  if (phase === 'failed') {
+    const errors = problems.length > 0 ? problems : [error];
+    const summary: ImportSuccessSummary = {
+      variant: 'failed',
+      totalRows: 0,
+      columns: 0,
+      errorRows: 0,
+      emptyRows: 0,
+      duplicateRows: 0,
+      emptyRowsSkipped: 0,
+      duplicatesRemoved: 0,
+      subtitle: problems.length > 0 && error ? `${file?.name ? `${file.name}: ` : ''}${error}` : `Your import${file?.name ? ` of "${file.name}"` : ''} did not finish.`,
+      errors,
+      errorRowsFileContent: serverLog || buildFailedImportLog({ format, fileName: file?.name, message: error, problems }),
+      stats: [
+        { label: 'Tables', value: 0 },
+        { label: 'Fields', value: 0 },
+        { label: 'Views', value: 0 },
+        { label: 'Rows', value: 0 },
+      ],
+    };
+    return <ImportSuccessModal open summary={summary} onClose={close} onRetry={() => setPhase('pick')} />;
   }
 
   return (
@@ -297,20 +326,6 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
               </div>
             </div>
           )}
-
-          {phase === 'failed' && (
-            <div className="flex items-start gap-3 text-red-700">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{error}</p>
-                {problems.length > 0 && (
-                  <ul className="mt-2 text-sm list-disc pl-5 space-y-1 max-h-40 overflow-y-auto">
-                    {problems.map((p) => <li key={p}>{p}</li>)}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {phase === 'running' ? (
@@ -321,7 +336,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
         ) : (
         <div className="flex items-center justify-end gap-3 p-4 border-t shrink-0">
           <button type="button" onClick={close} className="px-10 py-2 rounded-xl border bg-card hover:bg-gray-50 text-gray-700">
-            {phase === 'pick' ? 'Cancel' : 'Close'}
+            Cancel
           </button>
           {phase === 'pick' && (
             <button
@@ -332,9 +347,6 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
             >
               Import Base
             </button>
-          )}
-          {phase === 'failed' && (
-            <button type="button" onClick={() => setPhase('pick')} className="px-10 py-2 rounded-xl btn-primary font-medium">Try again</button>
           )}
         </div>
         )}

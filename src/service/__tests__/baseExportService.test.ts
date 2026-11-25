@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../clientService', () => ({ getStoredToken: vi.fn(async () => 'token') }));
 
-import { exportBaseAsSbase, getExportDependencies, importBaseFromSbase } from '../baseExportService';
+import { downloadImportLog, exportBaseAsSbase, getExportDependencies, importBaseFromSbase } from '../baseExportService';
 
 const fetchMock = vi.fn();
 
@@ -165,5 +165,38 @@ describe('importBaseFromSbase', () => {
     expect(form.get('format')).toBeNull();
     expect(form.get('include_automations')).toBe('true');
     expect(form.get('include_system_columns')).toBe('true');
+  });
+});
+
+describe('downloadImportLog', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockReset();
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('fetches the log of the job as text and saves it under the name the server gives', async () => {
+    fetchMock.mockResolvedValue(new Response('Import Issues Report', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain', 'Content-Disposition': 'attachment; filename="Sales_import_error_rows_report.txt"' },
+    }));
+    const saved: string[] = [];
+    const create = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = create(tag);
+      if (tag === 'a') Object.defineProperty(el, 'download', { set: (v: string) => saved.push(v), get: () => saved[saved.length - 1] });
+      return el;
+    });
+    await downloadImportLog('j1');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/import-job/j1/log');
+    expect(saved).toEqual(['Sales_import_error_rows_report.txt']);
+  });
+
+  it('says so when the log is not there', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: { message: 'job not found' } }), { status: 404 }));
+    await expect(downloadImportLog('j1')).rejects.toThrow('job not found');
   });
 });

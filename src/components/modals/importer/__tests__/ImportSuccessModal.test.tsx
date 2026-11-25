@@ -226,3 +226,62 @@ describe('ImportSuccessModal', () => {
     });
   });
 });
+
+describe('ImportSuccessModal for a failed import and for warnings', () => {
+  const failedSummary = (overrides?: Partial<ImportSuccessSummary>): ImportSuccessSummary => ({
+    variant: 'failed',
+    totalRows: 0,
+    columns: 0,
+    errorRows: 0,
+    emptyRows: 0,
+    duplicateRows: 0,
+    emptyRowsSkipped: 0,
+    duplicatesRemoved: 0,
+    subtitle: 'Your import of "a.zip" did not finish.',
+    errors: ['the zip has no base.sbase.json'],
+    errorRowsFileContent: 'LOG',
+    ...overrides,
+  });
+
+  it('shows a red popup with the one error and Close and Try again', async () => {
+    const onClose = vi.fn();
+    const onRetry = vi.fn();
+    render(<ImportSuccessModal open summary={failedSummary()} onClose={onClose} onRetry={onRetry} />);
+    expect(screen.getByText('Import Failed')).toBeTruthy();
+    expect(screen.getByText('Your import of "a.zip" did not finish.')).toBeTruthy();
+    expect(screen.getByText('1 error')).toBeTruthy();
+    expect(screen.getByText('the zip has no base.sbase.json')).toBeTruthy();
+    expect(screen.getByText('0 rows imported')).toBeTruthy();
+    expect(screen.queryByText('Data Imported Successfully')).toBeNull();
+    expect(screen.queryByText('Okay')).toBeNull();
+    await userEvent.click(screen.getByText('Try again'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByText('Close'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists three errors and counts the others', () => {
+    const errors = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+    render(<ImportSuccessModal open summary={failedSummary({ errors })} onClose={vi.fn()} />);
+    expect(screen.getByText('6 errors')).toBeTruthy();
+    expect(screen.getByText('e3')).toBeTruthy();
+    expect(screen.queryByText('e4')).toBeNull();
+    expect(screen.getByText('… 3 more (all of them are in the log)')).toBeTruthy();
+  });
+
+  it('has no Try again button without a retry action, and no log link without a log', () => {
+    render(<ImportSuccessModal open summary={failedSummary({ errorRowsFileContent: undefined })} onClose={vi.fn()} />);
+    expect(screen.queryByText('Try again')).toBeNull();
+    expect(screen.queryByText(/View data import log/)).toBeNull();
+  });
+
+  it('a finished import lists the warnings in Data Quality, in the singular for one', () => {
+    const { rerender } = render(<ImportSuccessModal open summary={createSummary({ warnings: 1 })} onClose={vi.fn()} />);
+    expect(screen.getByText('1 warning')).toBeTruthy();
+    rerender(<ImportSuccessModal open summary={createSummary({ warnings: 3 })} onClose={vi.fn()} />);
+    expect(screen.getByText('3 warnings')).toBeTruthy();
+    // a CSV table import does not set warnings: no such line
+    rerender(<ImportSuccessModal open summary={createSummary()} onClose={vi.fn()} />);
+    expect(screen.queryByText(/warning/)).toBeNull();
+  });
+});
