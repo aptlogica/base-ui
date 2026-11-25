@@ -100,7 +100,7 @@ const CREATE_TABLE: DocEndpoint = {
     {
       name: 'columns[].constraints',
       in: 'body',
-      description: 'Optional rules for the column: default, id_generation, unique, check. See Add a column.',
+      description: 'Optional rules for the column: unique, check. See Add a column. default and id_generation go in meta.',
     },
     IDEMPOTENCY,
   ],
@@ -401,7 +401,7 @@ const CREATE_TABLE: DocEndpoint = {
     },
     {
       title: 'Columns with constraints: unique, default, id generation, check',
-      description: 'Each column takes the constraints of Add a column. The columns are added one after the other, in the order sent.',
+      description: 'Each column takes the settings of Add a column: default and id_generation in meta, unique and check in constraints. The columns are added one after the other, in the order sent.',
       method: 'POST',
       path: '/tables',
       body: {
@@ -410,10 +410,10 @@ const CREATE_TABLE: DocEndpoint = {
           {
             title: 'Product ID',
             uidt: 'uuid',
-            constraints: { id_generation: { mode: 'auto' } },
+            meta: { id_generation: { mode: 'auto' } },
           },
           { title: 'SKU', uidt: 'text', constraints: { unique: true } },
-          { title: 'Status', uidt: 'text', constraints: { default: 'draft' } },
+          { title: 'Status', uidt: 'text', meta: { default: 'draft' } },
           {
             title: 'Price',
             uidt: 'decimal',
@@ -636,7 +636,8 @@ const CREATE_TABLE: DocEndpoint = {
           {
             title: 'Region',
             uidt: 'text',
-            constraints: { default: 'EU', unique: true },
+            meta: { default: 'EU' },
+            constraints: { unique: true },
           },
         ],
       },
@@ -646,7 +647,7 @@ const CREATE_TABLE: DocEndpoint = {
         'This column has a UNIQUE constraint. Its default value may be duplicated when inserting multiple rows. Remove the default value or the UNIQUE constraint to avoid duplicate-value errors.',
         [
           {
-            field: 'columns[1].constraints.default',
+            field: 'columns[1].meta.default',
             issue: "can't be combined with unique",
           },
         ]
@@ -919,17 +920,17 @@ const CREATE_COLUMN: DocEndpoint = {
       name: 'meta',
       in: 'body',
       description:
-        'Optional settings that belong to the type: options (select, multiSelect), ratingMax (rating), precision (decimal), emailValid / phoneValid / urlValid (turn the format check on or off), relation (links), link_column_id and lookup_column_id (lookup).',
+        'Optional settings that belong to the type: options (select, multiSelect), ratingMax (rating), precision (decimal), emailValid / phoneValid / urlValid (turn the format check on or off), relation (links), link_column_id and lookup_column_id (lookup), and the two settings below: default and id_generation.',
     },
     {
-      name: 'constraints.default',
+      name: 'meta.default',
       in: 'body',
-      description: 'The value a new record gets when none is sent. Not together with unique or check.',
+      description: 'The value a new record gets when none is sent. Not together with constraints.unique or constraints.check. Not for links and lookups. The column shows it as meta.defaultValue.',
     },
     {
-      name: 'constraints.id_generation',
+      name: 'meta.id_generation',
       in: 'body',
-      description: 'uuid columns only: {"mode": "auto" | "manual", "version": optional}. auto: the system creates the value and nobody can write it.',
+      description: 'uuid columns only: {"mode": "auto" | "manual", "version": optional}. auto (the default): the system creates the value and nobody can write it. manual: people enter a valid UUID.',
     },
     {
       name: 'constraints.unique',
@@ -939,16 +940,26 @@ const CREATE_COLUMN: DocEndpoint = {
     {
       name: 'constraints.check',
       in: 'body',
-      description: '{"category": optional, "where": condition}. Every record must satisfy the condition. It can use this column only.',
+      description: '{"category": optional, "where": condition}. Every record must satisfy the condition. It can use this column only. category is for example text or number_date; default custom.',
+    },
+    {
+      name: 'constraints.check.where',
+      in: 'body',
+      description:
+        'The condition, as JSON. A group is an object with exactly one key, all (every item true), any (at least one true) or none (no item true), holding a non-empty array. Each item is a condition {"column", "op", "value"} or another group. Groups nest up to 5 deep, with at most 50 conditions. See the notes for the operators.',
     },
     IDEMPOTENCY,
   ],
   notes: [
     "uidt is the app's type: text, longText, number, decimal, currency, percent, rating, boolean, date, datetime, time, duration, year, email, phoneNumber, url, select, multiSelect, json, uuid, links, lookup.",
     'select and multiSelect take their choices in meta.options. links take meta.relation: {"with": <table name or ID>, "type": "has-many" | "many-to-many" | "one-to-one"}. lookup takes meta.link_column_id (a links column of this table) and meta.lookup_column_id (a column of the linked table).',
-    'constraints: default (not together with unique or check), id_generation (uuid columns), unique (not for links, lookups, JSON, multi select, rating or system columns) and check (a structured condition on this column). Links and lookups take no constraints.',
+    'meta settings: default (not together with unique or check) and id_generation (uuid columns). constraints: unique (not for links, lookups, JSON, multi select, rating or system columns) and check (a structured condition on this column). Links and lookups take no default, id_generation or constraints. default and id_generation under constraints answer 422: they are column settings, so they go in meta.',
     'formula, attachment and user columns answer 422 type_not_supported.',
-    'A check condition is JSON, never SQL: {"all" | "any" | "none": [{"column", "op", "value"}, ...]}. Operators: eq, neq, gt, gte, lt, lte, in, contains, starts_with, ends_with, is_null, is_not_null, not_empty. The server turns it into SQL. Existing data must already pass.',
+    'A check condition is JSON, never SQL: {"all" | "any" | "none": [{"column", "op", "value"}, ...]}. The server turns it into the SQL inside CHECK (...): all is AND, any is OR, none is NOT (a OR b). Existing data must already pass, otherwise nothing is added and the answer is 422.',
+    'A condition has column (a name or fld_ ID), op and, for most operators, value. No other keys. The column can be this column only; for conditions over several columns use Add a constraint. Links and lookups can not be used.',
+    'Operators that work on any column: eq, neq, gt, gte, lt, lte (value: a string, number or true/false), in (value: an array of 1 to 100 such values), is_null and is_not_null (no value).',
+    'Operators for text columns only: contains, starts_with, ends_with (value: a string; %, _ and \\ match themselves) and not_empty (no value; true when the value is not null and not blank).',
+    'is_null, is_not_null and not_empty refuse a value; every other operator requires one. A wrong part is named by its path in details, for example constraints.check.where.all[1].op.',
   ],
   examples: [
     {
@@ -1030,7 +1041,7 @@ const CREATE_COLUMN: DocEndpoint = {
       title: 'A checkbox that starts unchecked',
       method: 'POST',
       path: '/tables/Orders/columns',
-      body: { title: 'Paid', uidt: 'boolean', constraints: { default: false } },
+      body: { title: 'Paid', uidt: 'boolean', meta: { default: false } },
       status: 201,
       response: ok({
         id: fieldId(206),
@@ -1097,8 +1108,8 @@ const CREATE_COLUMN: DocEndpoint = {
         uidt: 'select',
         meta: {
           options: [{ option: 'New' }, { option: 'Packed' }, { option: 'Sent' }],
+          default: 'New',
         },
-        constraints: { default: 'New' },
       },
       status: 201,
       response: ok({
@@ -1120,7 +1131,7 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Public ID',
         uidt: 'uuid',
-        constraints: { id_generation: { mode: 'auto', version: 'v4' } },
+        meta: { id_generation: { mode: 'auto', version: 'v4' } },
       },
       status: 201,
       response: ok({
@@ -1138,7 +1149,8 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Partner ID',
         uidt: 'uuid',
-        constraints: { id_generation: { mode: 'manual' }, unique: true },
+        meta: { id_generation: { mode: 'manual' } },
+        constraints: { unique: true },
       },
       status: 201,
       response: ok({
@@ -1156,7 +1168,7 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Currency code',
         uidt: 'text',
-        constraints: { default: 'EUR' },
+        meta: { default: 'EUR' },
       },
       status: 201,
       response: ok({
@@ -1386,7 +1398,21 @@ const CREATE_COLUMN: DocEndpoint = {
       response: fail('validation_failed', 'Some fields are not valid.', [
         {
           field: 'body.constraints.required',
-          issue: 'unknown constraint; allowed: default, id_generation, unique, check',
+          issue: 'unknown constraint; allowed: unique, check',
+        },
+      ]),
+    },
+    {
+      title: 'default or id_generation under constraints',
+      description: 'They are column settings: give them in meta.',
+      method: 'POST',
+      path: '/tables/Orders/columns',
+      body: { title: 'Code', uidt: 'text', constraints: { default: 'n/a' } },
+      status: 422,
+      response: fail('validation_failed', 'Some fields are not valid.', [
+        {
+          field: 'body.constraints.default',
+          issue: 'is a column setting: give it in meta, not in constraints',
         },
       ]),
     },
@@ -1405,12 +1431,12 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Code',
         uidt: 'text',
-        constraints: { id_generation: { mode: 'auto' } },
+        meta: { id_generation: { mode: 'auto' } },
       },
       status: 422,
       response: fail('validation_failed', 'Some fields are not valid.', [
         {
-          field: 'constraints.id_generation',
+          field: 'meta.id_generation',
           issue: 'only uuid columns can generate IDs',
         },
       ]),
@@ -1422,8 +1448,8 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Amount',
         uidt: 'number',
+        meta: { default: 0 },
         constraints: {
-          default: 0,
           check: {
             where: { all: [{ column: 'Amount', op: 'gte', value: 0 }] },
           },
@@ -1435,7 +1461,7 @@ const CREATE_COLUMN: DocEndpoint = {
         'This column has a CHECK constraint. Its default value may fail the check rule. Remove the default value or the CHECK constraint to avoid check-violation errors.',
         [
           {
-            field: 'constraints.default',
+            field: 'meta.default',
             issue: "can't be combined with check",
           },
         ]
@@ -1657,7 +1683,8 @@ const CREATE_COLUMN: DocEndpoint = {
       body: {
         title: 'Code',
         uidt: 'text',
-        constraints: { default: 'n/a', unique: true },
+        meta: { default: 'n/a' },
+        constraints: { unique: true },
       },
       status: 422,
       response: fail(
@@ -1665,7 +1692,7 @@ const CREATE_COLUMN: DocEndpoint = {
         'This column has a UNIQUE constraint. Its default value may be duplicated when inserting multiple rows. Remove the default value or the UNIQUE constraint to avoid duplicate-value errors.',
         [
           {
-            field: 'constraints.default',
+            field: 'meta.default',
             issue: "can't be combined with unique",
           },
         ]
@@ -1722,14 +1749,14 @@ const UPDATE_COLUMN: DocEndpoint = {
       description: 'Settings of the type. They are merged into the current ones: send only what changes (for example the full options list of a select).',
     },
     {
-      name: 'constraints.default',
+      name: 'meta.default',
       in: 'body',
-      description: 'Sets the default value. null removes it.',
+      description: 'Sets the default value. null removes it. Not together with a unique or check constraint.',
     },
     {
-      name: 'constraints.id_generation',
+      name: 'meta.id_generation',
       in: 'body',
-      description: 'uuid columns: {"mode", "version", "backfill"}. backfill: true fills the empty cells of existing records.',
+      description: 'uuid columns: {"mode", "version", "backfill"}. backfill: true fills the empty cells of existing records; it is an action and is not stored.',
     },
     {
       name: 'constraints.unique',
@@ -1739,7 +1766,7 @@ const UPDATE_COLUMN: DocEndpoint = {
     {
       name: 'constraints.check',
       in: 'body',
-      description: 'Adds a check constraint with a condition over this column.',
+      description: 'Adds a check constraint with a condition over this column: {"category": optional, "where": condition}. The condition works as in Add a column: all / any / none groups of {"column", "op", "value"}, this column only. Existing data must already pass.',
     },
     {
       name: 'empty_first',
@@ -1748,7 +1775,7 @@ const UPDATE_COLUMN: DocEndpoint = {
     },
   ],
   notes: [
-    "meta is merged into the column's current meta. default and id_generation go under constraints, as when adding a column. id_generation.backfill fills the empty cells of a uuid column that becomes auto-generated.",
+    "meta is merged into the column's current meta. default and id_generation are part of meta, as when adding a column (they are not merged raw: default is stored as meta.defaultValue). unique and check go under constraints. id_generation.backfill fills the empty cells of a uuid column that becomes auto-generated.",
     'A type change works as in the app: the new type must be allowed for the current one, otherwise the answer is 409 conversion_not_allowed and lists the allowed types. Values that cannot be cast become empty.',
     'dry_run reports filled_values and, for number targets, values_lost (exact: true). For other targets exact is false and filled_values is the most that can be lost.',
     'A type change is refused when a check constraint uses the column, or when the new type cannot be part of a unique key.',
@@ -1831,7 +1858,7 @@ const UPDATE_COLUMN: DocEndpoint = {
       title: 'Set a default value',
       method: 'PATCH',
       path: '/tables/Orders/columns/Currency%20code',
-      body: { constraints: { default: 'USD' } },
+      body: { meta: { default: 'USD' } },
       status: 200,
       response: ok({
         id: fieldId(214),
@@ -1845,7 +1872,7 @@ const UPDATE_COLUMN: DocEndpoint = {
       title: 'Remove the default value',
       method: 'PATCH',
       path: '/tables/Orders/columns/Currency%20code',
-      body: { constraints: { default: null } },
+      body: { meta: { default: null } },
       status: 200,
       response: ok({
         id: fieldId(214),
@@ -1859,7 +1886,7 @@ const UPDATE_COLUMN: DocEndpoint = {
       method: 'PATCH',
       path: '/tables/Orders/columns/Public%20ID',
       body: {
-        constraints: { id_generation: { mode: 'auto', backfill: true } },
+        meta: { id_generation: { mode: 'auto', backfill: true } },
       },
       status: 200,
       response: ok({
@@ -2052,11 +2079,11 @@ const UPDATE_COLUMN: DocEndpoint = {
       title: 'id_generation on a column that is not uuid',
       method: 'PATCH',
       path: '/tables/Orders/columns/Email',
-      body: { constraints: { id_generation: { mode: 'auto' } } },
+      body: { meta: { id_generation: { mode: 'auto' } } },
       status: 422,
       response: fail('validation_failed', 'Some fields are not valid.', [
         {
-          field: 'constraints.id_generation',
+          field: 'meta.id_generation',
           issue: 'only uuid columns can generate IDs',
         },
       ]),
@@ -2479,7 +2506,8 @@ const CREATE_CONSTRAINT: DocEndpoint = {
     {
       name: 'check.where',
       in: 'body',
-      description: 'Required for check. The condition: {"all" | "any" | "none": [{"column", "op", "value"}, ...]}, groups may nest.',
+      description:
+        'Required for check. The condition, as JSON: a group with exactly one key, all (every item true), any (at least one true) or none (no item true), holding a non-empty array of conditions {"column", "op", "value"} or nested groups. Unlike the check of a single column, it can use several columns.',
     },
     {
       name: 'check.category',
@@ -2490,7 +2518,10 @@ const CREATE_CONSTRAINT: DocEndpoint = {
   ],
   notes: [
     'unique needs columns. check needs check.where, a condition tree like the where filter of Find records, with {"column", "op", "value"} conditions. The columns the condition uses become the constraint\'s columns when you do not name any.',
-    'Conditions are compiled on the server: column names must exist in the table, values become escaped literals, and SQL text is never accepted. At most 50 conditions, nested 5 deep.',
+    'Conditions are compiled on the server: column names must exist in the table, values become escaped literals, and SQL text is never accepted. At most 50 conditions, nested 5 deep. all is AND, any is OR, none is NOT (a OR b).',
+    'A condition has column (a name or fld_ ID), op and, for most operators, value; no other keys. Links and lookups can not be used.',
+    'Operators for any column: eq, neq, gt, gte, lt, lte (value: a string, number or true/false), in (value: an array of 1 to 100 such values), is_null and is_not_null (no value). For text columns only: contains, starts_with, ends_with (value: a string; %, _ and \\ match themselves) and not_empty (no value; not null and not blank).',
+    'is_null, is_not_null and not_empty refuse a value; every other operator requires one. Existing records must already pass, otherwise nothing is added and the answer is 422. A wrong part is named by its path in details, for example check.where.all[1].op.',
     "When a record write later breaks a constraint, the records endpoints answer 422 with the constraint's title.",
   ],
   examples: [
@@ -3674,7 +3705,7 @@ export const COLUMN_TYPES: ColumnTypeDoc[] = [
     example: {
       title: 'Paid',
       uidt: 'boolean',
-      constraints: { default: false },
+      meta: { default: false },
     },
     constraints: 'default, check',
     changeTo: 'text, longText, number (0 or 1), select',
@@ -3799,11 +3830,11 @@ export const COLUMN_TYPES: ColumnTypeDoc[] = [
     uidt: 'uuid',
     apiType: 'uuid',
     purpose: 'A UUID: identifiers made by the system or supplied by people.',
-    meta: 'None in meta. Choose who fills it with constraints.id_generation: {"mode": "auto"} (the system creates every value; read-only) or {"mode": "manual"} (people enter a valid UUID).',
+    meta: 'None in meta. Choose who fills it with meta.id_generation: {"mode": "auto"} (the system creates every value; read-only) or {"mode": "manual"} (people enter a valid UUID).',
     example: {
       title: 'Public ID',
       uidt: 'uuid',
-      constraints: { id_generation: { mode: 'auto' } },
+      meta: { id_generation: { mode: 'auto' } },
     },
     constraints: 'id_generation, default, unique, check',
     changeTo: 'text, longText',

@@ -315,11 +315,12 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ baseId, onBack, bac
             <div className="space-y-3">
               <SubHeading>Constraints and type changes</SubHeading>
               <Text>
-                Constraints go in <InlineCode>constraints</InlineCode> of Add a column or Change a column. A column can be changed to the types listed;
-                values that cannot be converted become empty (preview it with <InlineCode>?dry_run=true</InlineCode>).
+                <InlineCode>default</InlineCode> and <InlineCode>id_generation</InlineCode> go in <InlineCode>meta</InlineCode>;{' '}
+                <InlineCode>unique</InlineCode> and <InlineCode>check</InlineCode> go in <InlineCode>constraints</InlineCode>, in Add a column or Change a column.
+                A column can be changed to the types listed; values that cannot be converted become empty (preview it with <InlineCode>?dry_run=true</InlineCode>).
               </Text>
               <DocTable
-                head={['uidt', 'Constraints', 'Can be changed to']}
+                head={['uidt', 'Settings and constraints', 'Can be changed to']}
                 rows={COLUMN_TYPES.map((t) => [<InlineCode key="u">{t.uidt}</InlineCode>, t.constraints, t.changeTo])}
               />
             </div>
