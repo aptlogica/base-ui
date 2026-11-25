@@ -12,16 +12,8 @@ vi.mock('../../components/modals/ExportSbaseModal', () => ({
     <button onClick={() => onExport({ includeData: true })}>{`start export ${format ?? ''}`.trim()}</button>
   ),
 }));
-vi.mock('../../components/modals/ExportProgressModal', () => ({
-  ExportProgressModal: ({ state, baseTitle, onClose }: { state: string; baseTitle: string; onClose: () => void }) => (
-    <div>
-      <span>{`progress ${baseTitle} ${state}`}</span>
-      <button onClick={onClose}>close progress</button>
-    </div>
-  ),
-}));
-
 import { useBaseExport } from '../useBaseExport';
+import { JOBS_FLY_EVENT } from '../../service/jobsEvents';
 
 const Host = () => {
   const { exportBase, exportProgressModal } = useBaseExport();
@@ -54,65 +46,54 @@ describe('useBaseExport runs exports in the background', () => {
     fireEvent.click(screen.getByText('start export sbase'));
   };
 
-  it('closing a running export frees the way for another one', () => {
-    render(<Host />);
-    startExport('export first');
-    expect(screen.getByText('progress First running')).toBeTruthy();
-
-    fireEvent.click(screen.getByText('close progress'));
-    expect(screen.queryByText('progress First running')).toBeNull();
-
-    startExport('export second');
-    expect(exportMock).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('progress Second running')).toBeTruthy();
+  it('starting an export shows no progress dialog: an icon flies to the Jobs button instead', () => {
+    const flew = vi.fn();
+    window.addEventListener(JOBS_FLY_EVENT, flew);
+    try {
+      render(<Host />);
+      startExport('export first');
+      expect(exportMock).toHaveBeenCalledTimes(1);
+      expect(flew).toHaveBeenCalledTimes(1);
+      expect((flew.mock.calls[0][0] as CustomEvent).detail.kind).toBe('export');
+      expect(screen.queryByText(/progress/)).toBeNull();
+    } finally {
+      window.removeEventListener(JOBS_FLY_EVENT, flew);
+    }
   });
 
-  it('an export that was closed still downloads and reports with a message', async () => {
+  it('another export can be started while the first one runs', () => {
     render(<Host />);
     startExport('export first');
-    fireEvent.click(screen.getByText('close progress'));
+    startExport('export second');
+    expect(exportMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('a finished export reports with a message', async () => {
+    render(<Host />);
+    startExport('export first');
     await act(async () => runs[0].resolve());
     expect(toast.success).toHaveBeenCalledWith('Export of “First” is ready. The download has started.');
   });
 
-  it('a closed export that fails is reported as an error', async () => {
+  it('a failed export is reported as an error', async () => {
     render(<Host />);
     startExport('export first');
-    fireEvent.click(screen.getByText('close progress'));
     await act(async () => runs[0].reject(new Error('boom')));
     expect(toast.error).toHaveBeenCalledWith('Export of “First” failed: boom');
-  });
-
-  it('the end of a closed export does not change the dialog of the next one', async () => {
-    render(<Host />);
-    startExport('export first');
-    fireEvent.click(screen.getByText('close progress'));
-    startExport('export second');
-    await act(async () => runs[0].resolve());
-    expect(screen.getByText('progress Second running')).toBeTruthy();
-    expect(screen.queryByText('progress First done')).toBeNull();
-  });
-
-  it('an export whose dialog stays open shows its own result', async () => {
-    render(<Host />);
-    startExport('export first');
-    await act(async () => runs[0].resolve());
-    expect(screen.getByText('progress First done')).toBeTruthy();
-    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('CSV opens the same dialog in csv format, and the export runs with that format', () => {
     render(<Host />);
     fireEvent.click(screen.getByText('export csv'));
     fireEvent.click(screen.getByText('start export csv'));
-    expect(exportMock).toHaveBeenCalledWith('b3', expect.objectContaining({ format: 'csv' }), expect.any(Function));
+    expect(exportMock).toHaveBeenCalledWith('b3', expect.objectContaining({ format: 'csv' }));
   });
 
   it('Excel opens the same dialog in xlsx format, and the export runs with that format', () => {
     render(<Host />);
     fireEvent.click(screen.getByText('export excel'));
     fireEvent.click(screen.getByText('start export xlsx'));
-    expect(exportMock).toHaveBeenCalledWith('b4', expect.objectContaining({ format: 'xlsx' }), expect.any(Function));
+    expect(exportMock).toHaveBeenCalledWith('b4', expect.objectContaining({ format: 'xlsx' }));
   });
 
   it('JSON opens the same dialog in json format, and the export runs with that format', () => {
@@ -120,6 +101,6 @@ describe('useBaseExport runs exports in the background', () => {
     fireEvent.click(screen.getByText('export json'));
     expect(toast.info).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('start export json'));
-    expect(exportMock).toHaveBeenCalledWith('b5', expect.objectContaining({ format: 'json' }), expect.any(Function));
+    expect(exportMock).toHaveBeenCalledWith('b5', expect.objectContaining({ format: 'json' }));
   });
 });

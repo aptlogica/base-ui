@@ -4,6 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { getStoredToken } from './clientService';
 import { downloadTextContent } from '../components/modals/importer/importDownload';
+import { requestJobsRefresh } from './jobsEvents';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 const API = `${API_BASE_URL}/api/v1`;
@@ -17,7 +18,7 @@ export interface ExportJob {
   error?: string;
 }
 
-async function authFetch(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+export async function authFetch(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
   const token = await getStoredToken();
   return fetch(`${API}${path}`, {
     ...init,
@@ -37,7 +38,7 @@ async function readJob(res: Response): Promise<ExportJob> {
   return (body?.data ?? body) as ExportJob;
 }
 
-function saveBlob(blob: Blob, fileName: string) {
+export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -196,6 +197,7 @@ export async function exportBaseAsSbase(
   }
 
   let job = await readJob(initialRes);
+  requestJobsRefresh(); // the Jobs panel shows the new job at once
   onProgress?.(job.progress ?? 0);
 
   while (job.status === 'queued' || job.status === 'running') {
@@ -242,6 +244,16 @@ export interface ImportJob {
     duplicate_rows?: number;
     error_log?: string;
   };
+}
+
+/** Downloads the file of a finished export job (the Jobs panel's Download). */
+export async function downloadExportJob(jobId: string, fileName?: string): Promise<void> {
+  const res = await authFetch(`/export-job/${jobId}/download`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message || body?.message || 'Could not download the export');
+  }
+  saveBlob(await res.blob(), fileName || 'export.zip');
 }
 
 /**
@@ -303,6 +315,7 @@ export async function importBaseFromSbase(
     throw Object.assign(new Error(message), { problems: Array.isArray(problems) ? problems : undefined });
   }
   let job = (body?.data ?? body) as ImportJob;
+  requestJobsRefresh(); // the Jobs panel shows the new job at once
   onProgress?.(job.progress ?? 0);
 
   while (job.status === 'queued' || job.status === 'running') {

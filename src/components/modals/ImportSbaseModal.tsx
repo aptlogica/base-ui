@@ -4,12 +4,13 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useRef, useState } from 'react';
 import { useToast } from '../common/Toast';
-import { X, Upload, FileArchive, Loader2 } from 'lucide-react';
+import { X, Minus, Upload, FileArchive, Loader2 } from 'lucide-react';
 import { importBaseFromSbase, type ExportFormat, type ImportJob } from '../../service/baseExportService';
 import { isNameDuplicate, type ExistingItem } from '../../utils/nameValidation';
 import { InfoTip } from './InfoTip';
 import { ImportSuccessModal, type ImportSuccessSummary } from './importer/ImportSuccessModal';
 import { buildFailedImportLog } from './importer/importErrorLog';
+import { announceJobInBackground } from '../../service/jobsEvents';
 
 interface ImportSbaseModalProps {
   isOpen: boolean;
@@ -81,6 +82,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   const close = () => {
     if (phase === 'running') {
       attachedRun.current = null;
+      announceJobInBackground('import');
       resetForm();
       onClose();
       return;
@@ -208,8 +210,8 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
             <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}</h2>
             <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files.' : isXlsx ? 'Create a new base from an .xlsx file or a .zip of it.' : isJson ? 'Create a new base from .json files or a .zip of them.' : 'Create a new base from a .sbase.zip file.'}</p>
           </div>
-          <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label="Close">
-            <X className="text-gray-400 h-5 w-5" />
+          <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label={phase === 'running' ? 'Minimize' : 'Close'} title={phase === 'running' ? 'Minimize' : undefined}>
+            {phase === 'running' ? <Minus className="text-gray-400 h-5 w-5" /> : <X className="text-gray-400 h-5 w-5" />}
           </button>
         </div>
 

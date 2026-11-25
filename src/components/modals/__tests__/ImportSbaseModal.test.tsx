@@ -11,6 +11,7 @@ const { download } = vi.hoisted(() => ({ download: vi.fn() }));
 vi.mock('../importer/importDownload', () => ({ downloadTextContent: download, downloadLinkedFile: vi.fn() }));
 
 import { ImportSbaseModal } from '../ImportSbaseModal';
+import { JOBS_FLY_EVENT } from '../../../service/jobsEvents';
 
 type Resolve = (job: unknown) => void;
 const resolvers: Resolve[] = [];
@@ -46,7 +47,7 @@ describe('ImportSbaseModal runs imports in the background', () => {
     const onClose = vi.fn();
     const { container, rerender } = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={onClose} onImported={vi.fn()} />);
     pickAndStart(container);
-    fireEvent.click(screen.getByLabelText('Close'));
+    fireEvent.click(screen.getByLabelText('Minimize'));
     expect(onClose).toHaveBeenCalled();
 
     // the parent hides the dialog and shows it again for the next import
@@ -64,7 +65,7 @@ describe('ImportSbaseModal runs imports in the background', () => {
   it('an import that was closed still reports its result with a message and refreshes the list', async () => {
     const { container, rerender, onImported } = open();
     pickAndStart(container);
-    fireEvent.click(screen.getByLabelText('Close'));
+    fireEvent.click(screen.getByLabelText('Minimize'));
     rerender(<ImportSbaseModal isOpen={false} workspaceId="ws" onClose={vi.fn()} onImported={onImported} />);
 
     await act(async () => {
@@ -77,7 +78,7 @@ describe('ImportSbaseModal runs imports in the background', () => {
   it('a closed import that fails is reported as an error', async () => {
     const { container, rerender } = open();
     pickAndStart(container);
-    fireEvent.click(screen.getByLabelText('Close'));
+    fireEvent.click(screen.getByLabelText('Minimize'));
     rerender(<ImportSbaseModal isOpen={false} workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
 
     await act(async () => {
@@ -89,7 +90,7 @@ describe('ImportSbaseModal runs imports in the background', () => {
   it('the result of a closed import never changes the dialog of the next one', async () => {
     const { container } = open();
     pickAndStart(container);
-    fireEvent.click(screen.getByLabelText('Close'));
+    fireEvent.click(screen.getByLabelText('Minimize'));
     pickAndStart(container, 'b.sbase.zip');
     // the first import finishes while the second is shown
     await act(async () => {
@@ -425,5 +426,31 @@ describe('ImportSbaseModal when the import fails', () => {
     await screen.findByText('Import Failed');
     fireEvent.click(screen.getByText('Close'));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('ImportSbaseModal tells the Jobs icon when it is closed on a running import', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    importMock.mockImplementation(() => new Promise(() => {}));
+  });
+
+  it('closing a running import sends the event; closing the picker does not', () => {
+    const flew = vi.fn();
+    window.addEventListener(JOBS_FLY_EVENT, flew);
+    try {
+      const picker = render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(flew).not.toHaveBeenCalled();
+      picker.unmount();
+
+      const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+      pickAndStart(container, 'a.csv.zip');
+      fireEvent.click(screen.getByLabelText('Minimize'));
+      expect(flew).toHaveBeenCalledTimes(1);
+      expect((flew.mock.calls[0][0] as CustomEvent).detail.kind).toBe('import');
+    } finally {
+      window.removeEventListener(JOBS_FLY_EVENT, flew);
+    }
   });
 });

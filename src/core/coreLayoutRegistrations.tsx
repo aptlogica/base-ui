@@ -8,6 +8,7 @@ import HeaderLogo from '../components/common/HeaderLogo';
 import HeaderWorkspaceDropdown from '../components/common/HeaderWorkspaceDropdown';
 import AdministratorSettingsButton from '../components/common/AdministratorSettingsButton';
 import HeaderMembers from '../components/common/HeaderMembers';
+import JobsButton from '../components/jobs/JobsButton';
 import UserDropdown from '../components/common/UserDropdown';
 import HomePage from '../pages/HomePage';
 
@@ -46,6 +47,13 @@ export const registerCoreLayoutComponents = (api: PluginAPI, config: any = {}) =
     id: 'header-administrator-settings',
     order: 1,
     render: () => <AdministratorSettingsButton />
+  });
+
+  // The Jobs icon, on the left of the settings icon; it shows on the home page only
+  api.registerExtension('layout:header', {
+    id: 'header-jobs',
+    order: 0.8,
+    render: () => <JobsButton />
   });
 
   api.registerExtension('layout:header', {
