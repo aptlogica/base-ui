@@ -36,6 +36,7 @@ import {
   endpointSections,
   sectionDomId,
 } from './ApiDocsBlocks';
+import { COLUMN_TYPES, COLUMN_TYPES_NOT_ALLOWED } from './apiDocsManagement';
 import type { SnippetLanguage } from './apiDocsSnippets';
 
 interface NavItem {
@@ -65,6 +66,7 @@ const NAV: { title: string; items: NavItem[] }[] = [
     title: 'Reference',
     items: [
       { id: 'field-values', label: 'Field values' },
+      { id: 'column-types', label: 'Column types' },
       { id: 'safe-retries', label: 'Safe retries' },
       { id: 'errors', label: 'Errors' },
       { id: 'limits', label: 'Limits' },
@@ -289,6 +291,53 @@ const ApiDocsView: React.FC<Readonly<ApiDocsViewProps>> = ({ baseId, onBack, bac
               <Bullet>A single user, created_by and last_modified_by field filters like text; a user field holding several users takes contains (one user ID) and is_null. created_time and last_modified_time filter like date_time (RFC 3339 with a time zone).</Bullet>
               <Bullet>Lookup fields filter through their link (a record matches when one of its linked records does) but can&apos;t be sorted by. Formula fields aren&apos;t in the API yet. Attachment and json fields can&apos;t be filtered.</Bullet>
               <Bullet>search looks in text, long_text, email, url, phone_number and single_select fields.</Bullet>
+            </Bullets>
+          </>
+        );
+      case 'column-types':
+        return (
+          <>
+            <Text>
+              The <InlineCode>uidt</InlineCode> of a column decides what it holds. This is every type you can add through the API, the{' '}
+              <InlineCode>meta</InlineCode> it needs when you add it yourself, and the types that only the SereniBase app can create. What to send in
+              records is under Field values.
+            </Text>
+            <DocTable
+              head={['uidt', 'Shown as', 'Used for', 'meta to send', 'Body to add it']}
+              rows={COLUMN_TYPES.map((t) => [
+                <InlineCode key="u">{t.uidt}</InlineCode>,
+                <InlineCode key="a">{t.apiType}</InlineCode>,
+                t.purpose,
+                t.meta,
+                <code key="e" className="font-mono text-xs text-primary break-all">{JSON.stringify(t.example)}</code>,
+              ])}
+            />
+            <div className="space-y-3">
+              <SubHeading>Constraints and type changes</SubHeading>
+              <Text>
+                Constraints go in <InlineCode>constraints</InlineCode> of Add a column or Change a column. A column can be changed to the types listed;
+                values that cannot be converted become empty (preview it with <InlineCode>?dry_run=true</InlineCode>).
+              </Text>
+              <DocTable
+                head={['uidt', 'Constraints', 'Can be changed to']}
+                rows={COLUMN_TYPES.map((t) => [<InlineCode key="u">{t.uidt}</InlineCode>, t.constraints, t.changeTo])}
+              />
+            </div>
+            <div className="space-y-3">
+              <SubHeading>Only in the SereniBase app</SubHeading>
+              <Text>
+                These types answer <InlineCode>422 type_not_supported</InlineCode> when you add a column or change a column to one of them. Create them
+                in the app; the API then treats them as described.
+              </Text>
+              <DocTable
+                head={['uidt', 'What it is', 'Why the API refuses it']}
+                rows={COLUMN_TYPES_NOT_ALLOWED.map((t) => [<InlineCode key="u">{t.uidt}</InlineCode>, t.what, t.why])}
+              />
+            </div>
+            <Bullets>
+              <Bullet>uidt is not case sensitive: <InlineCode>longtext</InlineCode> and <InlineCode>longText</InlineCode> are the same type. An unknown name answers 422 validation_failed.</Bullet>
+              <Bullet>Links and lookups cannot change type, and no other type can be changed into them.</Bullet>
+              <Bullet>Every table has system columns (Id, Created Time, Last Modified Time and the like). They cannot be changed, moved or deleted.</Bullet>
             </Bullets>
           </>
         );

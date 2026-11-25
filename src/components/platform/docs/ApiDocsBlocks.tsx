@@ -238,23 +238,57 @@ interface ExamplesPanelProps {
   onLanguage: (language: SnippetLanguage) => void;
 }
 
-// Scenarios to pick from, then the request (cURL or JavaScript) and the response of the one picked
+// Status classes the examples can be filtered by
+const STATUS_CLASSES: { key: string; label: string }[] = [
+  { key: '2', label: '2xx Success' },
+  { key: '3', label: '3xx Redirect' },
+  { key: '4', label: '4xx Client Error' },
+  { key: '5', label: '5xx Server Error' },
+];
+
+const statusClass = (status: number) => String(Math.floor(status / 100));
+
+// Scenarios to pick from (filtered by status class, in a short scrolling list), then the request (cURL or
+// JavaScript) and the response of the one picked
 export const ExamplesPanel: React.FC<Readonly<ExamplesPanelProps>> = ({ examples, baseUrl, language, onLanguage }) => {
-  const [picked, setPicked] = useState(0);
-  const example = examples[Math.min(picked, examples.length - 1)];
+  const [filter, setFilter] = useState('all');
+  const [picked, setPicked] = useState<DocExample | null>(null);
+
+  const classes = STATUS_CLASSES.filter((c) => examples.some((ex) => statusClass(ex.status) === c.key));
+  const activeFilter = filter === 'all' || classes.some((c) => c.key === filter) ? filter : 'all';
+  const visible = activeFilter === 'all' ? examples : examples.filter((ex) => statusClass(ex.status) === activeFilter);
+  const example = picked && visible.includes(picked) ? picked : visible[0];
   if (!example) return null;
 
   return (
     <div className="space-y-3">
+      {classes.length > 1 && (
+        <div role="tablist" aria-label="Filter examples by status" className="flex flex-wrap gap-1 rounded-xl border border-[var(--color-border-primary)] bg-gray-50 p-1 w-fit max-w-full">
+          {[{ key: 'all', label: 'All', count: examples.length }, ...classes.map((c) => ({ ...c, count: examples.filter((ex) => statusClass(ex.status) === c.key).length }))].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={activeFilter === tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={`h-8 px-3 rounded-lg text-[13px] font-medium transition-colors ${
+                activeFilter === tab.key ? 'bg-[var(--color-card)] text-primary shadow-xs border border-[var(--color-border-primary)]' : 'border border-transparent text-secondary hover:text-primary'
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
+      )}
       {examples.length > 1 ? (
-        <div role="group" aria-label="Examples" className="flex flex-wrap gap-2">
-          {examples.map((ex, i) => {
+        <div role="group" aria-label="Examples" className="flex flex-wrap gap-2 max-h-[118px] overflow-y-auto pr-1">
+          {visible.map((ex) => {
             const on = ex === example;
             return (
               <button
-                key={ex.title}
+                key={`${ex.status}-${ex.title}`}
                 type="button"
-                onClick={() => setPicked(i)}
+                onClick={() => setPicked(ex)}
                 aria-pressed={on}
                 className={`flex items-center gap-2 min-h-[34px] py-1 pl-1.5 pr-3 rounded-lg border text-left text-[13px] font-medium transition-colors ${
                   on ? 'border-gray-400 bg-[var(--color-card)] text-primary shadow-xs' : 'border-[var(--color-border-primary)] text-secondary hover:bg-gray-50'
