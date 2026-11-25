@@ -19,6 +19,11 @@ const baseMembersQueryState: { data: any; refetch: any } = {
 const useBaseMembersMock = vi.fn(() => baseMembersQueryState);
 vi.mock('../../../hooks/useApi', () => ({
   useBaseMembers: (...args: any[]) => useBaseMembersMock(...args),
+  useBaseById: () => ({ data: { title: 'Test Base' } }),
+}));
+
+vi.mock('../../platform/BaseApiModal', () => ({
+  BaseApiModal: () => <div>BaseApiModal</div>,
 }));
 
 const workspaceAccessState = {

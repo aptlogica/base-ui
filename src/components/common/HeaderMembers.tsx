@@ -3,9 +3,10 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState, useMemo } from 'react';
-import { UserPlus } from 'lucide-react';
+import { Code, UserPlus } from 'lucide-react';
 import { UserAvatarStack } from './UserAvatarStack';
-import { useBaseMembers } from '../../hooks/useApi';
+import { useBaseMembers, useBaseById } from '../../hooks/useApi';
+import { BaseApiModal } from '../platform/BaseApiModal';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { AddBaseMembersModal } from '../modals/AddBaseMembersModal';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
@@ -14,7 +15,11 @@ import { useComponentVisibility, COMPONENT_IDS } from '../../contexts/RouteConte
 
 const HeaderMembers: React.FC = () => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showBaseApi, setShowBaseApi] = useState(false);
   const { selectedBaseId, selectedWorkspaceId } = useNavigationStore();
+  const baseQuery = useBaseById(selectedBaseId || '');
+  const baseData = baseQuery.data as any;
+  const baseTitle: string | undefined = baseData?.title || baseData?.name || baseData?.data?.title || baseData?.data?.name;
   const baseMembersQuery = useBaseMembers(selectedBaseId || '');
   const { canAssignUsers, isWorkspaceReadOnly } = useWorkspaceAccess(selectedWorkspaceId || '');
   const { isBaseReadOnly, canManageBaseMembers } = useBaseAccess(selectedBaseId || undefined);
@@ -57,6 +62,15 @@ const HeaderMembers: React.FC = () => {
   return (
     <>
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          title="Base API"
+          aria-label="Base API"
+          onClick={() => setShowBaseApi(true)}
+          className="h-10 w-10 rounded-xl btn-primary text-primary transition-all flex items-center justify-center"
+        >
+          <Code className="w-5 h-5" />
+        </button>
         {(isWorkspaceReadOnly() || isBaseReadOnly()) ? (
           <span className="inline-block px-2 py-0.5 rounded-xl text-xs font-medium bg-gray-100 text-gray-700 border cursor-default">Read only</span>
         ) : (
@@ -76,6 +90,16 @@ const HeaderMembers: React.FC = () => {
         />
       </div>
 
+
+      {/* Base API (developer) popup, same as the base menu on the home page */}
+      {showBaseApi && (
+        <BaseApiModal
+          isOpen
+          onClose={() => setShowBaseApi(false)}
+          baseId={selectedBaseId}
+          baseName={baseTitle}
+        />
+      )}
 
       {/* Add Member Modal */}
       {!(isWorkspaceReadOnly() || isBaseReadOnly()) && showAddMemberModal && selectedBaseId && selectedWorkspaceId && (
