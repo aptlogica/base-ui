@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../clientService', () => ({ getStoredToken: vi.fn(async () => 'token') }));
 
-import { isActiveJob, listWorkspaceJobs } from '../baseJobsService';
+import { isActiveJob, listWorkspaceJobs, deleteJob } from '../baseJobsService';
 import { JOBS_REFRESH_EVENT, requestJobsRefresh } from '../jobsEvents';
 
 const fetchMock = vi.fn();
@@ -51,5 +51,27 @@ describe('requestJobsRefresh', () => {
     requestJobsRefresh();
     window.removeEventListener(JOBS_REFRESH_EVENT, listener);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('deleteJob', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockReset();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('sends a DELETE to the export or import job', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
+    await deleteJob({ id: 'j1', type: 'export' });
+    await deleteJob({ id: 'j2', type: 'import' });
+    expect(fetchMock.mock.calls[0][0]).toContain('/export-job/j1');
+    expect(fetchMock.mock.calls[0][1].method).toBe('DELETE');
+    expect(fetchMock.mock.calls[1][0]).toContain('/import-job/j2');
+  });
+
+  it('turns an error answer into a message', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: { message: 'Export is not ready' } }), { status: 409 }));
+    await expect(deleteJob({ id: 'j1', type: 'export' })).rejects.toThrow('Export is not ready');
   });
 });

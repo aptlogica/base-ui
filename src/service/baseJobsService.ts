@@ -54,3 +54,12 @@ export async function listWorkspaceJobs(workspaceId: string, signal?: AbortSigna
   const list = body?.data ?? body;
   return Array.isArray(list) ? (list as TransferJob[]) : [];
 }
+
+/** Removes a finished job from the list (an export's file is deleted with it). A job that still works is refused. */
+export async function deleteJob(job: Pick<TransferJob, 'id' | 'type'>, signal?: AbortSignal): Promise<void> {
+  const res = await authFetch(`/${job.type}-job/${job.id}`, { method: 'DELETE' }, signal);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message || body?.message || 'The job could not be removed');
+  }
+}

@@ -3,13 +3,15 @@
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useState } from 'react';
-import { Download, Import } from 'lucide-react';
+import { Download, Import, X } from 'lucide-react';
 import { isActiveJob, type TransferJob } from '../../service/baseJobsService';
 import { expiresIn, formatSize, jobChip, jobTitle, statusPill, timeAgo } from './jobsFormat';
 
 export interface JobRowActions {
   onDownloadExport: (job: TransferJob) => void;
   onDownloadLog: (job: TransferJob) => void;
+  /** Removes a finished job from the list; the promise ends when the server has answered */
+  onRemove: (job: TransferJob) => Promise<void> | void;
 }
 
 interface JobRowProps extends JobRowActions {
@@ -41,12 +43,22 @@ const detailLine = (job: TransferJob, now: number): string => {
   return parts.filter(Boolean).join(' · ');
 };
 
-export const JobRow: React.FC<JobRowProps> = ({ job, now = Date.now(), onDownloadExport, onDownloadLog }) => {
+export const JobRow: React.FC<JobRowProps> = ({ job, now = Date.now(), onDownloadExport, onDownloadLog, onRemove }) => {
   const [showProblems, setShowProblems] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const pill = statusPill(job);
   const active = isActiveJob(job);
   const problems = job.result?.problems ?? [];
   const isExport = job.type === 'export';
+  // the row goes when the server has deleted the job; until then the button is off, and a failed call turns it back on
+  const remove = async () => {
+    setRemoving(true);
+    try {
+      await onRemove(job);
+    } catch {
+      setRemoving(false);
+    }
+  };
 
   return (
     <li className="flex gap-3 px-4 py-3 border-b last:border-b-0" data-testid="job-row">
@@ -99,7 +111,21 @@ export const JobRow: React.FC<JobRowProps> = ({ job, now = Date.now(), onDownloa
         </div>
       </div>
 
-      <span className={`self-start shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${pill.className}`}>{pill.label}</span>
+      <div className="self-start shrink-0 flex items-center gap-1.5">
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${pill.className}`}>{pill.label}</span>
+        {!active && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={removing}
+            title="Remove"
+            aria-label={`Remove ${jobTitle(job)}`}
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 disabled:cursor-default"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
     </li>
   );
 };

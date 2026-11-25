@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { JobsPanel } from '../JobsPanel';
 import type { TransferJob } from '../../../service/baseJobsService';
 
@@ -14,7 +14,7 @@ const jobs: TransferJob[] = [
   J({ id: 'e', type: 'import', format: 'xlsx', base_title: 'Leads', status: 'failed', error: 'Leads.xlsx is not a valid workbook', result: { problems: ['p1', 'p2'] }, has_log: true }),
 ];
 
-const actions = () => ({ onDownloadExport: vi.fn(), onDownloadLog: vi.fn(), onRetry: vi.fn() });
+const actions = () => ({ onDownloadExport: vi.fn(), onDownloadLog: vi.fn(), onRemove: vi.fn().mockResolvedValue(undefined), onRetry: vi.fn() });
 const renderPanel = (over: Partial<React.ComponentProps<typeof JobsPanel>> = {}) => {
   const a = actions();
   render(<JobsPanel workspaceName="Marketing" jobs={jobs} loading={false} error="" {...a} {...over} />);
@@ -77,6 +77,33 @@ describe('JobsPanel', () => {
     expect(a.onDownloadLog).toHaveBeenCalledWith(expect.objectContaining({ id: 'e' }));
   });
 
+  it('a finished job has a Remove icon, a running one has none; the icon is off until the server has answered', async () => {
+    let finish: () => void = () => {};
+    const onRemove = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    renderPanel({ onRemove });
+    const rows = screen.getAllByTestId('job-row');
+    const row = (title: string) => rows.find((r) => within(r).queryByText(title)) as HTMLElement;
+    expect(within(row('Sales CRM')).queryByLabelText(/^Remove/)).toBeNull();
+    expect(within(row('Customers')).queryByLabelText(/^Remove/)).toBeNull();
+
+    const x = within(row('Inventory')).getByLabelText('Remove Inventory') as HTMLButtonElement;
+    fireEvent.click(x);
+    fireEvent.click(x);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onRemove).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }));
+    expect(x.disabled).toBe(true);
+    expect(screen.queryByText('Remove this job?')).toBeNull();
+    await act(async () => finish());
+  });
+
+  it('a failed Remove turns the icon back on', async () => {
+    const onRemove = vi.fn().mockRejectedValue(new Error('nope'));
+    renderPanel({ onRemove });
+    const x = screen.getByLabelText('Remove Inventory') as HTMLButtonElement;
+    await act(async () => { fireEvent.click(x); });
+    expect(x.disabled).toBe(false);
+  });
+
   it('an export has no log button, and a job with no format still shows its kind', () => {
     renderPanel({ jobs: [J({ id: 'x', type: 'export', base_title: 'Old', has_log: true }), J({ id: 'y', type: 'import', base_title: 'Older', base_id: 'b1' })] });
     expect(screen.queryByText('Download log')).toBeNull();
@@ -85,16 +112,16 @@ describe('JobsPanel', () => {
   });
 
   it('empty, loading and error states', () => {
-    const { unmount } = render(<JobsPanel jobs={[]} loading={false} error="" onRetry={vi.fn()} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} />);
+    const { unmount } = render(<JobsPanel jobs={[]} loading={false} error="" onRetry={vi.fn()} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByText('No jobs in this workspace yet.')).toBeTruthy();
     unmount();
 
-    const loading = render(<JobsPanel jobs={[]} loading error="" onRetry={vi.fn()} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} />);
+    const loading = render(<JobsPanel jobs={[]} loading error="" onRetry={vi.fn()} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByText('Loading jobs…')).toBeTruthy();
     loading.unmount();
 
     const onRetry = vi.fn();
-    render(<JobsPanel jobs={[]} loading={false} error="The jobs could not be loaded" onRetry={onRetry} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} />);
+    render(<JobsPanel jobs={[]} loading={false} error="The jobs could not be loaded" onRetry={onRetry} onDownloadExport={vi.fn()} onDownloadLog={vi.fn()} onRemove={vi.fn()} />);
     expect(screen.getByRole('alert').textContent).toContain('The jobs could not be loaded');
     fireEvent.click(screen.getByText('Try again'));
     expect(onRetry).toHaveBeenCalled();

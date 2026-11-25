@@ -9,7 +9,7 @@ import { ArrowDownUp, Check } from 'lucide-react';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useTransferJobs } from '../../hooks/useTransferJobs';
 import { downloadExportJob, downloadImportLog } from '../../service/baseExportService';
-import type { TransferJob } from '../../service/baseJobsService';
+import { deleteJob, type TransferJob } from '../../service/baseJobsService';
 import { JOBS_FLY_EVENT, type JobsFlyDetail } from '../../service/jobsEvents';
 import { useToast } from '../common/Toast';
 import { JobFlyer, type Flyer } from './JobFlyer';
@@ -190,6 +190,7 @@ const JobsButton: React.FC = () => {
             onRetry={() => void refresh()}
             onDownloadExport={(job: TransferJob) => void run(() => downloadExportJob(job.id, job.file_name), 'Could not download the export')}
             onDownloadLog={(job: TransferJob) => void run(() => downloadImportLog(job.id), 'Could not download the log')}
+            onRemove={async (job: TransferJob) => { await deleteJob(job); await refresh(); }}
           />
         </div>,
         document.body,
