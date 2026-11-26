@@ -8,6 +8,7 @@ import { useLocation } from 'react-router-dom';
 import { ArrowDownUp, Check } from 'lucide-react';
 import { useNavigationStore } from '../../stores/navigationStore';
 import { useTransferJobs } from '../../hooks/useTransferJobs';
+import { useJobCompletionNotices } from '../../hooks/useJobCompletionNotices';
 import { downloadExportJob, downloadImportLog } from '../../service/baseExportService';
 import { deleteJob, type TransferJob } from '../../service/baseJobsService';
 import { JOBS_FLY_EVENT, type JobsFlyDetail } from '../../service/jobsEvents';
@@ -32,7 +33,9 @@ const JobsButton: React.FC = () => {
   const { pathname } = useLocation();
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const { jobs, loading, error, runningCount, refresh } = useTransferJobs(selectedWorkspaceId, open);
+  const { jobs, loading, error, runningCount, refresh, refreshIfStale } = useTransferJobs(selectedWorkspaceId, open);
+  // the result of the exports and imports that were left running in the background
+  useJobCompletionNotices(jobs, selectedWorkspaceId);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const flyerId = useRef(0);
@@ -128,8 +131,8 @@ const JobsButton: React.FC = () => {
 
   // opening the panel shows the latest state at once
   useEffect(() => {
-    if (open) void refresh();
-  }, [open, refresh]);
+    if (open) void refreshIfStale();
+  }, [open, refreshIfStale]);
 
   const run = async (action: () => Promise<void>, what: string) => {
     try {

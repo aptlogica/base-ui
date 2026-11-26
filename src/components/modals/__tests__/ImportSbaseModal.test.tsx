@@ -11,7 +11,7 @@ const { download } = vi.hoisted(() => ({ download: vi.fn() }));
 vi.mock('../importer/importDownload', () => ({ downloadTextContent: download, downloadLinkedFile: vi.fn() }));
 
 import { ImportSbaseModal } from '../ImportSbaseModal';
-import { JOBS_FLY_EVENT } from '../../../service/jobsEvents';
+import { JOBS_FLY_EVENT, claimFinishedJobs, clearTrackedJobs } from '../../../service/jobsEvents';
 
 type Resolve = (job: unknown) => void;
 const resolvers: Resolve[] = [];
@@ -212,6 +212,61 @@ describe('ImportSbaseModal in xlsx format', () => {
     pickAndStart(container, 'Sales.xlsx');
     expect(screen.getByText('Only .zip files are supported.')).toBeTruthy();
     expect(importMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ImportSbaseModal hands a minimized import to the Jobs panel', () => {
+  beforeEach(() => {
+    importMock.mockReset();
+    clearTrackedJobs();
+  });
+
+  const open = () => render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+
+  it('minimizing stops this dialog from asking for the job, and the Jobs panel follows it', () => {
+    let signal: AbortSignal | undefined;
+    importMock.mockImplementation((_ws, _file, _opts, _progress, sig: AbortSignal, onStarted: (job: { id: string }) => void) => {
+      signal = sig;
+      onStarted({ id: 'job-1' });
+      return new Promise(() => {});
+    });
+    const { container } = open();
+    pickAndStart(container, 'a.sbase.zip');
+    expect(signal?.aborted).toBe(false);
+
+    fireEvent.click(screen.getByLabelText('Minimize'));
+    expect(signal?.aborted).toBe(true);
+    const ended = claimFinishedJobs([{ id: 'job-1', status: 'completed' }]);
+    expect(ended).toHaveLength(1);
+    expect(ended[0].tracked).toMatchObject({ id: 'job-1', type: 'import', title: 'a.sbase.zip' });
+  });
+
+  it('minimizing before the server has started the job lets the upload go on, and hands the job over when it starts', () => {
+    let signal: AbortSignal | undefined;
+    let started: ((job: { id: string }) => void) | undefined;
+    importMock.mockImplementation((_ws, _file, _opts, _progress, sig: AbortSignal, onStarted: (job: { id: string }) => void) => {
+      signal = sig;
+      started = onStarted;
+      return new Promise(() => {});
+    });
+    const { container } = open();
+    pickAndStart(container, 'a.sbase.zip');
+    fireEvent.click(screen.getByLabelText('Minimize'));
+    // no job yet: nothing is aborted, so the file is not lost
+    expect(signal?.aborted).toBe(false);
+    expect(claimFinishedJobs([{ id: 'job-2', status: 'completed' }])).toHaveLength(0);
+
+    started?.({ id: 'job-2' });
+    expect(signal?.aborted).toBe(true);
+    expect(claimFinishedJobs([{ id: 'job-2', status: 'completed' }])).toHaveLength(1);
+  });
+
+  it('an import that is not minimized is followed by the dialog, which tells the result itself', async () => {
+    importMock.mockResolvedValue({ id: 'j1', status: 'completed', progress: 100, base_title: 'Sales', result: { tables: 1 } });
+    const { container } = open();
+    pickAndStart(container, 'a.sbase.zip');
+    await screen.findByText('Data Imported Successfully');
+    expect(claimFinishedJobs([{ id: 'j1', status: 'completed' }])).toHaveLength(0);
   });
 });
 

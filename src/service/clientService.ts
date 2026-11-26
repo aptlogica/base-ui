@@ -1048,6 +1048,42 @@ export async function importService(
 }
 
 
+// Base export, import and the background jobs they run as (the SDK's transferService). The cancel signal of a call is
+// the AbortSignal of the caller.
+type TransferSignal = AbortSignal | undefined;
+
+export const getExportDependenciesService = (baseId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.getExportDependencies(baseId, { signal }));
+
+export const exportBaseService = (baseId: string, options: Parameters<typeof client.transferService.exportBase>[1], signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.exportBase(baseId, options, { signal }));
+
+export const getExportJobService = (jobId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.getExportJob(jobId, { signal }));
+
+export const downloadExportJobService = (jobId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.downloadExportJob(jobId, { signal }));
+
+export const importBaseService = (
+  workspaceId: string,
+  files: File | File[],
+  options: Parameters<typeof client.transferService.importBase>[2],
+  signal?: TransferSignal
+) => makeAuthenticatedCall(() => client.transferService.importBase(workspaceId, files, options, { signal }));
+
+export const getImportJobService = (jobId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.getImportJob(jobId, { signal }));
+
+export const downloadImportLogService = (jobId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.downloadImportLog(jobId, { signal }));
+
+export const listTransferJobsService = (workspaceId: string, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.listJobs(workspaceId, { signal }));
+
+export const deleteTransferJobService = (job: { id: string; type: 'export' | 'import' }, signal?: TransferSignal) =>
+  makeAuthenticatedCall(() => client.transferService.deleteJob(job, { signal }));
+
+
 const updateClientHeaders = (workspaceId?: string | null, baseId?: string | null) => {
   const headers: Record<string, string> = {};
 

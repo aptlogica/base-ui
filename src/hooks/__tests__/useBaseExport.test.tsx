@@ -13,7 +13,7 @@ vi.mock('../../components/modals/ExportSbaseModal', () => ({
   ),
 }));
 import { useBaseExport } from '../useBaseExport';
-import { JOBS_FLY_EVENT } from '../../service/jobsEvents';
+import { JOBS_FLY_EVENT, claimFinishedJobs, clearTrackedJobs } from '../../service/jobsEvents';
 
 const Host = () => {
   const { exportBase, exportProgressModal } = useBaseExport();
@@ -29,16 +29,18 @@ const Host = () => {
   );
 };
 
-type Done = { resolve: () => void; reject: (e: Error) => void };
+type Started = { kind: 'file' } | { kind: 'job'; job: { id: string; file_name?: string }; fallbackFileName: string };
+type Done = { resolve: (started?: Started) => void; reject: (e: Error) => void };
 const runs: Done[] = [];
 
 describe('useBaseExport runs exports in the background', () => {
   beforeEach(() => {
     runs.length = 0;
+    clearTrackedJobs();
     exportMock.mockReset();
     toast.success.mockReset();
     toast.error.mockReset();
-    exportMock.mockImplementation(() => new Promise<void>((resolve, reject) => runs.push({ resolve, reject })));
+    exportMock.mockImplementation(() => new Promise<Started | undefined>((resolve, reject) => runs.push({ resolve, reject })));
   });
 
   const startExport = (label: string) => {
@@ -68,11 +70,30 @@ describe('useBaseExport runs exports in the background', () => {
     expect(exportMock).toHaveBeenCalledTimes(2);
   });
 
-  it('a finished export reports with a message', async () => {
+  it('an export that is a file at once reports with a message', async () => {
     render(<Host />);
     startExport('export first');
-    await act(async () => runs[0].resolve());
+    await act(async () => runs[0].resolve({ kind: 'file' }));
     expect(toast.success).toHaveBeenCalledWith('Export of “First” is ready. The download has started.');
+  });
+
+  it('an export that is a background job is handed to the Jobs panel: no message yet, and the job is followed', async () => {
+    render(<Host />);
+    startExport('export first');
+    await act(async () => runs[0].resolve({ kind: 'job', job: { id: 'job-1' }, fallbackFileName: 'First.sbase.zip' }));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    // the Jobs panel finds it when the list says it is done
+    const ended = claimFinishedJobs([{ id: 'job-1', status: 'completed' }]);
+    expect(ended).toHaveLength(1);
+    expect(ended[0].tracked).toMatchObject({ id: 'job-1', type: 'export', title: 'First', fileName: 'First.sbase.zip' });
+  });
+
+  it('keeps the file name the server gave for the job', async () => {
+    render(<Host />);
+    startExport('export first');
+    await act(async () => runs[0].resolve({ kind: 'job', job: { id: 'job-2', file_name: 'Server.zip' }, fallbackFileName: 'First.sbase.zip' }));
+    expect(claimFinishedJobs([{ id: 'job-2', status: 'completed' }])[0].tracked.fileName).toBe('Server.zip');
   });
 
   it('a failed export is reported as an error', async () => {

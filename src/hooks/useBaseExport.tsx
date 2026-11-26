@@ -4,7 +4,7 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import { useCallback, useState } from 'react';
 import { useToast } from '../components/common/Toast';
-import { announceJobInBackground } from '../service/jobsEvents';
+import { announceJobInBackground, trackJob } from '../service/jobsEvents';
 import { exportBaseAsSbase, type ExportBaseOptions, type ExportFormat } from '../service/baseExportService';
 import { ExportSbaseModal } from '../components/modals/ExportSbaseModal';
 import type { BaseExportFormat } from '../components/common/BaseMenu';
@@ -34,8 +34,13 @@ export function useBaseExport() {
     const title = base.title || base.name || 'base';
     announceJobInBackground('export');
     try {
-      await exportBaseAsSbase(base.id, { ...options, format: filterFormat, title: base.title || base.name });
-      toast.success(`Export of “${title}” is ready. The download has started.`);
+      const started = await exportBaseAsSbase(base.id, { ...options, format: filterFormat, title: base.title || base.name });
+      if (started.kind === 'file') {
+        toast.success(`Export of “${title}” is ready. The download has started.`);
+      } else {
+        // a background job: the Jobs panel follows it and tells the result, and downloads the file when it is ready
+        trackJob({ id: started.job.id, type: 'export', title, fileName: started.job.file_name || started.fallbackFileName });
+      }
     } catch (error: any) {
       if (error?.name === 'AbortError') return;
       toast.error(`Export of “${title}” failed: ${error?.message || 'Export failed'}`);

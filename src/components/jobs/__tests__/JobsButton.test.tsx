@@ -13,11 +13,13 @@ const { listMock, toast, downloadExport, downloadLog, nav, location } = vi.hoist
 vi.mock('../../../service/baseJobsService', async (orig) => ({ ...(await orig<typeof import('../../../service/baseJobsService')>()), listWorkspaceJobs: listMock }));
 vi.mock('../../../service/baseExportService', () => ({ downloadExportJob: downloadExport, downloadImportLog: downloadLog }));
 vi.mock('react-router-dom', () => ({ useLocation: () => location }));
+const { invalidate } = vi.hoisted(() => ({ invalidate: vi.fn() }));
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: invalidate }) }));
 vi.mock('../../common/Toast', () => ({ useToast: () => toast }));
 vi.mock('../../../stores/navigationStore', () => ({ useNavigationStore: () => nav }));
 
 import JobsButton, { isHomePath } from '../JobsButton';
-import { announceJobInBackground, requestJobsRefresh } from '../../../service/jobsEvents';
+import { announceJobInBackground, clearTrackedJobs, requestJobsRefresh, trackJob } from '../../../service/jobsEvents';
 
 const now = new Date().toISOString();
 const running = { id: 'a', type: 'export', format: 'json', base_title: 'Sales CRM', status: 'running', progress: 62, created_at: now };
@@ -27,6 +29,9 @@ const imported = { id: 'c', type: 'import', format: 'json', base_id: 'nb', works
 describe('JobsButton', () => {
   beforeEach(() => {
     listMock.mockReset();
+    invalidate.mockReset();
+    toast.success.mockReset();
+    clearTrackedJobs();
     downloadExport.mockReset();
     downloadLog.mockReset();
     toast.error.mockReset();
@@ -104,11 +109,22 @@ describe('JobsButton', () => {
     expect(screen.queryByRole('dialog', { name: 'Jobs' })).toBeNull();
   });
 
-  it('opening asks for the latest list', async () => {
+  it('opening right after the list was loaded does not ask again; opening a list that is old does', async () => {
+    const realNow = Date.now;
     render(<JobsButton />);
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('button', { name: 'Jobs' }));
-    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    expect(listMock).toHaveBeenCalledTimes(1);
+
+    // close it, let the list get old, and open it again
+    fireEvent.keyDown(document, { key: 'Escape' });
+    Date.now = () => realNow() + 10_000;
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Jobs' }));
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    } finally {
+      Date.now = realNow;
+    }
   });
 
   it('the row actions work: download an export, download a log; a finished import has no Open base button', async () => {
@@ -226,5 +242,73 @@ describe('JobsButton: idle, running and the moves of the icon', () => {
     render(<JobsButton />);
     await waitFor(() => expect(listMock).toHaveBeenCalled());
     expect(screen.queryByTestId('jobs-done')).toBeNull();
+  });
+});
+
+
+describe('JobsButton acts on the jobs left running in the background', () => {
+  beforeEach(() => {
+    listMock.mockReset();
+    invalidate.mockReset();
+    toast.success.mockReset();
+    toast.error.mockReset();
+    downloadExport.mockReset();
+    downloadExport.mockResolvedValue(undefined);
+    clearTrackedJobs();
+    nav.selectedWorkspaceId = 'ws1';
+    location.pathname = '/workspace/ws1';
+  });
+
+  it('downloads a followed export when the list says it is completed, once, with no message', async () => {
+    listMock.mockResolvedValue([{ ...exported, id: 'e1' }]);
+    trackJob({ id: 'e1', type: 'export', title: 'Inventory', fileName: 'fallback.zip' });
+    render(<JobsButton />);
+    await waitFor(() => expect(downloadExport).toHaveBeenCalledWith('e1', 'Inventory.csv.zip'));
+    // a second look at the list does not download it again
+    await act(async () => requestJobsRefresh());
+    await waitFor(() => expect(listMock.mock.calls.length).toBeGreaterThan(1));
+    expect(downloadExport).toHaveBeenCalledTimes(1);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('uses the name kept for the export when the server gave none', async () => {
+    listMock.mockResolvedValue([{ ...exported, id: 'e1', file_name: undefined }]);
+    trackJob({ id: 'e1', type: 'export', title: 'Inventory', fileName: 'fallback.zip' });
+    render(<JobsButton />);
+    await waitFor(() => expect(downloadExport).toHaveBeenCalledWith('e1', 'fallback.zip'));
+  });
+
+  it('a followed export that failed downloads nothing and shows no message', async () => {
+    listMock.mockResolvedValue([{ ...exported, id: 'e1', status: 'failed', error: 'disk full' }]);
+    trackJob({ id: 'e1', type: 'export', title: 'Inventory' });
+    render(<JobsButton />);
+    await waitFor(() => expect(listMock).toHaveBeenCalled());
+    expect(downloadExport).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('a followed import that is completed refreshes the base list, with no message', async () => {
+    listMock.mockResolvedValue([{ ...imported, id: 'i1' }]);
+    trackJob({ id: 'i1', type: 'import', title: 'orders.csv' });
+    render(<JobsButton />);
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('a followed import that failed also refreshes the base list, with no message', async () => {
+    listMock.mockResolvedValue([{ ...imported, id: 'i1', status: 'failed', error: 'bad file' }]);
+    trackJob({ id: 'i1', type: 'import', title: 'orders.csv' });
+    render(<JobsButton />);
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a job that was not followed, or one that still runs', async () => {
+    listMock.mockResolvedValue([{ ...exported, id: 'x1' }, { ...running, id: 'r1' }]);
+    trackJob({ id: 'r1', type: 'export', title: 'Sales' });
+    render(<JobsButton />);
+    await waitFor(() => expect(listMock).toHaveBeenCalled());
+    expect(downloadExport).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,8 @@ import { JOBS_REFRESH_EVENT } from '../service/jobsEvents';
 /** How often the list is asked for again while a job is running: quickly when the panel is open, slowly when it is closed */
 export const POLL_OPEN_MS = 2000;
 export const POLL_CLOSED_MS = 5000;
+/** A list that is younger than this is not asked for again when the panel opens */
+export const FRESH_MS = 2000;
 
 /**
  * The jobs (exports and imports) of the selected workspace. The list is loaded when the workspace changes, and asked for
@@ -20,6 +22,7 @@ export function useTransferJobs(workspaceId: string | null | undefined, panelOpe
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const requestId = useRef(0);
+  const loadedAt = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!workspaceId) return;
@@ -30,6 +33,7 @@ export function useTransferJobs(workspaceId: string | null | undefined, panelOpe
       if (mine !== requestId.current) return;
       setJobs(list);
       setError('');
+      loadedAt.current = Date.now();
     } catch (e: any) {
       if (mine !== requestId.current) return;
       setError(e?.message || 'The jobs could not be loaded');
@@ -38,9 +42,16 @@ export function useTransferJobs(workspaceId: string | null | undefined, panelOpe
     }
   }, [workspaceId]);
 
+  // asks again only when the list is older than FRESH_MS (the panel opening right after a poll needs no new request)
+  const refreshIfStale = useCallback(async () => {
+    if (Date.now() - loadedAt.current < FRESH_MS) return;
+    await refresh();
+  }, [refresh]);
+
   // a new workspace: forget the old list and load the new one
   useEffect(() => {
     requestId.current++;
+    loadedAt.current = 0;
     setJobs([]);
     setError('');
     if (!workspaceId) {
@@ -82,5 +93,5 @@ export function useTransferJobs(workspaceId: string | null | undefined, panelOpe
   }, [workspaceId, anyActive, panelOpen, refresh]);
 
   const runningCount = jobs.filter(isActiveJob).length;
-  return { jobs, loading, error, runningCount, refresh };
+  return { jobs, loading, error, runningCount, refresh, refreshIfStale };
 }

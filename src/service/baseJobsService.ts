@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import { authFetch } from './baseExportService';
+import { deleteTransferJobService, listTransferJobsService } from './clientService';
 
 export type TransferJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'expired';
 export type TransferJobFormat = 'sbase' | 'csv' | 'xlsx' | 'json';
@@ -46,20 +46,22 @@ export const isActiveJob = (job: Pick<TransferJob, 'status'>): boolean => job.st
  * not listed.
  */
 export async function listWorkspaceJobs(workspaceId: string, signal?: AbortSignal): Promise<TransferJob[]> {
-  const res = await authFetch(`/workspace/${workspaceId}/transfer-jobs`, {}, signal);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(body?.error?.message || body?.message || 'The jobs could not be loaded');
+  try {
+    return (await listTransferJobsService(workspaceId, signal)) as TransferJob[];
+  } catch (e: any) {
+    throw signal?.aborted || e?.code === 'ERR_CANCELED'
+      ? new DOMException('Cancelled', 'AbortError')
+      : new Error(typeof e?.code === 'string' && e.message ? e.message : 'The jobs could not be loaded');
   }
-  const list = body?.data ?? body;
-  return Array.isArray(list) ? (list as TransferJob[]) : [];
 }
 
 /** Removes a finished job from the list (an export's file is deleted with it). A job that still works is refused. */
 export async function deleteJob(job: Pick<TransferJob, 'id' | 'type'>, signal?: AbortSignal): Promise<void> {
-  const res = await authFetch(`/${job.type}-job/${job.id}`, { method: 'DELETE' }, signal);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error?.message || body?.message || 'The job could not be removed');
+  try {
+    await deleteTransferJobService(job, signal);
+  } catch (e: any) {
+    throw signal?.aborted || e?.code === 'ERR_CANCELED'
+      ? new DOMException('Cancelled', 'AbortError')
+      : new Error(typeof e?.code === 'string' && e.message ? e.message : 'The job could not be removed');
   }
 }

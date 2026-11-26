@@ -12,7 +12,7 @@ import { ImportSuccessModal, type ImportSuccessSummary } from './importer/Import
 import { CSV_DIALOG_SIZE, CSV_IMPORT_SUBTITLE, CSV_IMPORT_TITLE } from './importer/CsvModeRadio';
 import { pickCsvFiles, pickCsvZip } from './importer/csvFileCheck';
 import { buildFailedImportLog } from './importer/importErrorLog';
-import { announceJobInBackground } from '../../service/jobsEvents';
+import { announceJobInBackground, trackJob } from '../../service/jobsEvents';
 
 interface ImportSbaseModalProps {
   isOpen: boolean;
@@ -70,6 +70,8 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
   const [serverLog, setServerLog] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // the job of the import that runs, once the server has started it
+  const jobIdRef = useRef<string | null>(null);
   const toast = useToast();
   // Every import is followed by its own run. Only the run the dialog shows is "attached"; closing the dialog while an
   // import runs detaches it: it carries on in the background and a message tells the result, and the dialog is free
@@ -89,12 +91,23 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     setFile(null); setCsvFiles([]); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setIncludeSystemColumns(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
   };
 
+  // The Jobs panel follows the import from now on: it is tracked there, and this dialog stops asking the server for it
+  const handOverToJobsPanel = () => {
+    const id = jobIdRef.current;
+    if (!id) return;
+    trackJob({ id, type: 'import', title: chosenName });
+    abortRef.current?.abort();
+  };
+
   // While an import runs on the server, closing the dialog detaches it and clears the form, so another import can be
   // started; the import itself carries on. Otherwise the dialog is just closed and cleared.
   const close = () => {
     if (phase === 'running') {
       attachedRun.current = null;
       announceJobInBackground('import');
+      // The Jobs panel follows the job from here, so this dialog stops asking for it. Before the server has answered
+      // there is no job yet: the upload carries on, and the job is handed over when it starts (see onJobStarted).
+      handOverToJobsPanel();
       resetForm();
       onClose();
       return;
@@ -148,6 +161,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     if (!hasFile || !workspaceId || nameError) return;
     const controller = new AbortController();
     abortRef.current = controller;
+    jobIdRef.current = null;
     const runId = ++runCounter.current;
     attachedRun.current = runId;
     const attached = () => attachedRun.current === runId;
@@ -159,6 +173,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
         { title, includeData, includeAttachments: includeAttachments && !attachmentsOff, includeAutomations: !isFlat && includeAutomations, includeSystemColumns: !isFlat && includeData && includeSystemColumns, format },
         (value) => { if (attached()) setPercent(value); },
         controller.signal,
+        (started) => {
+          jobIdRef.current = started.id;
+          // minimized while the file was still going up: hand the job over now that it exists
+          if (!attached()) {
+            trackJob({ id: started.id, type: 'import', title: chosenName });
+            controller.abort();
+          }
+        },
       );
       if (finished.status === 'completed') {
         onImported(finished);

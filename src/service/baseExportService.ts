@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
-import { getStoredToken } from './clientService';
+import {
+  downloadExportJobService,
+  downloadImportLogService,
+  exportBaseService,
+  getExportDependenciesService,
+  getImportJobService,
+  importBaseService,
+} from './clientService';
 import { downloadTextContent } from '../components/modals/importer/importDownload';
 import { requestJobsRefresh } from './jobsEvents';
-
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
-const API = `${API_BASE_URL}/api/v1`;
 
 export interface ExportJob {
   id: string;
@@ -18,25 +22,23 @@ export interface ExportJob {
   error?: string;
 }
 
-export async function authFetch(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
-  const token = await getStoredToken();
-  return fetch(`${API}${path}`, {
-    ...init,
-    signal,
-    headers: { ...(init.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-  });
-}
+/** The message of a failed call: the one the server sent (an error of the SDK has a code), or the fallback */
+const messageOf = (error: any, fallback: string): string => (typeof error?.code === 'string' && error.message ? error.message : fallback);
 
-async function readJob(res: Response): Promise<ExportJob> {
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    // a filter that is not valid comes with the list of what is wrong
-    const problems: string[] = Array.isArray(body?.data) ? body.data : [];
-    const message = body?.error?.message || body?.message || 'Export failed';
-    throw new Error(problems.length > 0 ? `${message}: ${problems.join('; ')}` : message);
-  }
-  return (body?.data ?? body) as ExportJob;
-}
+/** A call that was cancelled by its AbortSignal fails as an AbortError, as the caller expects */
+const abortedOrElse = (error: any, signal: AbortSignal | undefined, make: () => Error): Error =>
+  signal?.aborted || error?.code === 'ERR_CANCELED' ? new DOMException('Cancelled', 'AbortError') : make();
+
+/** What the server answers in `data`: the job, or the thing itself */
+const dataOf = <T>(res: any): T => (res?.data ?? res) as T;
+
+/** An export that failed: a filter that is not valid comes with the list of what is wrong */
+const exportError = (error: any, signal: AbortSignal | undefined): Error =>
+  abortedOrElse(error, signal, () => {
+    const problems: string[] = Array.isArray(error?.data) ? error.data : [];
+    const message = messageOf(error, 'Export failed');
+    return new Error(problems.length > 0 ? `${message}: ${problems.join('; ')}` : message);
+  });
 
 export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -126,95 +128,65 @@ export interface ExportDependencies {
 
 /** The tables of a base and which table needs which (links, lookups, triggers), for the export dialog's warnings. */
 export async function getExportDependencies(baseId: string, signal?: AbortSignal): Promise<ExportDependencies> {
-  const res = await authFetch(`/base/${baseId}/export-dependencies`, {}, signal);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error?.message || body?.message || 'Could not load the tables');
-  const data = (body?.data ?? body) as Partial<ExportDependencies>;
-  return { tables: data.tables || [], dependencies: data.dependencies || [] };
+  try {
+    const data = dataOf<Partial<ExportDependencies>>(await getExportDependenciesService(baseId, signal));
+    return { tables: data.tables || [], dependencies: data.dependencies || [] };
+  } catch (e: any) {
+    throw abortedOrElse(e, signal, () => new Error(messageOf(e, 'Could not load the tables')));
+  }
 }
 
+/** What starting an export gives: the file at once (no data), or a background job that the Jobs panel follows */
+export type ExportStarted = { kind: 'file' } | { kind: 'job'; job: ExportJob; fallbackFileName: string };
+
 /**
- * Exports a base as a .sbase.zip: starts the background job (or downloads directly when without data),
- * follows its progress and downloads the file when done. onProgress gets the job percent (0 to 100).
+ * Starts the export of a base. Without data the file comes back at once and is saved here. Otherwise a background job is
+ * started and returned: no request is made to follow it, because the Jobs panel already asks for the list of jobs while
+ * one runs (see trackJob). onProgress gets 100 for a file.
  */
 export async function exportBaseAsSbase(
   baseId: string,
   options?: ExportBaseOptions,
   onProgress?: (percent: number) => void,
   signal?: AbortSignal
-): Promise<void> {
-  const params = new URLSearchParams();
-  if (options?.includeData !== undefined) {
-    params.set('include_data', String(options.includeData));
-  } else {
-    params.set('include_data', 'true');
+): Promise<ExportStarted> {
+  // Starts the export: the SDK sends the options in the URL, or as a JSON body when there are row filters (too long for a URL)
+  let started;
+  try {
+    started = await exportBaseService(
+      baseId,
+      {
+        includeData: options?.includeData,
+        includeAttachments: options?.includeAttachments,
+        includeAutomations: options?.includeAutomations,
+        includeSystemColumns: options?.includeSystemColumns,
+        format: options?.format,
+        delimiter: options?.delimiter,
+        tables: options?.tables,
+        filters: options?.filters,
+      },
+      signal
+    );
+  } catch (e) {
+    throw exportError(e, signal);
   }
-  if (options?.includeAttachments !== undefined) {
-    params.set('include_attachments', String(options.includeAttachments));
-  }
-  if (options?.includeAutomations !== undefined) {
-    params.set('include_automations', String(options.includeAutomations));
-  }
-  if (options?.includeSystemColumns !== undefined) {
-    params.set('include_system_columns', String(options.includeSystemColumns));
-  }
-  if (options?.format && options.format !== 'sbase') {
-    params.set('format', options.format);
-    if (options.delimiter) params.set('delimiter', options.delimiter);
-  }
-  if (options?.tables && options.tables.length > 0) {
-    params.set('tables', options.tables.join(','));
-  }
-  const query = params.toString() ? `?${params.toString()}` : '';
 
-  // Filters are too long for a URL, so an export with filters is a POST with the options in a JSON body
-  const filters = Object.fromEntries(Object.entries(options?.filters || {}).filter(([, conditions]) => conditions.length > 0));
-  const initialRes = Object.keys(filters).length > 0
-    ? await authFetch(`/base/${baseId}/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          include_data: options?.includeData ?? true,
-          include_attachments: options?.includeAttachments,
-          include_automations: options?.includeAutomations,
-          include_system_columns: options?.includeSystemColumns,
-          format: options?.format && options.format !== 'sbase' ? options.format : undefined,
-          delimiter: options?.format && options.format !== 'sbase' ? options.delimiter : undefined,
-          tables: options?.tables,
-          filters: Object.fromEntries(Object.entries(filters).map(([table, conditions]) => [table, { conditions }])),
-        }),
-      }, signal)
-    : await authFetch(`/base/${baseId}/export${query}`, {}, signal);
-  if (initialRes.status === 200) {
+  if (started.kind === 'file') {
     // A direct file download (no background job; a job is always answered with 202). The file is a zip (.sbase.zip,
     // or .csv.zip for a csv), except an xlsx, which is a plain workbook unless it carries files (a zip, which the
     // content type says). It is named here from the base title, because a browser hides the Content-Disposition
     // header of a cross-origin response.
-    const blob = await initialRes.blob();
     onProgress?.(100);
-    saveBlob(blob, exportFileName(options?.title, options?.format, blob.type !== XLSX_TYPE));
-    return;
+    saveBlob(started.blob, exportFileName(options?.title, options?.format, started.blob.type !== XLSX_TYPE));
+    return { kind: 'file' };
   }
 
-  let job = await readJob(initialRes);
   requestJobsRefresh(); // the Jobs panel shows the new job at once
-  onProgress?.(job.progress ?? 0);
-
-  while (job.status === 'queued' || job.status === 'running') {
-    await new Promise((r) => setTimeout(r, 1500));
-    if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
-    job = await readJob(await authFetch(`/export-job/${job.id}`, {}, signal));
-    onProgress?.(job.progress ?? 0);
-  }
-  if (job.status !== 'completed') {
-    throw new Error(job.error || (job.status === 'expired' ? 'The export has expired' : 'Export failed'));
-  }
-
-  const res = await authFetch(`/export-job/${job.id}/download`, {}, signal);
-  if (!res.ok) {
-    throw new Error('Could not download the export');
-  }
-  saveBlob(await res.blob(), job.file_name || exportFileName(undefined, options?.format, options?.includeAttachments !== false));
+  return {
+    kind: 'job',
+    job: started.job as ExportJob,
+    fallbackFileName: exportFileName(options?.title, options?.format, options?.includeAttachments !== false),
+  };
 }
 
 export interface ImportJob {
@@ -248,12 +220,13 @@ export interface ImportJob {
 
 /** Downloads the file of a finished export job (the Jobs panel's Download). */
 export async function downloadExportJob(jobId: string, fileName?: string): Promise<void> {
-  const res = await authFetch(`/export-job/${jobId}/download`);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error?.message || body?.message || 'Could not download the export');
+  let file;
+  try {
+    file = await downloadExportJobService(jobId);
+  } catch (e) {
+    throw new Error(messageOf(e, 'Could not download the export'));
   }
-  saveBlob(await res.blob(), fileName || 'export.zip');
+  saveBlob(file.blob, fileName || 'export.zip');
 }
 
 /**
@@ -261,15 +234,13 @@ export async function downloadExportJob(jobId: string, fileName?: string): Promi
  * import, or what went wrong in a failed one. Resolves when the browser has been handed the file.
  */
 export async function downloadImportLog(jobId: string): Promise<void> {
-  const res = await authFetch(`/import-job/${jobId}/log`);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error?.message || body?.message || 'The error log could not be downloaded');
+  let log;
+  try {
+    log = await downloadImportLogService(jobId);
+  } catch (e) {
+    throw new Error(messageOf(e, 'The error log could not be downloaded'));
   }
-  const text = await res.text();
-  const disposition = res.headers.get('Content-Disposition') || '';
-  const fileName = /filename="?([^";]+)"?/.exec(disposition)?.[1] || 'import_error_rows_report.txt';
-  downloadTextContent(text, fileName);
+  downloadTextContent(log.text, log.fileName || 'import_error_rows_report.txt');
 }
 
 /**
@@ -290,44 +261,36 @@ export async function importBaseFromSbase(
     format?: ExportFormat;
   },
   onProgress?: (percent: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** Called once the server has started the job, before it is followed: with its id a dialog that is minimized can hand the job to the Jobs panel */
+  onJobStarted?: (job: ImportJob) => void
 ): Promise<ImportJob> {
-  const form = new FormData();
-  // several .csv files go as several file parts (a csv import takes them instead of a zip)
-  for (const f of Array.isArray(file) ? file : [file]) form.append('file', f);
-  if (options.title?.trim()) form.append('title', options.title.trim());
-  form.append('include_data', String(options.includeData ?? true));
-  form.append('include_attachments', String(options.includeAttachments ?? true));
-  if (options.format && options.format !== 'sbase') {
-    // a csv, xlsx or json has no triggers and no system columns, so those options are not sent
-    form.append('format', options.format);
-  } else {
-    // needs the automations permission; the server refuses the import without it
-    form.append('include_automations', String(options.includeAutomations ?? false));
-    // restores id, created / modified time and user of the rows; needs the data
-    form.append('include_system_columns', String((options.includeSystemColumns ?? false) && (options.includeData ?? true)));
+  // The SDK builds the form: every file as a file part, the options, and the format (a csv, xlsx or json has no
+  // triggers and no system columns, so those options are not sent)
+  let started;
+  try {
+    started = await importBaseService(workspaceId, file, options, signal);
+  } catch (e: any) {
+    throw abortedOrElse(e, signal, () => {
+      // what is wrong with the file comes as a list
+      const problems: unknown = Array.isArray(e?.data) ? e.data : e?.details;
+      return Object.assign(new Error(messageOf(e, 'Import failed')), { problems: Array.isArray(problems) ? (problems as string[]) : undefined });
+    });
   }
-
-  const res = await authFetch(`/workspace/${workspaceId}/import-base`, { method: 'POST', body: form }, signal);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const problems: string[] | undefined = body?.data || body?.error?.details;
-    const message = body?.error?.message || body?.message || 'Import failed';
-    throw Object.assign(new Error(message), { problems: Array.isArray(problems) ? problems : undefined });
-  }
-  let job = (body?.data ?? body) as ImportJob;
+  let job = dataOf<ImportJob>(started);
   requestJobsRefresh(); // the Jobs panel shows the new job at once
+  onJobStarted?.(job);
   onProgress?.(job.progress ?? 0);
 
   while (job.status === 'queued' || job.status === 'running') {
     await new Promise((r) => setTimeout(r, 1500));
     if (signal?.aborted) throw new DOMException('Import cancelled', 'AbortError');
-    const poll = await authFetch(`/import-job/${job.id}`, {}, signal);
-    const pollBody = await poll.json().catch(() => ({}));
-    if (!poll.ok) throw new Error(pollBody?.error?.message || pollBody?.message || 'Import failed');
-    job = (pollBody?.data ?? pollBody) as ImportJob;
+    try {
+      job = dataOf<ImportJob>(await getImportJobService(job.id, signal));
+    } catch (e) {
+      throw abortedOrElse(e, signal, () => new Error(messageOf(e, 'Import failed')));
+    }
     onProgress?.(job.progress ?? 0);
   }
   return job;
 }
-
