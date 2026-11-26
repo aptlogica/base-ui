@@ -28,22 +28,16 @@ const IMPORT_OPTIONS: ImportOption[] = [
     bgColor: 'bg-white',
   },
   {
-    id: 'csvzip',
-    label: 'CSV',
-    description: 'Import a .zip of CSV files exported from Sereni Base',
-    iconPath: '/assets/csv.png',
-    bgColor: 'bg-white',
-  },
-  {
     id: 'csv',
     label: 'CSV',
+    description: 'Import one CSV file, or a .zip of several',
     iconPath: '/assets/csv.png',
     bgColor: 'bg-white',
   },
   {
     id: 'xlsxbase',
     label: 'Excel',
-    description: 'Import an .xlsx (or a .zip of one) exported from Sereni Base',
+    description: 'Import a .zip of Excel files, or one .xlsx file',
     iconPath: '/assets/docx.png', // Using docx icon as placeholder for Excel
     bgColor: 'bg-white',
   },

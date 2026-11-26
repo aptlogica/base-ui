@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 
 const { importMock, toast } = vi.hoisted(() => ({
   importMock: vi.fn(),
@@ -239,6 +239,93 @@ describe('ImportSbaseModal in csv format', () => {
     expect(workspace).toBe('ws');
     expect((file as File).name).toBe('Sales.csv.zip');
     expect(options).toMatchObject({ format: 'csv', includeData: true, includeAutomations: false, includeSystemColumns: false });
+  });
+
+  const pickMany = (container: HTMLElement, files: File[]) => {
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    return act(async () => {
+      fireEvent.change(input, { target: { files } });
+    });
+  };
+
+  it('takes several csv files, lists them, and sends them all', async () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    await pickMany(container, [new File(['Name\nA\n'], 'a.csv'), new File(['No\n1\n'], 'b.csv')]);
+    await waitFor(() => expect(screen.getByText('b.csv')).toBeTruthy());
+    expect(screen.getByText('a.csv')).toBeTruthy();
+    expect(screen.getByText(/2 files/)).toBeTruthy();
+    expect(screen.getByText('Leave empty to use “Imported CSV”.')).toBeTruthy();
+    expect((screen.getByLabelText(/Import attachment/) as HTMLInputElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByText('Import Base'));
+    const [, files, options] = importMock.mock.calls[0];
+    expect((files as File[]).map((f) => f.name)).toEqual(['a.csv', 'b.csv']);
+    expect(options).toMatchObject({ format: 'csv' });
+  });
+
+  it('refuses a file that is not a csv with a message naming it, and does not list it', async () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    await pickMany(container, [new File(['x'], 'sheet.xlsx')]);
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('sheet.xlsx is not a CSV file'));
+    expect(screen.queryByLabelText('Chosen CSV files')).toBeNull();
+    expect((screen.getByText('Import Base') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('lets csv files replace a zip that was chosen first', async () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    await pickMany(container, [new File(['x'], 'all.zip')]);
+    expect(screen.getByText('all.zip')).toBeTruthy();
+    await pickMany(container, [new File(['Name\nA\n'], 'a.csv')]);
+    await waitFor(() => expect(screen.getByText('a.csv')).toBeTruthy());
+    expect(screen.queryByText('all.zip')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it.each(['csv', 'xlsx', 'json'] as const)('turns Import attachment off while table data is off, in the %s format', (format) => {
+    render(<ImportSbaseModal isOpen workspaceId="ws" format={format} onClose={vi.fn()} onImported={vi.fn()} />);
+    const attachment = screen.getByLabelText(/Import attachment/) as HTMLInputElement;
+    expect(attachment.disabled).toBe(false);
+    fireEvent.click(screen.getByLabelText(/Import table data/));
+    expect(attachment.disabled).toBe(true);
+    expect(attachment.checked).toBe(false);
+    fireEvent.click(screen.getByLabelText(/Import table data/));
+    expect(attachment.disabled).toBe(false);
+  });
+
+  it('keeps Import attachment usable without table data for Sereni Base', () => {
+    render(<ImportSbaseModal isOpen workspaceId="ws" onClose={vi.fn()} onImported={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText(/Import table data/));
+    expect((screen.getByLabelText(/Import attachment/) as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it.each([
+    ['csv', 'Sales 2026.csv.zip', 'Sales 2026'],
+    ['xlsx', 'Budget.xlsx', 'Budget'],
+    ['json', 'Orders.json', 'Orders'],
+    ['json', 'Orders.json.zip', 'Orders'],
+  ] as const)('names the base after the %s file without its extension: %s', (format, fileName, expected) => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format={format} onClose={vi.fn()} onImported={vi.fn()} />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['x'], fileName)] } });
+    expect(screen.getByText(`Leave empty to use “${expected}”.`)).toBeTruthy();
+  });
+
+  it('names the base after the one csv file without .csv, and "Imported CSV" for several', async () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await act(async () => { fireEvent.change(input, { target: { files: [new File(['Name\nA\n'], 'xyz.csv')] } }); });
+    await waitFor(() => expect(screen.getByText('Leave empty to use “xyz”.')).toBeTruthy());
+    await act(async () => { fireEvent.change(input, { target: { files: [new File(['No\n1\n'], 'b.csv')] } }); });
+    await waitFor(() => expect(screen.getByText('Leave empty to use “Imported CSV”.')).toBeTruthy());
+  });
+
+  it('removes a listed csv file', async () => {
+    const { container } = render(<ImportSbaseModal isOpen workspaceId="ws" format="csv" onClose={vi.fn()} onImported={vi.fn()} />);
+    await pickMany(container, [new File(['Name\nA\n'], 'a.csv'), new File(['No\n1\n'], 'b.csv')]);
+    await waitFor(() => expect(screen.getByLabelText('Remove a.csv')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Remove a.csv'));
+    expect(screen.queryByText('a.csv')).toBeNull();
+    expect(screen.getByText('b.csv')).toBeTruthy();
   });
 
   it('puts the descriptions of the import options behind an info icon', () => {

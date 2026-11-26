@@ -279,7 +279,7 @@ export async function downloadImportLog(jobId: string): Promise<void> {
  */
 export async function importBaseFromSbase(
   workspaceId: string,
-  file: File,
+  file: File | File[],
   options: {
     title?: string;
     includeData?: boolean;
@@ -293,7 +293,8 @@ export async function importBaseFromSbase(
   signal?: AbortSignal
 ): Promise<ImportJob> {
   const form = new FormData();
-  form.append('file', file);
+  // several .csv files go as several file parts (a csv import takes them instead of a zip)
+  for (const f of Array.isArray(file) ? file : [file]) form.append('file', f);
   if (options.title?.trim()) form.append('title', options.title.trim());
   form.append('include_data', String(options.includeData ?? true));
   form.append('include_attachments', String(options.includeAttachments ?? true));

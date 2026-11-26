@@ -210,31 +210,22 @@ describe('ImportDataModal', () => {
     });
   });
 
-  describe('Sereni Base CSV option', () => {
-    it('is listed right below Sereni Base and above the existing CSV option', () => {
+  describe('CSV option', () => {
+    it('has one CSV card (the single and the zip import share it)', () => {
       render(<ImportDataModal {...defaultProps} />);
-      const labels = screen.getAllByRole('button').map((b) => b.textContent || '');
-      const sbase = labels.findIndex((l) => l.startsWith('Sereni Base') && !l.startsWith('Sereni Base CSV'));
-      const csvZip = labels.findIndex((l) => l.startsWith('Sereni Base CSV'));
-      const csv = labels.findIndex((l) => l.startsWith('CSV'));
-      expect(sbase).toBeGreaterThanOrEqual(0);
-      expect(csvZip).toBe(sbase + 1);
-      expect(csv).toBe(csvZip + 1);
+      const csvButtons = screen.getAllByRole('button').filter((b) => (b.textContent || '').startsWith('CSV'));
+      expect(csvButtons).toHaveLength(1);
+      expect(screen.queryByText('Sereni Base CSV')).not.toBeInTheDocument();
     });
 
-    it('is enabled and selects csvzip, while the existing CSV still selects csv', async () => {
+    it('selects csv', async () => {
       const user = userEvent.setup();
       const onSelectImportType = vi.fn();
-      const onClose = vi.fn();
-      render(<ImportDataModal {...defaultProps} onSelectImportType={onSelectImportType} onClose={onClose} />);
-
-      const option = screen.getByText('Sereni Base CSV').closest('button') as HTMLElement;
-      expect(option).not.toBeDisabled();
-      await user.click(option);
-      expect(onSelectImportType).toHaveBeenLastCalledWith('csvzip');
+      render(<ImportDataModal {...defaultProps} onSelectImportType={onSelectImportType} />);
 
       await user.click(screen.getByText('CSV').closest('button') as HTMLElement);
       expect(onSelectImportType).toHaveBeenLastCalledWith('csv');
+      expect(onSelectImportType).not.toHaveBeenCalledWith('csvzip');
     });
   });
 

@@ -11,6 +11,7 @@ import { useNavigationActions } from '../hooks/useNavigationActions';
 import { Loader } from '../components/ui/Loader';
 import { CreateBaseModal, type CreateBaseData } from '../components/modals/CreateBaseModal';
 import { ImportDataModal } from '../components/modals/ImportDataModal';
+import { ImportCsvModal } from '../components/modals/ImportCsvModal';
 import { ImportModal } from '../components/modals/ImportModal';
 import { ImportSbaseModal } from '../components/modals/ImportSbaseModal';
 import { EditItemModal } from '../components/modals/EditItemModal';
@@ -123,8 +124,8 @@ const HomePage: React.FC = () => {
   const [showCreateBase, setShowCreateBase] = useState(false);
   const [showImportData, setShowImportData] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportCsv, setShowImportCsv] = useState(false);
   const [showImportSbase, setShowImportSbase] = useState(false);
-  const [showImportCsvZip, setShowImportCsvZip] = useState(false);
   const [showImportXlsx, setShowImportXlsx] = useState(false);
   const [showImportJson, setShowImportJson] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<'csv' | 'excel' | 'sql' | 'json' | 'airtable' | 'nocodb' | null>(null);
@@ -360,12 +361,9 @@ const HomePage: React.FC = () => {
 
   const handleImportTypeSelect = (importType: string) => {
     if (importType === 'csv') {
-      setSelectedImportType('csv');
-      setShowImportModal(true);
+      setShowImportCsv(true);
     } else if (importType === 'sbase') {
       setShowImportSbase(true);
-    } else if (importType === 'csvzip') {
-      setShowImportCsvZip(true);
     } else if (importType === 'xlsxbase') {
       setShowImportXlsx(true);
     } else if (importType === 'jsonbase') {
@@ -728,12 +726,13 @@ const HomePage: React.FC = () => {
         onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
       />
 
-      <ImportSbaseModal
-        isOpen={showImportCsvZip}
-        format="csv"
+      <ImportCsvModal
+        isOpen={showImportCsv}
         workspaceId={selectedWorkspaceId || ''}
         existingBases={allBases || []}
-        onClose={() => setShowImportCsvZip(false)}
+        existingTables={[]}
+        onClose={() => setShowImportCsv(false)}
+        onSuccess={() => setShowImportCsv(false)}
         onImported={() => invalidateBaseQueries(queryClient, selectedWorkspaceId)}
       />
 

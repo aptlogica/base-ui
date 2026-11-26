@@ -4,11 +4,13 @@
 // Support: support@aptlogica.com | support@serenibase.com
 import React, { useRef, useState } from 'react';
 import { useToast } from '../common/Toast';
-import { X, Minus, Upload, FileArchive, Loader2 } from 'lucide-react';
+import { X, Minus, Upload, FileArchive, FileText, Loader2 } from 'lucide-react';
 import { importBaseFromSbase, type ExportFormat, type ImportJob } from '../../service/baseExportService';
 import { isNameDuplicate, type ExistingItem } from '../../utils/nameValidation';
 import { InfoTip } from './InfoTip';
 import { ImportSuccessModal, type ImportSuccessSummary } from './importer/ImportSuccessModal';
+import { CSV_DIALOG_SIZE, CSV_IMPORT_SUBTITLE, CSV_IMPORT_TITLE } from './importer/CsvModeRadio';
+import { pickCsvFiles, pickCsvZip } from './importer/csvFileCheck';
 import { buildFailedImportLog } from './importer/importErrorLog';
 import { announceJobInBackground } from '../../service/jobsEvents';
 
@@ -24,7 +26,15 @@ interface ImportSbaseModalProps {
    * .zip of one) or json (a .zip of .json files, one table per file, or one .json file). A csv, xlsx or json has no triggers or
    * system columns. */
   format?: ExportFormat;
+  /** Optional: shown under the header before a file is imported (the CSV Single / Multiple radio) */
+  modeSwitcher?: React.ReactNode;
 }
+
+// "Sales.csv.zip", "Sales.zip", "Sales.csv", "Sales.xlsx" and "Sales.json" all give "Sales"
+const baseNameFromFile = (fileName: string): string => {
+  const name = fileName.replace(/\\/g, '/').split('/').pop() || '';
+  return name.replace(/\.(csv|xlsx|json)\.zip$/i, '').replace(/\.(zip|csv|xlsx|json)$/i, '').trim();
+};
 
 type Phase = 'pick' | 'running' | 'done' | 'failed';
 
@@ -36,12 +46,14 @@ const stageLabel = (percent: number): string => {
   return 'Finishing up…';
 };
 
-export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported, format = 'sbase' }) => {
+export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, workspaceId, existingBases = [], onClose, onImported, format = 'sbase', modeSwitcher }) => {
   const isCsv = format === 'csv';
   const isXlsx = format === 'xlsx';
   const isJson = format === 'json';
   const isFlat = isCsv || isXlsx || isJson;
   const [file, setFile] = useState<File | null>(null);
+  // a csv import also takes several loose .csv files (instead of a zip): they are listed here, and file stays empty
+  const [csvFiles, setCsvFiles] = useState<File[]>([]);
   const [title, setTitle] = useState('');
   const [includeData, setIncludeData] = useState(true);
   const [includeAttachments, setIncludeAttachments] = useState(true);
@@ -74,7 +86,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       : '';
 
   const resetForm = () => {
-    setFile(null); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setIncludeSystemColumns(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
+    setFile(null); setCsvFiles([]); setTitle(''); setIncludeData(true); setIncludeAttachments(true); setIncludeAutomations(false); setIncludeSystemColumns(false); setDragging(false); setFileError(''); setPhase('pick'); setPercent(0); setJob(null); setError(''); setProblems([]);;
   };
 
   // While an import runs on the server, closing the dialog detaches it and clears the form, so another import can be
@@ -105,8 +117,35 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     setFile(picked);
   };
 
+  // The Multiple CSV option: several .csv files or one .zip (see pickCsvFiles for the rules and the checks)
+  const pickCsv = async (picked: File[]) => {
+    if (inputRef.current) inputRef.current.value = '';
+    if (picked.length === 0) return;
+    // a zip is answered at once; .csv files are read (to check they are text) first
+    const current = { csvFiles, zip: file };
+    const result = pickCsvZip(picked, current) ?? (await pickCsvFiles(picked, current));
+    setCsvFiles(result.csvFiles);
+    setFile(result.zip);
+    setFileError(result.error);
+  };
+
+  const removeCsv = (index: number) => {
+    setCsvFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileError('');
+  };
+
+  const looseCsv = isCsv && csvFiles.length > 0;
+  const hasFile = !!file || looseCsv;
+  // Files belong to rows: for a csv, xlsx or json import, attachments are off while the table data is off (and for loose CSV files, which carry none)
+  // The name the new base gets when the name field is left empty: the file name without .csv, .xlsx, .json or .zip (the
+  // server does the same); several loose CSV files are named "Imported CSV"
+  const defaultBaseName = !isFlat ? '' : csvFiles.length > 1 ? 'Imported CSV' : baseNameFromFile(file?.name || csvFiles[0]?.name || '');
+  const attachmentsOff = looseCsv || (isFlat && !includeData);
+  const chosenName = file?.name || (looseCsv ? csvFiles.map((f) => f.name).join(', ') : undefined);
+  const csvTotalMb = csvFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
+
   const start = async () => {
-    if (!file || !workspaceId || nameError) return;
+    if (!hasFile || !workspaceId || nameError) return;
     const controller = new AbortController();
     abortRef.current = controller;
     const runId = ++runCounter.current;
@@ -116,8 +155,8 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     try {
       const finished = await importBaseFromSbase(
         workspaceId,
-        file,
-        { title, includeData, includeAttachments, includeAutomations: !isFlat && includeAutomations, includeSystemColumns: !isFlat && includeData && includeSystemColumns, format },
+        looseCsv ? csvFiles : (file as File),
+        { title, includeData, includeAttachments: includeAttachments && !attachmentsOff, includeAutomations: !isFlat && includeAutomations, includeSystemColumns: !isFlat && includeData && includeSystemColumns, format },
         (value) => { if (attached()) setPercent(value); },
         controller.signal,
       );
@@ -189,9 +228,9 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
       duplicateRows: 0,
       emptyRowsSkipped: 0,
       duplicatesRemoved: 0,
-      subtitle: problems.length > 0 && error ? `${file?.name ? `${file.name}: ` : ''}${error}` : `Your import${file?.name ? ` of "${file.name}"` : ''} did not finish.`,
+      subtitle: problems.length > 0 && error ? `${chosenName ? `${chosenName}: ` : ''}${error}` : `Your import${chosenName ? ` of "${chosenName}"` : ''} did not finish.`,
       errors,
-      errorRowsFileContent: serverLog || buildFailedImportLog({ format, fileName: file?.name, message: error, problems }),
+      errorRowsFileContent: serverLog || buildFailedImportLog({ format, fileName: chosenName, message: error, problems }),
       stats: [
         { label: 'Tables', value: 0 },
         { label: 'Fields', value: 0 },
@@ -202,28 +241,40 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
     return <ImportSuccessModal open summary={summary} onClose={close} onRetry={() => setPhase('pick')} />;
   }
 
+  // The CSV Single / Multiple dialog look (shared header, size, radio) is only for choosing a file; a running import looks as it always did
+  const csvPick = !!modeSwitcher && phase === 'pick';
+
   return (
     <div className="bg-modal-backdrop" onKeyDown={(e) => e.key === 'Escape' && close()}>
-      <div className="bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden" role="dialog" aria-label={isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}>
+      <div className={`bg-modal max-w-lg! p-0! flex flex-col relative overflow-hidden ${csvPick ? CSV_DIALOG_SIZE : ''}`} role="dialog" aria-label={isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}>
         <div className="flex items-center justify-between p-4 border-b shrink-0">
-          <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-primary truncate">{isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}</h2>
-            <p className="text-sm text-secondary truncate">{isCsv ? 'Create a new base from a .zip of CSV files.' : isXlsx ? 'Create a new base from an .xlsx file or a .zip of it.' : isJson ? 'Create a new base from .json files or a .zip of them.' : 'Create a new base from a .sbase.zip file.'}</p>
+          <div className="flex items-center gap-3 min-w-0">
+            {csvPick && (
+              <div className="w-10 h-10 bg-brand-100 text-brand-800 rounded-xl flex items-center justify-center shrink-0">
+                <Upload className="text-green-600 h-5 w-5" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-primary truncate">{csvPick ? CSV_IMPORT_TITLE : isCsv ? 'Import Sereni Base CSV' : isXlsx ? 'Import Sereni Base Excel' : isJson ? 'Import Sereni Base JSON' : 'Import Sereni Base'}</h2>
+              <p className="text-sm text-secondary truncate">{csvPick ? CSV_IMPORT_SUBTITLE : isCsv ? 'Create a new base from a .zip of CSV files.' : isXlsx ? 'Create a new base from an .xlsx file or a .zip of it.' : isJson ? 'Create a new base from .json files or a .zip of them.' : 'Create a new base from a .sbase.zip file.'}</p>
+            </div>
           </div>
           <button onClick={close} className="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label={phase === 'running' ? 'Minimize' : 'Close'} title={phase === 'running' ? 'Minimize' : undefined}>
             {phase === 'running' ? <Minus className="text-gray-400 h-5 w-5" /> : <X className="text-gray-400 h-5 w-5" />}
           </button>
         </div>
 
-        <div className="p-6 flex flex-col gap-y-4">
+        <div className={`${csvPick ? 'p-4 flex-1 overflow-y-auto' : 'p-6'} flex flex-col gap-y-4`}>
+          {csvPick && modeSwitcher}
           {phase === 'pick' && (
             <>
               <input
                 ref={inputRef}
                 type="file"
-                accept={isXlsx ? '.xlsx,.zip' : isJson ? '.json,.zip' : '.zip'}
+                accept={isCsv ? '.csv,.zip' : isXlsx ? '.xlsx,.zip' : isJson ? '.json,.zip' : '.zip'}
                 className="hidden"
-                onChange={(e) => pickFile(e.target.files?.[0] || null)}
+                multiple={isCsv}
+                onChange={(e) => (isCsv ? pickCsv(Array.from(e.target.files || [])) : pickFile(e.target.files?.[0] || null))}
               />
               <div
                 role="button"
@@ -235,30 +286,57 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
+                  if (isCsv) {
+                    pickCsv(Array.from(e.dataTransfer.files || []));
+                    return;
+                  }
                   const dropped = e.dataTransfer.files?.[0];
                   if (dropped) pickFile(dropped);
                 }}
                 className={`w-full border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-2 cursor-pointer transition-colors ${dragging ? 'bg-green-50 border-green-400' : 'hover:bg-gray-50'}`}
               >
                 <span className="w-12 h-12 rounded-xl border bg-card shadow-sm flex items-center justify-center">
-                  {file ? <FileArchive className="w-6 h-6 text-green-600" /> : <Upload className="w-6 h-6 text-gray-600" />}
+                  {file ? <FileArchive className="w-6 h-6 text-green-600" /> : looseCsv ? <FileText className="w-6 h-6 text-green-600" /> : <Upload className="w-6 h-6 text-gray-600" />}
                 </span>
-                {file ? (
+                {looseCsv ? (
+                  <>
+                    <span className="text-sm text-gray-700 text-center">Drag &amp; Drop more CSV files here, or <span className="text-green-600 font-medium">click to add</span></span>
+                    <span className="text-xs text-gray-500 text-center">Several .csv files, or one .zip of .csv files</span>
+                  </>
+                ) : file ? (
                   <>
                     <span className="text-sm text-gray-700 font-medium">{file.name}</span>
                     <span className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-700">
-                      Drag &amp; Drop your zip file here, or <span className="text-green-600 font-medium">click to add</span>
+                    <span className="text-sm text-gray-700 text-center">
+                      {isCsv ? 'Drag & Drop CSV files or a .zip here, or ' : 'Drag & Drop your zip file here, or '}<span className="text-green-600 font-medium">click to add</span>
                     </span>
-                    <span className="text-xs text-gray-500">{isCsv ? 'Only a .zip of .csv files is supported' : isXlsx ? 'Only an .xlsx file or a .zip of it is supported' : isJson ? 'Only .json files or a .zip of them are supported' : 'Only .zip files are supported'}</span>
+                    <span className="text-xs text-gray-500 text-center">{isCsv ? 'Several .csv files, or one .zip of .csv files' : isXlsx ? 'Only an .xlsx file or a .zip of it is supported' : isJson ? 'Only .json files or a .zip of them are supported' : 'Only .zip files are supported'}</span>
                   </>
                 )}
               </div>
 
               {fileError && <p className="text-xs text-red-600 -mt-2" role="alert">{fileError}</p>}
+
+              {looseCsv && (
+                <div className="flex flex-col gap-y-1.5" aria-label="Chosen CSV files">
+                  <ul className="flex flex-col gap-y-1 max-h-40 overflow-y-auto">
+                    {csvFiles.map((f, i) => (
+                      <li key={f.name} className="flex items-center gap-2 text-sm text-gray-700 border rounded-lg px-3 py-1.5">
+                        <FileText className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="truncate flex-1">{f.name}</span>
+                        <span className="text-xs text-gray-500 shrink-0">{(f.size / 1024).toFixed(f.size < 1024 * 100 ? 1 : 0)} KB</span>
+                        <button type="button" onClick={() => removeCsv(i)} className="w-6 h-6 rounded hover:bg-gray-100 flex items-center justify-center shrink-0" aria-label={`Remove ${f.name}`}>
+                          <X className="w-3.5 h-3.5 text-gray-500" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="text-xs text-gray-500">{csvFiles.length} {csvFiles.length === 1 ? 'file' : 'files'}, {csvTotalMb.toFixed(1)} MB in total</span>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium text-gray-800 block mb-1.5" htmlFor="sbase-import-title">Name of Base</label>
@@ -267,14 +345,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={isFlat ? 'Same as the name of the file' : 'Same as the name in the file'}
+                  placeholder={isFlat ? 'Enter a name, or leave empty to use the file name' : 'Same as the name in the file'}
                   aria-invalid={!!nameError}
                   className={`w-full text-sm px-3 h-10 border rounded-lg text-primary bg-card outline-none ${nameError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary'}`}
                 />
                 {nameError ? (
                   <p className="text-xs text-red-600 mt-1" role="alert">{nameError}</p>
                 ) : (
-                  <p className="text-xs text-secondary mt-1">{isFlat ? 'If left empty, the base is named after the file.' : 'If left empty, the base is created with the name stored in the .zip file.'}</p>
+                  <p className="text-xs text-secondary mt-1">{defaultBaseName ? `Leave empty to use “${defaultBaseName}”.` : isFlat ? 'Leave empty to use the file name.' : 'If left empty, the base is created with the name stored in the .zip file.'}</p>
                 )}
               </div>
 
@@ -288,13 +366,14 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
                   />
                   Import table data<InfoTip label="import table data" text="Off creates empty tables." />
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                <label className={`flex items-center gap-2 text-sm text-gray-700 select-none ${attachmentsOff ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
-                    checked={includeAttachments}
+                    checked={includeAttachments && !attachmentsOff}
+                    disabled={attachmentsOff}
                     onChange={(e) => setIncludeAttachments(e.target.checked)}
                   />
-                  Import attachment<InfoTip label="import attachment" text="Restores the uploaded files." />
+                  Import attachment<InfoTip label="import attachment" text={looseCsv ? 'CSV files carry no attachments. Use a .zip with an attachments folder to import them.' : isFlat && !includeData ? 'Needs table data.' : 'Restores the uploaded files.'} />
                 </label>
                 {!isFlat && (
                   <>
@@ -344,7 +423,7 @@ export const ImportSbaseModal: React.FC<ImportSbaseModalProps> = ({ isOpen, work
             <button
               type="button"
               onClick={start}
-              disabled={!file || !workspaceId || !!nameError}
+              disabled={!hasFile || !workspaceId || !!nameError}
               className="px-10 py-2 rounded-xl btn-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Import Base

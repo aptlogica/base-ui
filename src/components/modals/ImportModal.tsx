@@ -10,6 +10,7 @@ import { validateTableName } from '../../utils/nameValidation';
 import type { ImportColumnMapping, ImportPreview, ImportPayload } from './importer/ImportTypes';
 import { ImportColumnMapper } from './importer/ImportColumnMapper';
 import { ImportDataPreviewGrid } from './importer/ImportDataPreviewGrid';
+import { CSV_DIALOG_SIZE, CSV_IMPORT_SUBTITLE, CSV_IMPORT_TITLE } from './importer/CsvModeRadio';
 import { ImportCleanupOptions } from './importer/ImportCleanupOptions';
 import type { ImportCleanupOptionsState } from './importer/ImportCleanupOptions';
 import { avoidSystemColumnTitle, buildImportPreview, buildInitialMappings } from './importer/importPreviewBuilder';
@@ -25,6 +26,8 @@ interface ImportModalProps {
   baseId?: string; // Optional: required from sidebar, optional from home page
   workspaceId: string;
   existingTables?: any[];
+  /** Optional: shown under the header on the first step (the CSV Single / Multiple radio). Not shown on the review step. */
+  modeSwitcher?: React.ReactNode;
 }
 
 const IMPORT_CONFIG = {
@@ -137,6 +140,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   baseId: _baseId,
   workspaceId,
   existingTables = [],
+  modeSwitcher,
 }) => {
   const [uiStep, setUiStep] = useState<ImportUiStep>('select');
   const [title, setTitle] = useState('');
@@ -444,10 +448,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   if (!isOpen) return null;
 
   const fileUploadStateClass = getFileUploadStateClass(isDragOver, fileError, selectedFile);
+  // In the CSV Single / Multiple dialog the first step is as small as the zip popup, so switching the radio does not resize it
+  const compact = !!modeSwitcher && uiStep === 'select';
 
   return (
     <div // NOSONAR
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.169] backdrop-blur-sm transition-all duration-200 p-4"
+      className="bg-modal-backdrop"
       onKeyDown={handleKeyDown}
     >
       <button
@@ -460,7 +466,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         }}
       />
       <div // NOSONAR
-        className="bg-(--color-card) border border-(--color-border-primary) rounded-xl shadow-2xl max-w-[94vw] max-h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200"
+        className={`bg-(--color-card) border border-(--color-border-primary) rounded-xl shadow-2xl ${compact ? CSV_DIALOG_SIZE : 'max-w-[94vw]'} max-h-[94vh] flex flex-col relative overflow-hidden transform transition-all duration-200`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -474,12 +480,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               <h2 className="text-xl font-semibold text-primary truncate">
                 {uiStep === 'review'
                   ? 'Review and clean your data'
-                  : `Import ${config.label}`}
+                  : compact ? CSV_IMPORT_TITLE : `Import ${config.label}`}
               </h2>
               <p className="text-sm text-secondary truncate">
                 {uiStep === 'review'
                   ? 'Check your data preview, choose which columns to import, and fix any columns before continuing.'
-                  : `Upload your ${config.label} file to create a new table`}
+                  : compact ? CSV_IMPORT_SUBTITLE : `Upload your ${config.label} file to create a new table`}
               </p>
             </div>
           </div>
@@ -495,6 +501,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             <X className="text-gray-500 h-5 w-5" />
           </button>
         </div>
+
+        {modeSwitcher && uiStep === 'select' && !isImporting && <div className="px-4 pt-4 shrink-0">{modeSwitcher}</div>}
 
         {/* Scrollable Content Area */}
         <form
@@ -557,7 +565,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   </label>
                   <div //NOSONAR
                     id="file-upload-input"
-                    className={`border-2 border-dashed rounded-xl p-8 min-w-[40vw] min-h-[40vh] flex items-center justify-center text-center transition-colors cursor-pointer ${fileUploadStateClass}`}
+                    className={`border-2 border-dashed rounded-xl p-8 ${compact ? 'min-h-[200px]' : 'min-w-[40vw] min-h-[40vh]'} flex items-center justify-center text-center transition-colors cursor-pointer ${fileUploadStateClass}`}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
