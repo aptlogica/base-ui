@@ -249,8 +249,8 @@ export const Table: React.FC<TableProps> = ({
       .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
       .map((apiColumn: any): ColumnConfig => {
         const parsedMeta = parseApiColumnMeta(apiColumn.meta);
-        const columnName = String(apiColumn.column_name ?? '').toLowerCase();
-        const isSystemColumn = (Boolean(apiColumn.system) || columnName === 'id') && !isLegacyTitleColumn(apiColumn);
+        // Only the backend's flag decides: the id of older tables is a system column, the uuid id of new tables is not
+        const isSystemColumn = Boolean(apiColumn.system) && !isLegacyTitleColumn(apiColumn);
         return {
           id: apiColumn.id ? String(apiColumn.id) : undefined,
           key: String(apiColumn.column_name ?? apiColumn.title ?? apiColumn.id ?? ''),
