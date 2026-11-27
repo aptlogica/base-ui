@@ -21,6 +21,7 @@ import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
 import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldConfirmModal';
 import { isFormulaField } from '../../../../utils/fieldUtils';
 import { isAutoUuidColumn } from '../../../../utils/uuid';
+import { isPrimaryIdColumn } from '../../../../utils/primaryKeyFields';
 import { Loader } from '../../../../components/ui/Loader';
 import { useBaseAccess } from '../../../../hooks/useBaseAccess';
 // Custom hooks
@@ -452,8 +453,8 @@ export const FormView: React.FC<FormViewProps> = ({ tableData, viewId, recordId,
   const handleDeleteField = (fieldId: string) => {
     const fieldToDelete = formFieldsMap.get(fieldId);
     
-    if (fieldToDelete?.isSystem || fieldToDelete?.system) {
-      toast.error('System fields cannot be deleted', { title: 'Error' });
+    if (fieldToDelete?.isSystem || fieldToDelete?.system || isPrimaryIdColumn(fieldToDelete)) {
+      toast.error(isPrimaryIdColumn(fieldToDelete) ? 'The primary key cannot be deleted' : 'System fields cannot be deleted', { title: 'Error' });
       return;
     }
     

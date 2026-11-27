@@ -10,6 +10,8 @@ import { useClickOutside } from '../../../../../hooks/useClickOutside';
 interface ColumnDropdownProps {
   onEdit: (anchorEl?: HTMLElement) => void;
   onDelete: () => void;
+  // False for a primary key field: it can't be deleted while it is part of the key
+  canDelete?: boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -17,6 +19,7 @@ interface ColumnDropdownProps {
 export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
   onEdit,
   onDelete,
+  canDelete = true,
   isOpen: controlledOpen,
   onOpenChange,
 }) => {
@@ -134,18 +137,22 @@ export const ColumnDropdown: React.FC<ColumnDropdownProps> = ({
             Edit Column
           </button>
 
-          {/* Divider */}
-          <div className="border-t border-gray-100 my-1"></div>
+          {canDelete && (
+            <>
+              {/* Divider */}
+              <div className="border-t border-gray-100 my-1"></div>
 
-          {/* Delete field */}
-          <button
-            onClick={handleDelete}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
-            title="Delete field"
-          >
-            <Trash2 className="w-5 h-5" />
-            Delete Column
-          </button>
+              {/* Delete field */}
+              <button
+                onClick={handleDelete}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-400 hover:text-black transition-colors"
+                title="Delete field"
+              >
+                <Trash2 className="w-5 h-5" />
+                Delete Column
+              </button>
+            </>
+          )}
         </div>,
         document.body
       )}

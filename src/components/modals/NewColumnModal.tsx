@@ -1427,8 +1427,13 @@ export function NewColumnModal({ isOpen, onClose, onSave, initialValues, fields 
                   fieldTypes={FIELD_TYPES.filter(type => !(type as any).hidden)}
                   selectedType={selectedType}
                   setSelectedType={handleTypeSelect}
-                  disabled={isFieldTypeLocked(isFieldUsedInViews, isLinksFieldEditing, selectedType?.key, selectedRelationId)}
+                  disabled={isPrimaryKeyField || isFieldTypeLocked(isFieldUsedInViews, isLinksFieldEditing, selectedType?.key, selectedRelationId)}
                 />
+                {isPrimaryKeyField && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Field type cannot be changed because this field is part of the table's primary key. Change the primary key first.
+                  </p>
+                )}
                 {isFieldUsedInViews && selectedType?.key !== 'links' && (
                   <div className="flex item-start gap-2 justify-between">
                     <span className="text-amber-600 mt-1"><Info className="w-4 h-4" /></span>

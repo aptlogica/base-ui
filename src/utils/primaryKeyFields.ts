@@ -20,6 +20,14 @@ export interface KeyColumnRef {
   config?: unknown;
 }
 
+// The table's own primary key column: the auto-generated uuid `id` every new table starts with. It can't be
+// deleted, renamed or retyped (the backend refuses too), so the UI offers no column menu for it.
+export const isPrimaryIdColumn = (column: KeyColumnRef | null | undefined): boolean => {
+  if (!column) return false;
+  const name = column.column_name ?? column.columnName ?? column.key;
+  return name === ID_COLUMN && isAutoUuidColumn(column);
+};
+
 // Same rule as the backend: null, undefined and blank text are empty
 export const isEmptyKeyValue = (value: unknown): boolean => {
   if (value === null || value === undefined) return true;

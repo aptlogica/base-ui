@@ -38,7 +38,7 @@ import UpdateFieldConfirmModal from '../../../../components/modals/UpdateFieldCo
 import { useAllViews, usePrimaryKey, useUpsertRow } from '../../../../hooks/useApi';
 import { useRequiredKeyFields } from '../../../../hooks/useRequiredKeyFields';
 import { useDraftRows, isDraftRowId } from '../../hooks/useDraftRows';
-import { isEmptyKeyValue } from '../../../../utils/primaryKeyFields';
+import { isEmptyKeyValue, isPrimaryIdColumn } from '../../../../utils/primaryKeyFields';
 import { getFieldTypeIconComponent, getRelationTypeFromField } from '../../../../types/fieldTypes';
 import { ColumnDropdown } from './components/ColumnDropdown';
 import { Loader } from '../../../../components/ui/Loader';
@@ -1204,7 +1204,7 @@ export const Table: React.FC<TableProps> = ({
   }, [editModalOpen, editColumnIndex, dragColumnIndex, hoverColumnIndex]);
 
   const canShowColumnDropdown = useCallback((column: ColumnConfig) => (
-    !column.isSystem && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn())
+    !column.isSystem && !isPrimaryIdColumn(column) && !isBaseReadOnly() && (canUpdateColumn() || canDeleteColumn())
   ), [isBaseReadOnly, canUpdateColumn, canDeleteColumn]);
 
   const renderColumnHeader = useCallback((column: ColumnConfig, index: number) => {
@@ -1216,7 +1216,7 @@ export const Table: React.FC<TableProps> = ({
     const isLocked = column.isSystem || isAutoUuidColumn(column);
 
     const handleColumnContextMenu = (e: React.MouseEvent) => {
-      if (column.isSystem || column.system) {
+      if (column.isSystem || column.system || isPrimaryIdColumn(column)) {
         return;
       }
       e.preventDefault();
@@ -1333,6 +1333,7 @@ export const Table: React.FC<TableProps> = ({
                 handleEditColumn(column, index, anchorEl ? { target: anchorEl } : undefined);
               }}
               onDelete={() => handleDeleteColumn(column.id!)}
+              canDelete={!primaryKeyColumnIds.includes(String(column.id)) && canDeleteColumn()}
               isOpen={openColumnDropdownIndex === index}
               onOpenChange={handleDropdownOpenChange}
             />
@@ -1663,7 +1664,7 @@ export const Table: React.FC<TableProps> = ({
               handleCloseColMenu();
             }}
             canUpdate={canUpdateColumn()}
-            canDelete={canDeleteColumn()}
+            canDelete={canDeleteColumn() && !primaryKeyColumnIds.includes(String(visibleColumns[colMenu.colIndex!]?.id))}
           />
         </>
       )}
