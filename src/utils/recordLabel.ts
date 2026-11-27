@@ -50,8 +50,8 @@ export const isLegacyTitleColumn = (column: LabelColumn): boolean =>
 // Whether a field of this type can label a record
 export const isDisplayColumnType = (type: string | undefined): boolean => !NON_LABEL_TYPES.has(String(type ?? '').toLowerCase());
 
-// The system Id column every table has
-export const isIdColumn = (column: LabelColumn): boolean => isSystem(column) && columnName(column) === 'id';
+// The Id column every table has: a system bigint on older tables, an ordinary auto-generated uuid on newer ones
+export const isIdColumn = (column: LabelColumn): boolean => columnName(column) === 'id';
 
 // Whether the column can be chosen as a display column: a plain, live field. System fields are left out,
 // except the Id column and the Title of an older table.
