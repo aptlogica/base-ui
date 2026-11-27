@@ -866,3 +866,78 @@ input[type="password"]::-ms-clear {
 .api-docs-tok-meta {
   color: var(--docs-tok-punct);
 }
+
+/* ---- Developer > Logs (src/components/platform/DeveloperLogs.tsx) ---- */
+/* Level, status and method pills, the retention note and the tint of an opened row. Light values here, dark
+   values under the app's dark theme. Scoped to .api-logs (the Logs screen's root). */
+.api-logs {
+  --logs-error-bg: #fef3f2;
+  --logs-error-fg: #b42318;
+  --logs-error-border: #fecdca;
+  --logs-warn-bg: #fffaeb;
+  --logs-warn-fg: #93370d;
+  --logs-warn-border: #fedf89;
+  --logs-info-bg: #eff8ff;
+  --logs-info-fg: #175cd3;
+  --logs-info-border: #b2ddff;
+  --logs-ok-bg: #effcf7;
+  --logs-ok-fg: #067647;
+  --logs-ok-border: #abefc6;
+  --logs-neutral-bg: #f5f5f5;
+  --logs-neutral-fg: #414651;
+  --logs-neutral-border: #edeeee;
+  --logs-note-bg: #eff8ff;
+  --logs-note-border: #b2ddff;
+  --logs-note-fg: #194185;
+}
+
+:root[data-theme='dark'] .api-logs {
+  --logs-error-bg: rgba(240, 68, 56, 0.14);
+  --logs-error-fg: #f97066;
+  --logs-error-border: rgba(249, 112, 102, 0.32);
+  --logs-warn-bg: rgba(247, 144, 9, 0.14);
+  --logs-warn-fg: #fdb022;
+  --logs-warn-border: rgba(253, 176, 34, 0.32);
+  --logs-info-bg: rgba(46, 144, 250, 0.14);
+  --logs-info-fg: #84caff;
+  --logs-info-border: rgba(132, 202, 255, 0.32);
+  --logs-ok-bg: rgba(23, 178, 106, 0.14);
+  --logs-ok-fg: #47cd89;
+  --logs-ok-border: rgba(71, 205, 137, 0.32);
+  --logs-neutral-bg: rgba(255, 255, 255, 0.06);
+  --logs-neutral-fg: #d5d7da;
+  --logs-neutral-border: rgba(255, 255, 255, 0.14);
+  --logs-note-bg: rgba(46, 144, 250, 0.1);
+  --logs-note-border: rgba(132, 202, 255, 0.32);
+  --logs-note-fg: #b2ddff;
+}
+
+.api-logs-tone-error { background-color: var(--logs-error-bg); color: var(--logs-error-fg); }
+.api-logs-tone-warn { background-color: var(--logs-warn-bg); color: var(--logs-warn-fg); }
+.api-logs-tone-info { background-color: var(--logs-info-bg); color: var(--logs-info-fg); }
+.api-logs-tone-ok { background-color: var(--logs-ok-bg); color: var(--logs-ok-fg); }
+.api-logs-tone-neutral { background-color: var(--logs-neutral-bg); color: var(--logs-neutral-fg); }
+
+.api-logs-fg-error { color: var(--logs-error-fg); }
+.api-logs-fg-warn { color: var(--logs-warn-fg); }
+.api-logs-fg-info { color: var(--logs-info-fg); }
+.api-logs-fg-ok { color: var(--logs-ok-fg); }
+.api-logs-fg-neutral { color: var(--logs-neutral-fg); }
+
+/* The row that is open and its panel: tinted by the level of the entry */
+.api-logs-open-error { background-color: var(--logs-error-bg); }
+.api-logs-open-warn { background-color: var(--logs-warn-bg); }
+.api-logs-open-info { background-color: var(--logs-neutral-bg); }
+.api-logs-open-ok { background-color: var(--logs-neutral-bg); }
+.api-logs-open-neutral { background-color: var(--logs-neutral-bg); }
+.api-logs-panel-error { border-color: var(--logs-error-border); }
+.api-logs-panel-warn { border-color: var(--logs-warn-border); }
+.api-logs-panel-info { border-color: var(--logs-neutral-border); }
+.api-logs-panel-ok { border-color: var(--logs-neutral-border); }
+.api-logs-panel-neutral { border-color: var(--logs-neutral-border); }
+
+.api-logs-note {
+  background-color: var(--logs-note-bg);
+  border: 1px solid var(--logs-note-border);
+  color: var(--logs-note-fg);
+}

@@ -2384,7 +2384,11 @@ const LIST_CONSTRAINTS: DocEndpoint = {
       description: 'unique or check. Default: both.',
     },
   ],
-  notes: ['status is ok, or missing when Postgres no longer has the constraint. For check constraints, condition is the SQL Postgres enforces.'],
+  notes: [
+    'Each constraint comes back in the shape you create and change it with: title, type, columns (column names) and, for a check, check.category and check.where. Edit those and send them back with PUT to change the constraint.',
+    'Read only: id, constraint_name, status (ok, or missing when Postgres no longer has the constraint), definition and check.condition (the SQL Postgres enforces).',
+    'A check made in the app, not through this API, has no check.where: only check.condition is given. Leave check out of the PUT to keep it, or send a new check.where to replace it.',
+  ],
   examples: [
     {
       title: 'Only unique constraints',
@@ -2394,11 +2398,11 @@ const LIST_CONSTRAINTS: DocEndpoint = {
       response: ok([
         {
           id: CONSTRAINT_ID,
-          name: 'Email is unique',
+          title: 'Email is unique',
           type: 'unique',
           constraint_name: 'uq_orders_email',
           status: 'ok',
-          columns: [{ id: EMAIL_ID, name: 'Email' }],
+          columns: ['Email'],
         },
       ]),
     },
@@ -2410,13 +2414,16 @@ const LIST_CONSTRAINTS: DocEndpoint = {
       response: ok([
         {
           id: 'con_6d7e8f9a0b1c42d3e4f5a6b7c8d9e0f1',
-          name: 'Email check',
+          title: 'Email check',
           type: 'check',
           constraint_name: 'ck_orders_email',
           status: 'ok',
-          category: 'text',
-          condition: "(email_1 LIKE '%@%')",
-          columns: [{ id: EMAIL_ID, name: 'Email' }],
+          check: {
+            category: 'text',
+            where: { all: [{ column: 'Email', op: 'contains', value: '@' }] },
+            condition: "(email_1 LIKE '%@%')",
+          },
+          columns: ['Email'],
         },
       ]),
     },
@@ -2436,11 +2443,11 @@ const LIST_CONSTRAINTS: DocEndpoint = {
       response: ok([
         {
           id: CONSTRAINT_ID,
-          name: 'Email is unique',
+          title: 'Email is unique',
           type: 'unique',
           constraint_name: 'uq_orders_email',
           status: 'missing',
-          columns: [{ id: EMAIL_ID, name: 'Email' }],
+          columns: ['Email'],
         },
       ]),
     },
@@ -2459,21 +2466,24 @@ const LIST_CONSTRAINTS: DocEndpoint = {
       response: ok([
         {
           id: CONSTRAINT_ID,
-          name: 'Email is unique',
+          title: 'Email is unique',
           type: 'unique',
           constraint_name: 'uq_orders_email',
           status: 'ok',
-          columns: [{ id: EMAIL_ID, name: 'Email' }],
+          columns: ['Email'],
         },
         {
           id: 'con_6d7e8f9a0b1c42d3e4f5a6b7c8d9e0f1',
-          name: 'Email check',
+          title: 'Email check',
           type: 'check',
           constraint_name: 'ck_orders_email',
           status: 'ok',
-          category: 'text',
-          condition: "(email_1 LIKE '%@%')",
-          columns: [{ id: EMAIL_ID, name: 'Email' }],
+          check: {
+            category: 'text',
+            where: { all: [{ column: 'Email', op: 'contains', value: '@' }] },
+            condition: "(email_1 LIKE '%@%')",
+          },
+          columns: ['Email'],
         },
       ]),
     },
@@ -2537,11 +2547,11 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'Invoice numbers are unique',
+        title: 'Invoice numbers are unique',
         type: 'unique',
         constraint_name: 'uq_orders_invoice_number',
         status: 'ok',
-        columns: [{ id: fieldId(215), name: 'Invoice number' }],
+        columns: ['Invoice number'],
       }),
     },
     {
@@ -2556,14 +2566,11 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'One SKU per region',
+        title: 'One SKU per region',
         type: 'unique',
         constraint_name: 'uq_products_sku_region',
         status: 'ok',
-        columns: [
-          { id: 'fld_a0b1c2d3e4f541a2b3c4d5e6f7a8b9c0', name: 'SKU' },
-          { id: 'fld_b1c2d3e4f5a642b3c4d5e6f7a8b9c0d1', name: 'Region' },
-        ],
+        columns: ['SKU', 'Region'],
       }),
     },
     {
@@ -2586,13 +2593,16 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: 'con_8f9a0b1c2d3e44f5a6b7c8d9e0f1a2b3',
-        name: 'Quantity between 1 and 100',
+        title: 'Quantity between 1 and 100',
         type: 'check',
         constraint_name: 'ck_orders_quantity',
         status: 'ok',
-        category: 'number_date',
-        condition: '(quantity_5 >= 1 AND quantity_5 <= 100)',
-        columns: [{ id: fieldId(217), name: 'Quantity' }],
+        check: {
+          category: 'number_date',
+          where: { all: [{ column: 'Quantity', op: 'gte', value: 1 }, { column: 'Quantity', op: 'lte', value: 100 }] },
+          condition: '(quantity_5 >= 1 AND quantity_5 <= 100)',
+        },
+        columns: ['Quantity'],
       }),
     },
     {
@@ -2617,16 +2627,16 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: 'con_9a0b1c2d3e4f45a6b7c8d9e0f1a2b3c4',
-        name: 'End date needs a start date',
+        title: 'End date needs a start date',
         type: 'check',
         constraint_name: 'ck_orders_dates',
         status: 'ok',
-        category: 'custom',
-        condition: '(end_date_6 IS NULL OR start_date_7 IS NOT NULL)',
-        columns: [
-          { id: fieldId(231), name: 'Start date' },
-          { id: fieldId(232), name: 'End date' },
-        ],
+        check: {
+          category: 'custom',
+          where: { any: [{ column: 'End date', op: 'is_null' }, { column: 'Start date', op: 'is_not_null' }] },
+          condition: '(end_date_6 IS NULL OR start_date_7 IS NOT NULL)',
+        },
+        columns: ['Start date', 'End date'],
       }),
     },
     {
@@ -2655,16 +2665,16 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: 'con_0b1c2d3e4f5a46b7c8d9e0f1a2b3c4d5',
-        name: 'Open orders have a code',
+        title: 'Open orders have a code',
         type: 'check',
         constraint_name: 'ck_orders_open_code',
         status: 'ok',
-        category: 'text',
-        condition: "(status_4 IN ('open', 'paid') AND NOT (order_code_8 IS NULL OR order_code_8 LIKE '%-TEST'))",
-        columns: [
-          { id: fieldId(233), name: 'Status' },
-          { id: fieldId(234), name: 'Order code' },
-        ],
+        check: {
+          category: 'text',
+          where: { all: [{ column: 'Status', op: 'in', value: ['open', 'paid'] }, { none: [{ column: 'Order code', op: 'is_null' }, { column: 'Order code', op: 'ends_with', value: '-TEST' }] }] },
+          condition: "(status_4 IN ('open', 'paid') AND NOT (order_code_8 IS NULL OR order_code_8 LIKE '%-TEST'))",
+        },
+        columns: ['Status', 'Order code'],
       }),
     },
     {
@@ -2680,11 +2690,11 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'Invoice numbers are unique',
+        title: 'Invoice numbers are unique',
         type: 'unique',
         constraint_name: 'uq_orders_invoice_number',
         status: 'ok',
-        columns: [{ id: fieldId(215), name: 'Invoice number' }],
+        columns: ['Invoice number'],
       }),
     },
     {
@@ -2859,14 +2869,11 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'One SKU per region',
+        title: 'One SKU per region',
         type: 'unique',
         constraint_name: 'uq_products_sku_region',
         status: 'ok',
-        columns: [
-          { id: 'fld_a0b1c2d3e4f541a2b3c4d5e6f7a8b9c0', name: 'SKU' },
-          { id: 'fld_b1c2d3e4f5a642b3c4d5e6f7a8b9c0d1', name: 'Region' },
-        ],
+        columns: ['SKU', 'Region'],
       }),
     },
     {
@@ -2884,13 +2891,16 @@ const CREATE_CONSTRAINT: DocEndpoint = {
       status: 201,
       response: ok({
         id: 'con_7e8f9a0b1c2d43e4f5a6b7c8d9e0f1a2',
-        name: 'Price is not negative',
+        title: 'Price is not negative',
         type: 'check',
         constraint_name: 'ck_orders_price',
         status: 'ok',
-        category: 'number_date',
-        condition: '(price_3 >= 0)',
-        columns: [{ id: 'fld_3c4d5e6f7081492081b2c3d4e5f6a7b8', name: 'Price' }],
+        check: {
+          category: 'number_date',
+          where: { all: [{ column: 'Price', op: 'gte', value: 0 }] },
+          condition: '(price_3 >= 0)',
+        },
+        columns: ['Price'],
       }),
     },
     {
@@ -3067,15 +3077,18 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
     {
       name: 'check.where',
       in: 'body',
-      description: 'check: the new condition. Required when the constraint is a check.',
+      description: 'check: the new condition, in the same form as when it was added. Leave check out to keep the condition as it is.',
     },
     {
       name: 'check.category',
       in: 'body',
-      description: 'check: the new label.',
+      description: 'check: the new label. Send it with check.where.',
     },
   ],
-  notes: ['type cannot be sent: a unique constraint stays unique and a check stays a check.'],
+  notes: [
+    'type cannot be changed: a unique constraint stays unique and a check stays a check. Sending the type it already has is fine.',
+    'A constraint comes back in the same shape you send it: title, type, columns (names) and, for a check, check.category and check.where. To change something, take the constraint from Get constraints, edit those fields and send it back; id, constraint_name, status, definition and check.condition may stay in, and are ignored.',
+  ],
   examples: [
     {
       title: 'Only rename a unique constraint',
@@ -3085,11 +3098,11 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
       status: 200,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'One order per email',
+        title: 'One order per email',
         type: 'unique',
         constraint_name: 'uq_orders_email',
         status: 'ok',
-        columns: [{ id: EMAIL_ID, name: 'Email' }],
+        columns: ['Email'],
       }),
     },
     {
@@ -3100,14 +3113,11 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
       status: 200,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'Email is unique',
+        title: 'Email is unique',
         type: 'unique',
         constraint_name: 'uq_orders_email',
         status: 'ok',
-        columns: [
-          { id: EMAIL_ID, name: 'Email' },
-          { id: 'fld_1a2b3c4d5e6f47a8b9c0d1e2f3a4b5c6', name: 'Name' },
-        ],
+        columns: ['Email', 'Name'],
       }),
     },
     {
@@ -3121,14 +3131,11 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
       status: 200,
       response: ok({
         id: CONSTRAINT_ID,
-        name: 'One order per customer and day',
+        title: 'One order per customer and day',
         type: 'unique',
         constraint_name: 'uq_orders_email',
         status: 'ok',
-        columns: [
-          { id: EMAIL_ID, name: 'Email' },
-          { id: fieldId(241), name: 'Order date' },
-        ],
+        columns: ['Email', 'Order date'],
       }),
     },
     {
@@ -3146,13 +3153,16 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
       status: 200,
       response: ok({
         id: 'con_7e8f9a0b1c2d43e4f5a6b7c8d9e0f1a2',
-        name: 'Price above zero',
+        title: 'Price above zero',
         type: 'check',
         constraint_name: 'ck_orders_price',
         status: 'ok',
-        category: 'number_date',
-        condition: '(price_3 > 0)',
-        columns: [{ id: 'fld_3c4d5e6f7081492081b2c3d4e5f6a7b8', name: 'Price' }],
+        check: {
+          category: 'number_date',
+          where: { all: [{ column: 'Price', op: 'gt', value: 0 }] },
+          condition: '(price_3 > 0)',
+        },
+        columns: ['Price'],
       }),
     },
     {
@@ -3218,13 +3228,16 @@ const UPDATE_CONSTRAINT: DocEndpoint = {
       status: 200,
       response: ok({
         id: 'con_7e8f9a0b1c2d43e4f5a6b7c8d9e0f1a2',
-        name: 'Price is positive',
+        title: 'Price is positive',
         type: 'check',
         constraint_name: 'ck_orders_price',
         status: 'ok',
-        category: 'custom',
-        condition: '(price_3 > 0)',
-        columns: [{ id: 'fld_3c4d5e6f7081492081b2c3d4e5f6a7b8', name: 'Price' }],
+        check: {
+          category: 'custom',
+          where: { all: [{ column: 'Price', op: 'gt', value: 0 }] },
+          condition: '(price_3 > 0)',
+        },
+        columns: ['Price'],
       }),
     },
     {

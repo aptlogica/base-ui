@@ -717,6 +717,98 @@ export async function updateBaseApiSettingsService(id: string, settings: { base_
   return await makeAuthenticatedCall(() => baseHttp().patch<BaseApiStatus>(`/base/${id}/api/settings`, settings));
 }
 
+// What a log entry of the base API carries. Entries are the log service's own, sent as they are; fields holds the
+// request: its route, status, timing and, for a failed call, the error with a plain explanation and what to do.
+export interface BaseApiLogFields {
+  event?: string;
+  key?: string;
+  api?: string;
+  path?: string;
+  method?: string;
+  base_id?: string;
+  status?: number;
+  duration_ms?: number;
+  request_id?: string;
+  table?: string;
+  error_code?: string;
+  error_message?: string;
+  friendly?: string;
+  suggestion?: string;
+  record_count?: number;
+  request?: Record<string, unknown>;
+  response?: Record<string, unknown>;
+  request_truncated?: boolean;
+  response_truncated?: boolean;
+}
+
+export interface BaseApiLogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  service: string;
+  labels?: Record<string, string>;
+  fields?: BaseApiLogFields;
+}
+
+// One page of GET /base/:id/api/logs; next_cursor is set while there are older entries
+export interface BaseApiLogsPage {
+  query?: string;
+  count: number;
+  entries: BaseApiLogEntry[];
+  next_cursor?: string;
+}
+
+// GET /base/:id/api/logs/count
+export interface BaseApiLogsCount {
+  query?: string;
+  count: number;
+  start?: string;
+  end?: string;
+}
+
+// Filters of the log endpoints. The base and the service are never sent: the backend takes them from the base.
+export interface BaseApiLogFilters {
+  level?: string;
+  status?: string | number;
+  method?: string;
+  request_id?: string;
+  table?: string;
+  error_code?: string;
+  search?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  direction?: 'backward' | 'forward';
+  cursor?: string;
+}
+
+// The query string of the log endpoints; empty filters are left out
+export const buildBaseApiLogQuery = (filters: BaseApiLogFilters): string => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      params.set(key, String(value));
+    }
+  });
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
+
+// GET /base/:id/api/logs; any member who can open the base
+export async function getBaseApiLogsService(id: string, filters: BaseApiLogFilters = {}) {
+  return await makeAuthenticatedCall(() =>
+    baseHttp().get<BaseApiLogsPage>(`/base/${id}/api/logs${buildBaseApiLogQuery(filters)}`)
+  );
+}
+
+// GET /base/:id/api/logs/count; the same filters, without paging
+export async function countBaseApiLogsService(id: string, filters: BaseApiLogFilters = {}) {
+  const { limit: _limit, direction: _direction, cursor: _cursor, ...rest } = filters;
+  return await makeAuthenticatedCall(() =>
+    baseHttp().get<BaseApiLogsCount>(`/base/${id}/api/logs/count${buildBaseApiLogQuery(rest)}`)
+  );
+}
+
 // Origin the backend is served from; VITE_API_BASE_URL is empty when nginx serves both on one origin
 export const getApiOrigin = () => API_BASE_URL || window.location.origin;
 

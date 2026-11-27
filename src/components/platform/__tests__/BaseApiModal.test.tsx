@@ -17,6 +17,10 @@ vi.mock('../DeveloperOverview', () => ({
   ),
 }));
 
+vi.mock('../DeveloperLogs', () => ({
+  default: ({ baseId }: any) => <div data-testid="developer-logs">{baseId}</div>,
+}));
+
 vi.mock('../docs/ApiDocsView', () => ({
   default: ({ baseId, onBack, backLabel, embedded }: any) => (
     <div data-testid="api-docs-view">
@@ -58,15 +62,31 @@ describe('BaseApiModal', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('shows Overview as the only section that can be opened', () => {
+  it('shows Overview and Logs as the sections that can be opened', () => {
     renderModal();
 
     const overview = screen.getByRole('button', { name: 'Overview' });
     expect(overview).toBeEnabled();
     expect(overview).toHaveAttribute('aria-current', 'page');
-    for (const label of ['API keys', 'Login settings', 'App users', 'Roles & rules', 'Test as user', 'Logs']) {
+    expect(screen.getByRole('button', { name: 'Logs' })).toBeEnabled();
+    for (const label of ['API keys', 'Login settings', 'App users', 'Roles & rules', 'Test as user']) {
       expect(screen.getByRole('button', { name: new RegExp(`^${label}\\s*Soon$`) })).toBeDisabled();
     }
+  });
+
+  it('opens Logs in place of Overview and goes back', () => {
+    renderModal();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Logs' }));
+
+    expect(screen.getByTestId('developer-logs')).toHaveTextContent('base-1');
+    expect(screen.queryByTestId('developer-overview')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Logs' })).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+
+    expect(screen.getByTestId('developer-overview')).toBeInTheDocument();
+    expect(screen.queryByTestId('developer-logs')).not.toBeInTheDocument();
   });
 
   it('shows the API docs inside the popup and goes back to Overview', () => {

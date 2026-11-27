@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { BookOpen, Code, KeyRound, LayoutDashboard, LogIn, Maximize2, Minimize2, ScrollText, ShieldCheck, UserCheck, Users, X } from 'lucide-react';
 import { useWorkspaceAccess } from '../../hooks/useWorkspaceAccess';
 import DeveloperOverview from './DeveloperOverview';
+import DeveloperLogs from './DeveloperLogs';
 import ApiDocsView from './docs/ApiDocsView';
 
 interface BaseApiModalProps {
@@ -16,7 +17,7 @@ interface BaseApiModalProps {
   baseName?: string;
 }
 
-// Sections of the left panel; only Overview is built so far
+// Sections of the left panel; Overview and Logs are built so far
 const SECTIONS: { key: string; label: string; icon: React.ElementType; ready: boolean }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, ready: true },
   { key: 'apiKeys', label: 'API keys', icon: KeyRound, ready: false },
@@ -24,14 +25,16 @@ const SECTIONS: { key: string; label: string; icon: React.ElementType; ready: bo
   { key: 'appUsers', label: 'App users', icon: Users, ready: false },
   { key: 'rolesAndRules', label: 'Roles & rules', icon: ShieldCheck, ready: false },
   { key: 'testAsUser', label: 'Test as user', icon: UserCheck, ready: false },
-  { key: 'logs', label: 'Logs', icon: ScrollText, ready: false },
+  { key: 'logs', label: 'Logs', icon: ScrollText, ready: true },
 ];
 
-// Developer settings of a base: sections on the left, Overview on the right
+// Developer settings of a base: sections on the left, the chosen one on the right
 export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, baseId, baseName: baseNameProp }) => {
   const { isAdmin } = useWorkspaceAccess();
   // The docs open inside the popup, in place of the sections; Back returns to Overview
   const [showDocs, setShowDocs] = useState(false);
+  // The section shown on the right
+  const [section, setSection] = useState('overview');
   // Wide by default; the expand button makes the popup fill the whole screen
   const [isFullWidth, setIsFullWidth] = useState(false);
 
@@ -46,6 +49,7 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
   // The popup opens on Overview next time
   const close = () => {
     setShowDocs(false);
+    setSection('overview');
     setIsFullWidth(false);
     onClose();
   };
@@ -137,12 +141,13 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
             {/* Left panel: sections */}
             <nav className="w-[220px] flex-shrink-0 border-r bg-gray-50 p-2 space-y-1 overflow-y-auto" aria-label="Developer sections">
               {SECTIONS.map(({ key, label, icon: Icon, ready }) => {
-                const isActive = key === 'overview';
+                const isActive = key === section;
                 return (
                   <button
                     key={key}
                     type="button"
                     disabled={!ready}
+                    onClick={() => setSection(key)}
                     aria-current={isActive ? 'page' : undefined}
                     className={`relative w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left transition-colors duration-200 ${isActive ? 'bg-card shadow-xs font-medium text-primary' : 'text-gray-700 hover:bg-gray-100'} disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent`}
                   >
@@ -157,15 +162,19 @@ export const BaseApiModal: React.FC<BaseApiModalProps> = ({ isOpen, onClose, bas
               })}
             </nav>
 
-            {/* Right panel: Overview */}
+            {/* Right panel: the chosen section */}
             <div className="flex-1 min-w-0 overflow-y-auto">
-              <DeveloperOverview
-                baseId={baseId}
-                baseName={baseName}
-                canEnable={isAdmin}
-                onCancel={close}
-                onOpenDocs={openDocs}
-              />
+              {section === 'logs' ? (
+                <DeveloperLogs baseId={baseId} />
+              ) : (
+                <DeveloperOverview
+                  baseId={baseId}
+                  baseName={baseName}
+                  canEnable={isAdmin}
+                  onCancel={close}
+                  onOpenDocs={openDocs}
+                />
+              )}
             </div>
           </div>
         )}
